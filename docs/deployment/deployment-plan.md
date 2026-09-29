@@ -14,3 +14,30 @@ No product is runnable or packaged yet. Only repository checks run locally and i
 Stakeholder release → trusted testers → alpha → beta → broader deployment. None of these stages has occurred. Advance only with recorded test results, known limitations and authorized feedback.
 
 Before shipping, document artifact origin/checksum, prerequisites, configuration, install/start/stop, local storage and network behavior. Test upgrade and backup/restore using synthetic data. Associate every artifact with the reviewed release tag and locked dependencies. Define rollback compatibility before schema migration; preserve user data and credentials. The release owner and support channel remain to be assigned.
+
+## Course rollout stages applied to this project
+
+1. **Stakeholder:** approved workstation and authorized datasets, with recorded acceptance feedback.
+2. **Family/friends / trusted testers:** optional usability checks using synthetic data only; never share restricted manufacturing sources or credentials.
+3. **Alpha:** narrow documented connector/block scope and known limitations.
+4. **Beta:** broader approved workloads, regression/performance evidence and tested upgrade/recovery.
+5. **Full release plan:** agreed support, packaging, security, compatibility and acceptance criteria.
+
+All stages are planned. A public SaaS deployment is not assumed for a local-first tool.
+
+## Monitoring and deployment record
+
+For an implemented product, define local run health/error reporting, redacted logs, retention and opt-in diagnostics before release. No monitoring service is currently deployed.
+
+Copy this record for each actual deployment:
+
+- Environment / approved machine class: TODO
+- Date / operator GitHub identity: TODO
+- Release tag, commit and artifact checksum: TODO
+- Configuration reference (no secrets): TODO
+- Data approval and backup: TODO
+- Install/upgrade commands actually run: TODO
+- Smoke tests / health/log evidence: TODO
+- Result / failures / rollback performed: TODO
+- Rollback target and data-compatibility constraints: TODO
+- Related issue, PR and stakeholder review: TODO

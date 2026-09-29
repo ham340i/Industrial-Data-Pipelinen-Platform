@@ -18,3 +18,9 @@ Use this path to inspect engineering work and identify missing evidence. The lin
 | Outstanding actions | [Human actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/SOEN490_HUMAN_ACTIONS.md) |
 
 The intended chain is **story → design → code → commit → PR → test → iteration → release → individual contributor**, with stakeholder feedback linked throughout. Missing records remain explicitly pending.
+
+## Follow-up compliance evidence
+
+- [Current compliance audit](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/SOEN490_COMPLIANCE_AUDIT.md)
+- [Traceability guide](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/traceability.md)
+- [Personal contribution records](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/individual-contributions/README.md)

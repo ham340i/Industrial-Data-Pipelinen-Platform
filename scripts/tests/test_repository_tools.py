@@ -45,6 +45,22 @@ class DocumentationTests(unittest.TestCase):
             source.write_text('[escape](../outside.md)  ')
             self.assertEqual(len(check_markdown(source, root)), 2)
 
+    def test_absolute_repository_and_wiki_links_are_checked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'target.md').write_text('# Existing heading\n')
+            (root / 'docs/wiki').mkdir(parents=True)
+            (root / 'docs/wiki/Home.md').write_text('# Wiki home\n')
+            source = root / 'source.md'
+            base = 'https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/'
+            source.write_text(
+                f'[good]({base}blob/main/target.md#existing-heading)\n'
+                f'[home]({base}wiki/Home)\n'
+                f'[missing]({base}blob/main/absent.md)\n'
+                f'[missing wiki]({base}wiki/Absent)\n'
+            )
+            self.assertEqual(len(check_markdown(source, root)), 2)
+
 
 class SecurityTests(unittest.TestCase):
     def test_private_key_and_token_detection(self):
@@ -89,6 +105,20 @@ class SetupTests(unittest.TestCase):
         with patch.object(setup, 'gh_json', side_effect=[[{'title': str(i)} for i in range(100)], []]) as api:
             self.assertEqual(len(setup.existing_records('owner/repo', 'milestones')), 100)
             self.assertIn('page=2&state=all', api.call_args.args[0][1])
+
+    def test_normalized_milestone_time_is_not_drift(self):
+        desired = {'title': 'Iteration 1', 'due_on': '2026-10-06T23:59:59Z'}
+        existing = dict(desired, due_on='2026-10-06T00:00:00Z')
+        with patch.object(setup, 'gh_json') as api, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(setup.reconcile('owner/repo', 'milestones', [desired], [existing], True), 0)
+            api.assert_not_called()
+
+    def test_different_milestone_date_is_preserved_and_reported(self):
+        desired = {'title': 'Iteration 1', 'due_on': '2026-10-06T23:59:59Z'}
+        existing = dict(desired, due_on='2026-10-07T00:00:00Z')
+        with patch.object(setup, 'gh_json') as api, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(setup.reconcile('owner/repo', 'milestones', [desired], [existing], True), 2)
+            api.assert_not_called()
 
 
 if __name__ == '__main__':

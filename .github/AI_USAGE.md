@@ -26,3 +26,7 @@ Replace placeholders with facts. Do not claim human review until it happens. Con
 - Verification performed: see [actual local validation](../docs/testing/repository-validation.md). Local checks do not establish product correctness or GitHub Actions success.
 
 The Wiki navigation and publishing helper were also drafted with Codex from these repository documents. Local checks and source-link verification are recorded in the validation report; human review remains pending.
+
+## Compliance follow-up
+
+Codex inspected live GitHub configuration, configured supported labels/milestones/protection, drafted additional onboarding/consent/contribution documentation, and updated tooling/tests for milestone date normalization and maintained Wiki links. The user supplied requirements; independent human review remains pending. See [issue #2](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/2), its linked PR and the [compliance audit](../docs/SOEN490_COMPLIANCE_AUDIT.md) for actual verification. This does not claim a student personally authored the generated work.

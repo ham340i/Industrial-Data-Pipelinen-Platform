@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Check local inline Markdown links, heading anchors and basic whitespace.
+"""Check local and maintained repository/Wiki links, anchors and whitespace.
 
-External URLs are intentionally not fetched. This is not a full Markdown parser:
+External URLs are not fetched; maintained GitHub links use local source files.
+This is not a full Markdown parser:
 reference-style links, embedded HTML and Mermaid semantics are outside its scope.
 """
 
@@ -45,7 +46,17 @@ def check_markdown(path, root=ROOT):
         target = target.strip().strip('<>')
         parsed = urlsplit(target)
         if parsed.scheme or parsed.netloc:
-            continue
+            repo_prefix = '/ham340i/Industrial-Data-Pipelinen-Platform/'
+            if parsed.netloc == 'github.com' and parsed.path.startswith(repo_prefix + 'blob/main/'):
+                local = unquote(parsed.path.removeprefix(repo_prefix + 'blob/main/'))
+            elif parsed.netloc == 'github.com' and parsed.path.startswith(repo_prefix + 'wiki/'):
+                local = 'docs/wiki/' + unquote(parsed.path.removeprefix(repo_prefix + 'wiki/')) + '.md'
+            else:
+                continue
+            # Validate maintained absolute links against this checkout, even
+            # on a PR whose files are not yet on main or the live Wiki.
+            target = '/' + local + ('#' + parsed.fragment if parsed.fragment else '')
+            parsed = urlsplit(target)
         dest = (root / unquote(parsed.path).lstrip('/') if parsed.path.startswith('/')
                 else path.parent / unquote(parsed.path)) if parsed.path else path
         dest = dest.resolve()

@@ -1,5 +1,7 @@
 # SOEN 490 requirements matrix
 
+**Historical foundation snapshot:** this table records the original setup coverage before the live GitHub follow-up. Current labels, milestones, protection, tests and remaining actions are in the [compliance audit](SOEN490_COMPLIANCE_AUDIT.md); use that audit for current status.
+
 Scope: the user-supplied course/project brief, not an independently verified official rubric. **COMPLETE** means the stated repository artifact/policy is supplied; it never asserts that planned product work, remote enforcement or human evidence exists. **PARTIAL** means scaffolding exists but execution/evidence remains. **REQUIRES HUMAN ACTION** means authorized access, a decision or real human evidence is needed. **NOT YET APPLICABLE** means the required application component/stack does not exist yet.
 
 | SOEN 490 Requirement | Implementation | Location | Status |

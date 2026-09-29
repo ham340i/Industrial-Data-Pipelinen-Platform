@@ -8,3 +8,5 @@ The repository currently contains documentation, templates and Python standard-l
 - [Configuration and security boundaries](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/security/security-plan.md)
 
 The first implementation must add verified application install, start, test and build commands. Follow the linked README for current commands rather than assuming a framework has been chosen.
+
+[Detailed developer guide and troubleshooting](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/getting-started.md).

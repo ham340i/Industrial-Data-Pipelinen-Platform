@@ -1,6 +1,12 @@
 # GitHub Project setup
 
-Status: not configured by this work; GitHub CLI unavailable. Actual Project URL: **TODO**. Owner to confirm: `ham340i` (repository owner), or an approved team organization.
+Status: not configured by this work. GitHub CLI is unavailable; authenticated API inspection returned `INSUFFICIENT_SCOPES` because the current token lacks Projects scope. Actual Project URL: **TODO**. Owner to confirm: `ham340i` (repository owner), or an approved team organization.
+
+## Browser setup when CLI/Projects API is unavailable
+
+Sign in as the authorized owner. Open the repository’s **Projects** tab and choose **New project**, or open the owner’s Projects list and reuse the correct existing board. Choose a table layout and name it **Local Pipeline Studio — SOEN 490**. In Project settings, link this repository. Do not create duplicate boards. Then configure the fields/views below and share with **moar82**. Record the actual URL in README.
+
+For API/CLI setup, authorize Projects access on the owner’s machine (classic tokens need `project` for writes; `read:project` alone is read-only). Never paste credentials into the repository or chat. Repository `repo` scope alone was insufficient in the observed API query.
 
 ## Create or reuse the board
 
@@ -33,11 +39,15 @@ In the Project table, use the rightmost **+** / New field; use Settings → Fiel
 
 | Field | Type / options |
 |---|---|
-| Status | Existing single select: Backlog, Ready, In Progress, In Review, Blocked, Done |
+| Title | Built-in issue/item title |
+| Assignee | Built-in Assignees field |
+| Start Date | Date |
+| Target Date | Date |
+| Status | Existing single select: Backlog, Ready, In Progress, In Review, Testing, Stakeholder Review, Blocked, Done |
 | Priority | Single select: Critical, High, Medium, Low |
 | Risk | Single select: High, Medium, Low |
 | Story Points | Number |
-| Ideal Hours | Number |
+| Ideal Time (hours) | Number; record focused effort and assumptions in the issue |
 | Iteration | Iteration field; align dates with course schedule, including winter break and irregular release dates |
 | Feature | Use built-in Labels with `feature:*` values as the authoritative category |
 | Stakeholder Status | Single select: Not Reviewed, Review Requested, Approved, Changes Requested |
@@ -54,8 +64,10 @@ Use **New view**, choose a layout, set filters/grouping in view options, then **
 |---|---|---|
 | Backlog | Table | `status:Backlog` |
 | Current Iteration | Table | `iteration:@current` (requires configured dates) |
+| Next Iteration | Table | Select the next agreed Iteration value in the filter menu |
+| High Risk | Table | `risk:High`; sort by Priority and Target Date |
 | Board | Board | Columns by Status; all active work |
-| Roadmap | Roadmap | Date fields from Iteration; show Milestone |
+| Roadmap | Roadmap | Use Start Date / Target Date; show Iteration and Milestone |
 | By Feature | Table | Group by Labels; filter `label:feature:*` if supported, otherwise select actual feature labels in UI |
 | By Assignee | Table | Group by Assignees |
 | Releases | Table | Group by Release; show Milestone and Stakeholder Status |

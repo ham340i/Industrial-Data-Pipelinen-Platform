@@ -1,40 +1,27 @@
 # SOEN 490 human actions
 
-These require authenticated administration, team decisions or real human evidence. Templates and local validation do not satisfy them. No remote GitHub changes, completion tags or releases were made.
+Labels, all 13 milestones and main protection are now configured. The [current audit](docs/SOEN490_COMPLIANCE_AUDIT.md) records what was verified. Only actions requiring human decisions, access or real evidence remain below.
 
-## Repository access and administration
+## Next actions
 
-- [ ] Initialize the enabled [Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) by saving its first Home page in GitHub. Prepared navigation can then be published with the [Wiki publisher](scripts/github-setup/wiki-setup.md).
+1. **Review the compliance PR linked from [issue #2](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/2).** One independent teammate must approve after CI passes; main is protected, including administrators. No self-approval or fabricated review is allowed.
+2. **Create/reuse the GitHub Project.** Follow [exact setup](docs/GITHUB_PROJECT_SETUP.md); current credentials lack Projects scope. Configure the documented fields/views, link real issues, paste the Project URL into README and share it with **moar82**. Verify the professor can see items and demos.
+3. **Resolve Wiki initialization.** The enabled [Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) still returns repository-not-found over Git. Save its first Home page in the browser, verify its URL, then use the [publisher](scripts/github-setup/wiki-setup.md). Canonical documentation is already maintained in this repository.
+4. **Plan the next two iterations.** Approve a small product vertical slice, assign every student substantial engineering work, create real stories, estimate points/ideal hours, and attach the correct [milestones](docs/milestones.md). Do not retroactively invent estimates for completed setup.
+5. **Confirm stakeholder and technical constraints.** Provide acceptance authority, review cadence, approved source/output contracts, access permission, representative sanitized data and local hardware limits. Select the stack through a reviewed ADR, then implement and test the first slice.
 
-- [ ] Review the generated changes, choose a real tracking issue and contributor attribution, and merge through the team’s workflow. No commits were manufactured.
-- [ ] On an authorized administrator’s machine, install/authenticate GitHub CLI; run the [preview/apply helpers](scripts/github-setup/README.md) for labels and all 13 milestones. Inspect and resolve reported drift without overwriting unrelated settings.
-- [ ] Create/reuse the [GitHub Project](docs/planning/github-project-setup.md), configure fields/views and paste its actual URL into README and the guide.
-- [ ] Share the Project with **moar82** and verify access to repository items and demos; arrange repository access separately when private.
-- [ ] Assign team access and confirm at least one independent reviewer is available. Add CODEOWNERS only after real ownership and valid team handles are agreed.
-- [ ] Confirm both Actions workflows pass remotely, then [protect main](scripts/github-setup/branch-protection.md) using actual check contexts. Record plan/permission limitations if enforcement is unavailable.
-- [ ] Review available GitHub secret scanning/push protection settings and enable appropriate protections.
+## Decisions and evidence the team must supply
 
-## Decisions before product implementation
+- [ ] Confirm supplied course dates and the actual submission time/time zone; prepare the presentation, peer evaluations and stakeholder feedback due by April 13, 2027.
+- [ ] Approve IP ownership, stakeholder/data agreements, NDA applicability and software license. MIT remains only a candidate; no LICENSE is selected. Keep confidential signed documents in restricted storage.
+- [ ] Decide whether [consent/EULA](docs/user-consent-eula.md) is needed and obtain appropriate review; the draft is not approved or effective.
+- [ ] Validate personas/accessibility needs, assign risk owners and review mitigation evidence early each iteration.
+- [ ] Confirm budget, plan allowances, expenses/credits and authorized receipts; review the observed SonarCloud integration and its permissions/data handling.
+- [ ] Confirm intended public Git identity; older commit metadata contains a non-noreply email. Use GitHub noreply prospectively if appropriate; do not rewrite history without a separate coordinated decision.
+- [ ] Approve a dedicated private security/support contact and verify the repository's private-reporting route.
+- [ ] Review existing Dependabot PR #1; no dependency upgrade was merged by this follow-up.
+- [ ] Each contributor records actual [personal engineering contributions](docs/individual-contributions/README.md), tests, learning, failed experiments and AI assistance every iteration/release. Do not claim AI-generated scaffolding as personally authored product engineering.
+- [ ] Record actual meetings, decisions, code reviews, application tests and performance measurements; add approved stakeholder feedback and signoffs.
+- [ ] Complete real iteration/release notes, velocity and justified contractor estimates. Create tags only on reviewed completed states and provide actual demo URLs with verified access.
 
-- [ ] Confirm stakeholder representative, acceptance authority, review cadence and approved manufacturing workflow/data access.
-- [ ] Validate [personas](docs/planning/personas.md), [risks](docs/planning/risks.md), workload/hardware constraints and accessibility needs; assign risk owners.
-- [ ] Approve scope for the next approximately two iterations and create real estimated/assigned issues. Ensure every student has substantial engineering work each iteration.
-- [ ] Select the application stack and initial vertical slice through reviewed design/ADRs. The product cannot run until implemented; the implementation owner must supply verified setup/start/test/build commands, lockfiles and application CI with that work.
-- [ ] Confirm the supplied [course dates](docs/iterations/README.md), including submission time/time zone and any course updates.
-- [ ] Approve [IP/data-use agreements and license](docs/legal/README.md); only then add the selected LICENSE. Determine whether an NDA is required and store signed confidential documents outside the public repository.
-- [ ] Confirm [budget](docs/planning/budget.md), permitted tools, costs/credits and economic-measurement assumptions; assign responsible owners.
-- [ ] Review the [Codex disclosure](.github/AI_USAGE.md), record actual human verification and correct any unaccepted design assumptions.
-
-## Evidence as work occurs
-
-- [ ] Record actual meeting minutes, discussion decisions, learning and failed experiments with issue links.
-- [ ] Maintain requirement → issue → design → branch/commit → PR → tests → iteration/release links and honest individual contribution summaries every iteration.
-- [ ] Collect actual application test results, security reviews and performance measurements; repository-tool checks do not replace them.
-- [ ] Obtain and record authorized stakeholder feedback/signoffs. Preserve pending reviews and changes requested.
-- [ ] Complete iteration/release records and contractor estimates from actual scope and explicit assumptions; create completion tags only after completion.
-- [ ] Provide real demo URLs and verify instructor access for Releases 1–3.
-- [ ] Complete the final group presentation, peer evaluations and stakeholder feedback due by **April 13, 2027**.
-
-## Material grading gaps
-
-A live shared Project, implemented/tested product, per-student engineering evidence, reviewed PRs, real iteration/release history, stakeholder feedback and demos are still missing. The repository foundation supports collecting them; it does not establish that these course outcomes have been achieved.
+The largest remaining grading gaps are a shared live Project, a working/tested product, per-student engineering evidence, authorized stakeholder feedback, and completed iteration/release/demo records. Templates do not close these gaps.

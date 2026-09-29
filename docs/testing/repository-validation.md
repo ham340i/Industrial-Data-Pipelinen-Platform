@@ -1,5 +1,7 @@
 # Repository validation
 
+Historical setup results are preserved below. See the [current compliance audit](../SOEN490_COMPLIANCE_AUDIT.md) for live GitHub findings and follow-up test results.
+
 Local validation performed during this repository-foundation change, completed 2026-09-29. Environment: macOS, Python 3.13.0, Bash; application baseline `71a1383` plus the uncommitted repository changes. No new commit or GitHub Actions run is claimed.
 
 | Check | Result |

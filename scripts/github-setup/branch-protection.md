@@ -1,6 +1,6 @@
 # Protect main
 
-Status: not configured or remotely inspected. Requires repository administration access and a GitHub plan supporting protection for this repository. Preserve existing rules; inspect before editing.
+Status: configured and verified by API during the follow-up audit. Main requires one approval, both GitHub Actions check contexts, up-to-date branches and resolved conversations; admins are included, stale approvals dismissed, and force pushes/deletion disabled. Existing collaborators can review. The following steps document maintenance; preserve existing rules when editing.
 
 1. Merge/push the workflow files through the team’s authorized review process and let both Actions workflows run successfully at least once.
 2. Confirm another teammate can review PRs. In repository Settings → Branches → Add branch protection rule (or edit the existing main rule), use branch pattern `main`.

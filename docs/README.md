@@ -1,6 +1,6 @@
 # Documentation index
 
-Start with the [project README](../README.md), [baseline audit](../SOEN490_REPO_AUDIT.md), [requirements matrix](SOEN490_REQUIREMENTS_MATRIX.md) and [human actions](../SOEN490_HUMAN_ACTIONS.md). Product functionality is planned; templates are not completed evidence.
+Start with the [current compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [developer guide](getting-started.md), [project README](../README.md), [baseline audit](../SOEN490_REPO_AUDIT.md), [requirements matrix](SOEN490_REQUIREMENTS_MATRIX.md) and [human actions](../SOEN490_HUMAN_ACTIONS.md). Product functionality is planned; templates are not completed evidence.
 
 | Topic | Reference |
 |---|---|
@@ -15,6 +15,10 @@ Start with the [project README](../README.md), [baseline audit](../SOEN490_REPO_
 | Diversity/accessibility | [Usability commitments](planning/diversity.md) |
 | Infrastructure | [Tools and pending choices](planning/infrastructure-and-tools.md) |
 | Naming | [Conventions and traceability](planning/naming-conventions.md) |
+| Traceability | [Evidence chain and real issue example](traceability.md) |
+| Individual contributions | [Policy and personal template](individual-contributions/README.md) |
+| Consent/EULA | [Unapproved draft and applicability decision](user-consent-eula.md) |
+| Labels / milestones | [Active features](github-labels.md), [live schedule](milestones.md) |
 | GitHub Project | [Fields, views and professor access](planning/github-project-setup.md) |
 | GitHub administration | [Scripts and protection instructions](../scripts/github-setup/README.md) |
 | GitHub Wiki | [Prepared home page](wiki/Home.md), [publishing instructions](../scripts/github-setup/wiki-setup.md) |

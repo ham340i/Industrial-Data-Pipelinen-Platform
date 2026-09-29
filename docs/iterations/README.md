@@ -4,7 +4,7 @@ No completed iteration evidence exists yet. Copy [iteration template](ITERATION_
 
 ## Course schedule
 
-Dates supplied in the project brief; verify any course updates with the instructor. GitHub setup stores each listed calendar date at 23:59:59 UTC as a date marker, not an assertion about the course submission time zone.
+Dates supplied in the project brief; verify any course updates with the instructor. The catalog submits each calendar date at 23:59:59 UTC; GitHub returns midnight UTC. These are date markers, not an assertion about the course submission time zone. All 13 [milestones now exist](../milestones.md).
 
 | Milestone | Due date |
 |---|---|

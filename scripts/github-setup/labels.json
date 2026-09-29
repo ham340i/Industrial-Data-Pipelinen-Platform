@@ -1,70 +1,5 @@
 [
   {
-    "name": "feature:visual-builder",
-    "color": "1D76DB",
-    "description": "Visual pipeline authoring and configuration"
-  },
-  {
-    "name": "feature:data-ingestion",
-    "color": "1D76DB",
-    "description": "Approved file, SQL and REST ingestion"
-  },
-  {
-    "name": "feature:transformations",
-    "color": "1D76DB",
-    "description": "Reusable transformation blocks"
-  },
-  {
-    "name": "feature:data-quality",
-    "color": "1D76DB",
-    "description": "Schema validation and data-quality rules"
-  },
-  {
-    "name": "feature:execution-engine",
-    "color": "1D76DB",
-    "description": "Local orchestration and reproducibility"
-  },
-  {
-    "name": "feature:data-preview",
-    "color": "1D76DB",
-    "description": "Intermediate data inspection"
-  },
-  {
-    "name": "feature:versioning",
-    "color": "1D76DB",
-    "description": "Pipeline revisions and reuse"
-  },
-  {
-    "name": "feature:run-history",
-    "color": "1D76DB",
-    "description": "Run metadata, diagnostics and logging"
-  },
-  {
-    "name": "feature:governed-output",
-    "color": "1D76DB",
-    "description": "Validated datasets and publication"
-  },
-  {
-    "name": "feature:local-api",
-    "color": "1D76DB",
-    "description": "Potential local output API"
-  },
-  {
-    "name": "feature:analytics",
-    "color": "1D76DB",
-    "description": "Analytics consumer integration"
-  },
-  {
-    "name": "feature:ml-preparation",
-    "color": "1D76DB",
-    "description": "ML-ready data preparation"
-  },
-  {
-    "name": "feature:security",
-    "color": "1D76DB",
-    "description": "Credentials, privacy and access boundaries"
-  },
-  {
     "name": "feature:infrastructure",
     "color": "1D76DB",
     "description": "Repository, CI and developer tooling"
@@ -143,5 +78,10 @@
     "name": "stakeholder:changes-requested",
     "color": "0E8A16",
     "description": "Stakeholder: changes requested"
+  },
+  {
+    "name": "ai-assisted",
+    "color": "7057FF",
+    "description": "Meaningful AI assistance disclosed in the issue or PR"
   }
 ]
