@@ -115,6 +115,8 @@ See the [exact course schedule](docs/iterations/README.md). Completion tags are 
 
 The [documentation index](docs/README.md) links all engineering and course evidence. [Requirements matrix](docs/SOEN490_REQUIREMENTS_MATRIX.md) distinguishes implemented scaffolding from outstanding evidence.
 
+The [GitHub Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) provides a documentation entry point. Its navigation pages are prepared in [docs/wiki](docs/wiki/Home.md); first-page initialization and publication are pending. See [Wiki setup](scripts/github-setup/wiki-setup.md).
+
 ## Release Demos
 
 [Demo registry](docs/demos/README.md) — all video links pending actual releases.

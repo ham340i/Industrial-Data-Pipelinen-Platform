@@ -23,5 +23,6 @@ Use `--repo OWNER/REPO` for an intentionally different target. Scripts page thro
 - [Milestone catalog](milestones.json): exact 13 titles/dates from the brief.
 - [Project setup](setup-project.md): create/reuse board, fields, views and access.
 - [Branch protection](branch-protection.md): configure only after check names exist and a reviewer is available.
+- [Wiki setup](wiki-setup.md): initialize the first page, then publish maintained navigation pages.
 
 Issue forms live under `.github/ISSUE_TEMPLATE/`; they become available after merging to the default branch. Do not create fake issues just to fill the board.

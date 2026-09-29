@@ -17,6 +17,7 @@ Start with the [project README](../README.md), [baseline audit](../SOEN490_REPO_
 | Naming | [Conventions and traceability](planning/naming-conventions.md) |
 | GitHub Project | [Fields, views and professor access](planning/github-project-setup.md) |
 | GitHub administration | [Scripts and protection instructions](../scripts/github-setup/README.md) |
+| GitHub Wiki | [Prepared home page](wiki/Home.md), [publishing instructions](../scripts/github-setup/wiki-setup.md) |
 | Testing/CI | [Testing plan](testing/testing-plan.md), [actual repository validation](testing/repository-validation.md) |
 | Security | [Threats and controls](security/security-plan.md) |
 | Performance | [Measurement plan](performance/performance-plan.md) |
