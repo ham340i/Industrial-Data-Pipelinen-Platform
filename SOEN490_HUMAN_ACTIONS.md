@@ -4,7 +4,7 @@ Labels, all 13 milestones and main protection are now configured. The [current a
 
 ## Next actions
 
-1. **Review the compliance PR linked from [issue #2](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/2).** One independent teammate must approve after CI passes; main is protected, including administrators. No self-approval or fabricated review is allowed.
+1. **Review [compliance PR #3](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/3), linked to [issue #2](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/2).** One independent teammate must approve after CI passes; main is protected, including administrators. No self-approval or fabricated review is allowed.
 2. **Create/reuse the GitHub Project.** Follow [exact setup](docs/GITHUB_PROJECT_SETUP.md); current credentials lack Projects scope. Configure the documented fields/views, link real issues, paste the Project URL into README and share it with **moar82**. Verify the professor can see items and demos.
 3. **Resolve Wiki initialization.** The enabled [Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) still returns repository-not-found over Git. Save its first Home page in the browser, verify its URL, then use the [publisher](scripts/github-setup/wiki-setup.md). Canonical documentation is already maintained in this repository.
 4. **Plan the next two iterations.** Approve a small product vertical slice, assign every student substantial engineering work, create real stories, estimate points/ideal hours, and attach the correct [milestones](docs/milestones.md). Do not retroactively invent estimates for completed setup.

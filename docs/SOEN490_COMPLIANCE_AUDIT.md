@@ -1,5 +1,9 @@
 # SOEN 490 compliance audit
 
+## Current delivery status
+
+[PR #3](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/3) contains this follow-up on `docs/2-soen490-compliance`, tracked by [issue #2](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/2). Implementation commit [9c41b3b](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/9c41b3b69c6df6b0e5141cabf199f2ee367c9057) passed both PR workflows. The PR is open and blocked on the required independent review; changes are not claimed merged or accepted. New follow-up commits use the authenticated account’s GitHub noreply attribution; historical commits remain unchanged.
+
 ## Audit scope and baseline
 
 Follow-up baseline: commit `609b617`. All 72 tracked files were inspected (142,320 bytes), including scripts, tests, workflow/configuration files and documentation. The working tree was clean. This audit uses the supplied SOEN 490 brief; it does not independently certify the official course rubric.
@@ -107,10 +111,64 @@ Status applies to the stated requirement. Complete policies/templates do not est
 | Live setup reconciliation | PASS | Read-only comparison of 17 desired labels and 13 milestones; no duplicate writes |
 | Main protection verification | PASS | Read-back API confirmed required reviews/checks and restrictions |
 | Product build / development / deployment | NOT AVAILABLE | No runnable application exists |
-| Follow-up PR CI | MANUAL ACTION REQUIRED | Push and PR results will be linked after the actual run |
+| Follow-up PR CI | PASS | Implementation commit `9c41b3b`: [CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/36613576426), [Documentation](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/36613576444); latest results remain visible in [PR #3](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/3) |
 | Independent review | MANUAL ACTION REQUIRED | An authorized teammate must review; no approval fabricated |
 | Stakeholder acceptance / product benchmarks | NOT AVAILABLE | No demonstrated product release or measurements |
 
 ## Remaining decisions and highest risks
 
 See [human actions](../SOEN490_HUMAN_ACTIONS.md) for exact next steps and [five observed risks](planning/risks.md#observed-priorities-before-the-next-iteration) for evidence and mitigation. The team must provide approved product scope, a stack decision, stakeholder/data contracts, per-person work allocation, actual estimates, legal/license decisions, costs and real review/demo evidence. These cannot be supplied honestly by repository scaffolding.
+
+## Files created and modified
+
+Compared with baseline `609b617`; application code was not present or rewritten.
+
+| Change | File |
+|---|---|
+| Modified | [.github/AI_USAGE.md](../.github/AI_USAGE.md) |
+| Modified | [.github/CONTRIBUTING.md](../.github/CONTRIBUTING.md) |
+| Modified | [.github/ISSUE_TEMPLATE/user_story.yml](../.github/ISSUE_TEMPLATE/user_story.yml) |
+| Modified | [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) |
+| Created | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| Modified | [README.md](../README.md) |
+| Created | [SECURITY.md](../SECURITY.md) |
+| Modified | [SOEN490_HUMAN_ACTIONS.md](../SOEN490_HUMAN_ACTIONS.md) |
+| Created | [docs/GITHUB_PROJECT_SETUP.md](GITHUB_PROJECT_SETUP.md) |
+| Modified | [docs/README.md](README.md) |
+| Created | [docs/SOEN490_COMPLIANCE_AUDIT.md](SOEN490_COMPLIANCE_AUDIT.md) |
+| Modified | [docs/SOEN490_REQUIREMENTS_MATRIX.md](SOEN490_REQUIREMENTS_MATRIX.md) |
+| Created | [docs/ai-usage.md](ai-usage.md) |
+| Modified | [docs/architecture/README.md](architecture/README.md) |
+| Modified | [docs/demos/README.md](demos/README.md) |
+| Modified | [docs/deployment/deployment-plan.md](deployment/deployment-plan.md) |
+| Created | [docs/getting-started.md](getting-started.md) |
+| Created | [docs/github-labels.md](github-labels.md) |
+| Created | [docs/individual-contributions/README.md](individual-contributions/README.md) |
+| Created | [docs/individual-contributions/TEMPLATE.md](individual-contributions/TEMPLATE.md) |
+| Modified | [docs/iterations/ITERATION_TEMPLATE.md](iterations/ITERATION_TEMPLATE.md) |
+| Modified | [docs/iterations/README.md](iterations/README.md) |
+| Modified | [docs/legal/legal-and-ethical-issues.md](legal/legal-and-ethical-issues.md) |
+| Modified | [docs/meetings/README.md](meetings/README.md) |
+| Created | [docs/milestones.md](milestones.md) |
+| Modified | [docs/performance/performance-plan.md](performance/performance-plan.md) |
+| Modified | [docs/planning/budget.md](planning/budget.md) |
+| Modified | [docs/planning/diversity.md](planning/diversity.md) |
+| Modified | [docs/planning/github-project-setup.md](planning/github-project-setup.md) |
+| Modified | [docs/planning/independent-learning.md](planning/independent-learning.md) |
+| Modified | [docs/planning/infrastructure-and-tools.md](planning/infrastructure-and-tools.md) |
+| Modified | [docs/planning/naming-conventions.md](planning/naming-conventions.md) |
+| Modified | [docs/planning/personas.md](planning/personas.md) |
+| Modified | [docs/planning/risks.md](planning/risks.md) |
+| Modified | [docs/releases/RELEASE_TEMPLATE.md](releases/RELEASE_TEMPLATE.md) |
+| Modified | [docs/security/security-plan.md](security/security-plan.md) |
+| Modified | [docs/testing/repository-validation.md](testing/repository-validation.md) |
+| Created | [docs/traceability.md](traceability.md) |
+| Created | [docs/user-consent-eula.md](user-consent-eula.md) |
+| Modified | [docs/wiki/Getting-Started.md](wiki/Getting-Started.md) |
+| Modified | [docs/wiki/SOEN-490-Evaluation.md](wiki/SOEN-490-Evaluation.md) |
+| Modified | [scripts/check_docs.py](../scripts/check_docs.py) |
+| Modified | [scripts/github-setup/README.md](../scripts/github-setup/README.md) |
+| Modified | [scripts/github-setup/branch-protection.md](../scripts/github-setup/branch-protection.md) |
+| Modified | [scripts/github-setup/labels.json](../scripts/github-setup/labels.json) |
+| Modified | [scripts/github-setup/setup.py](../scripts/github-setup/setup.py) |
+| Modified | [scripts/tests/test_repository_tools.py](../scripts/tests/test_repository_tools.py) |
