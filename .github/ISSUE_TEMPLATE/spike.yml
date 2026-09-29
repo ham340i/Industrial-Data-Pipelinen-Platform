@@ -1,0 +1,137 @@
+{
+  "name": "Spike / research",
+  "description": "Time-bounded investigation with documented outcomes, including failures.",
+  "title": "[Spike / research] ",
+  "labels": [
+    "type:spike"
+  ],
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Use a short, specific issue title. Keep secrets, private data and personal contact details out of this form. Pending evidence must be marked Pending."
+      }
+    },
+    {
+      "type": "input",
+      "id": "feature",
+      "attributes": {
+        "label": "Feature and source requirement",
+        "description": "Name the primary feature:* label and source requirement/brief section. Apply the label after creation."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "question",
+      "attributes": {
+        "label": "Question Being Investigated and Why It Matters",
+        "description": "State the uncertainty and the decision it blocks."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "hypothesis",
+      "attributes": {
+        "label": "Hypothesis",
+        "description": "What do you expect and what would disprove it?"
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "timebox",
+      "attributes": {
+        "label": "Time Box",
+        "description": "Maximum planned effort and stopping condition."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "iteration",
+      "attributes": {
+        "label": "Iteration / Milestone",
+        "description": "Use the exact course milestone title; set the issue milestone and Project iteration after creation. Use Unscheduled for backlog work."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "approaches",
+      "attributes": {
+        "label": "Approaches Tested and Prototype / Code",
+        "description": "Plan at creation; add actual experiment/code links as work proceeds."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "results",
+      "attributes": {
+        "label": "Results, What Failed and Why It Failed",
+        "description": "Pending at creation; record observed outcomes including unsuccessful approaches."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "learning",
+      "attributes": {
+        "label": "What Was Learned and Decision",
+        "description": "Pending at creation; link evidence and ADR if appropriate."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "followup",
+      "attributes": {
+        "label": "Follow-up Stories",
+        "description": "Pending at creation; link actual next work."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "time",
+      "attributes": {
+        "label": "Time Spent",
+        "description": "Pending at creation; record actual effort at close."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "ai",
+      "attributes": {
+        "label": "AI Assistance Disclosure",
+        "description": "State None or complete Tool, Purpose, Human contribution, Verification performed. Do not claim unperformed review."
+      },
+      "validations": {
+        "required": true
+      }
+    }
+  ]
+}

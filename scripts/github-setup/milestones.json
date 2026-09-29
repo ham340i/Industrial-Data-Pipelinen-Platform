@@ -1,0 +1,54 @@
+[
+  {
+    "title": "Iteration 1",
+    "due_on": "2026-10-06T23:59:59Z"
+  },
+  {
+    "title": "Iteration 2",
+    "due_on": "2026-10-20T23:59:59Z"
+  },
+  {
+    "title": "Iteration 3",
+    "due_on": "2026-11-03T23:59:59Z"
+  },
+  {
+    "title": "Iteration 4 (Release 1)",
+    "due_on": "2026-11-17T23:59:59Z"
+  },
+  {
+    "title": "Iteration 5",
+    "due_on": "2026-12-01T23:59:59Z"
+  },
+  {
+    "title": "Iteration 6",
+    "due_on": "2026-12-15T23:59:59Z"
+  },
+  {
+    "title": "Iteration 7",
+    "due_on": "2027-01-19T23:59:59Z"
+  },
+  {
+    "title": "Iteration 8 (Release 2)",
+    "due_on": "2027-02-05T23:59:59Z"
+  },
+  {
+    "title": "Iteration 9",
+    "due_on": "2027-02-16T23:59:59Z"
+  },
+  {
+    "title": "Iteration 10",
+    "due_on": "2027-03-02T23:59:59Z"
+  },
+  {
+    "title": "Iteration 11",
+    "due_on": "2027-03-16T23:59:59Z"
+  },
+  {
+    "title": "Iteration 12",
+    "due_on": "2027-03-30T23:59:59Z"
+  },
+  {
+    "title": "Iteration 13 (Final Release / Release 3)",
+    "due_on": "2027-04-13T23:59:59Z"
+  }
+]

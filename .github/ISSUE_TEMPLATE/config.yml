@@ -1,0 +1,10 @@
+{
+  "blank_issues_enabled": false,
+  "contact_links": [
+    {
+      "name": "Contribution workflow",
+      "url": "https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/.github/CONTRIBUTING.md",
+      "about": "Read the workflow, evidence requirements and privacy guidance."
+    }
+  ]
+}

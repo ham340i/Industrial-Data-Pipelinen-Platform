@@ -1,0 +1,33 @@
+# Local secrets; .env.example may contain names and safe placeholders only.
+.env
+.env.*
+!.env.example
+credentials/
+secrets/
+tokens/
+*.key
+*.pem
+*.p12
+*.pfx
+*.keystore
+
+# Private/local inputs and generated outputs. Use reviewed synthetic fixtures in tests/fixtures/.
+/data/
+/datasets/
+/local-data/
+/generated-data/
+/outputs/
+/runs/
+*.parquet
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# Tool and editor state
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+.vscode/
+.idea/

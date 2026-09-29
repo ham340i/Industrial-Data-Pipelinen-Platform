@@ -1,0 +1,26 @@
+# AI assistance disclosure
+
+Disclose meaningful AI assistance in each affected issue and PR, including generated code, designs, documentation, debugging and tests. Use `None` if no meaningful assistance occurred. Do not infer or retroactively attribute historical work to AI.
+
+```text
+AI Assistance:
+- Tool:
+- Purpose:
+- Human contribution:
+- Verification performed:
+```
+
+Recommended commit footer:
+
+```text
+AI-Assisted: Codex used for <purpose>; reviewed and verified by <contributor>.
+```
+
+Replace placeholders with facts. Do not claim human review until it happens. Contributors remain responsible for correctness, originality, security and understanding the work. Never send secrets, confidential agreements or unapproved stakeholder data to AI tools. Summarize assistance in iteration and release records.
+
+## This repository foundation
+
+- Tool: OpenAI Codex.
+- Purpose: audit the initial README-only repository and draft repository tooling, templates and documentation.
+- Human contribution: supplied project requirements; review/edits and acceptance pending.
+- Verification performed: see [actual local validation](../docs/testing/repository-validation.md). Local checks do not establish product correctness or GitHub Actions success.

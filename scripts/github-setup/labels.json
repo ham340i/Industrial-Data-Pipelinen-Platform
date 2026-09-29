@@ -1,0 +1,147 @@
+[
+  {
+    "name": "feature:visual-builder",
+    "color": "1D76DB",
+    "description": "Visual pipeline authoring and configuration"
+  },
+  {
+    "name": "feature:data-ingestion",
+    "color": "1D76DB",
+    "description": "Approved file, SQL and REST ingestion"
+  },
+  {
+    "name": "feature:transformations",
+    "color": "1D76DB",
+    "description": "Reusable transformation blocks"
+  },
+  {
+    "name": "feature:data-quality",
+    "color": "1D76DB",
+    "description": "Schema validation and data-quality rules"
+  },
+  {
+    "name": "feature:execution-engine",
+    "color": "1D76DB",
+    "description": "Local orchestration and reproducibility"
+  },
+  {
+    "name": "feature:data-preview",
+    "color": "1D76DB",
+    "description": "Intermediate data inspection"
+  },
+  {
+    "name": "feature:versioning",
+    "color": "1D76DB",
+    "description": "Pipeline revisions and reuse"
+  },
+  {
+    "name": "feature:run-history",
+    "color": "1D76DB",
+    "description": "Run metadata, diagnostics and logging"
+  },
+  {
+    "name": "feature:governed-output",
+    "color": "1D76DB",
+    "description": "Validated datasets and publication"
+  },
+  {
+    "name": "feature:local-api",
+    "color": "1D76DB",
+    "description": "Potential local output API"
+  },
+  {
+    "name": "feature:analytics",
+    "color": "1D76DB",
+    "description": "Analytics consumer integration"
+  },
+  {
+    "name": "feature:ml-preparation",
+    "color": "1D76DB",
+    "description": "ML-ready data preparation"
+  },
+  {
+    "name": "feature:security",
+    "color": "1D76DB",
+    "description": "Credentials, privacy and access boundaries"
+  },
+  {
+    "name": "feature:infrastructure",
+    "color": "1D76DB",
+    "description": "Repository, CI and developer tooling"
+  },
+  {
+    "name": "type:story",
+    "color": "5319E7",
+    "description": "Type: story"
+  },
+  {
+    "name": "type:bug",
+    "color": "5319E7",
+    "description": "Type: bug"
+  },
+  {
+    "name": "type:task",
+    "color": "5319E7",
+    "description": "Type: task"
+  },
+  {
+    "name": "type:spike",
+    "color": "5319E7",
+    "description": "Type: spike"
+  },
+  {
+    "name": "type:documentation",
+    "color": "5319E7",
+    "description": "Type: documentation"
+  },
+  {
+    "name": "risk:high",
+    "color": "D93F0B",
+    "description": "Risk: high"
+  },
+  {
+    "name": "risk:medium",
+    "color": "D93F0B",
+    "description": "Risk: medium"
+  },
+  {
+    "name": "risk:low",
+    "color": "D93F0B",
+    "description": "Risk: low"
+  },
+  {
+    "name": "priority:critical",
+    "color": "FBCA04",
+    "description": "Priority: critical"
+  },
+  {
+    "name": "priority:high",
+    "color": "FBCA04",
+    "description": "Priority: high"
+  },
+  {
+    "name": "priority:medium",
+    "color": "FBCA04",
+    "description": "Priority: medium"
+  },
+  {
+    "name": "priority:low",
+    "color": "FBCA04",
+    "description": "Priority: low"
+  },
+  {
+    "name": "stakeholder:review",
+    "color": "0E8A16",
+    "description": "Stakeholder: review"
+  },
+  {
+    "name": "stakeholder:approved",
+    "color": "0E8A16",
+    "description": "Stakeholder: approved"
+  },
+  {
+    "name": "stakeholder:changes-requested",
+    "color": "0E8A16",
+    "description": "Stakeholder: changes requested"
+  }
+]

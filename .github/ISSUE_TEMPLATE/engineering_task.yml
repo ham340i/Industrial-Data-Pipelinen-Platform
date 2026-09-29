@@ -1,0 +1,137 @@
+{
+  "name": "Engineering task",
+  "description": "Technical work that is not naturally a user story.",
+  "title": "[Engineering task] ",
+  "labels": [
+    "type:task"
+  ],
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Use a short, specific issue title. Keep secrets, private data and personal contact details out of this form. Pending evidence must be marked Pending."
+      }
+    },
+    {
+      "type": "input",
+      "id": "feature",
+      "attributes": {
+        "label": "Feature and source requirement",
+        "description": "Name the primary feature:* label and source requirement/brief section. Apply the label after creation."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "problem",
+      "attributes": {
+        "label": "Problem and Engineering Objective",
+        "description": "State the concrete problem and measurable technical objective."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "context",
+      "attributes": {
+        "label": "Technical Context",
+        "description": "Current behavior, constraints and affected components."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "approach",
+      "attributes": {
+        "label": "Proposed Approach and Alternatives Considered",
+        "description": "Design steps, alternatives and tradeoffs; link diagrams/ADRs."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "risks",
+      "attributes": {
+        "label": "Risks",
+        "description": "Failure modes and mitigations."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "acceptance",
+      "attributes": {
+        "label": "Acceptance Criteria",
+        "description": "Use an unchecked measurable checklist."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "testing",
+      "attributes": {
+        "label": "Testing",
+        "description": "Checks, expected outcomes and eventual evidence links."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "effort",
+      "attributes": {
+        "label": "Estimated Effort",
+        "description": "Ideal hours and assumptions."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "story",
+      "attributes": {
+        "label": "Related Story",
+        "description": "Issue link, or standalone task with reason."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "iteration",
+      "attributes": {
+        "label": "Iteration / Milestone",
+        "description": "Use the exact course milestone title; set the issue milestone and Project iteration after creation. Use Unscheduled for backlog work."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "ai",
+      "attributes": {
+        "label": "AI Assistance Disclosure",
+        "description": "State None or complete Tool, Purpose, Human contribution, Verification performed. Do not claim unperformed review."
+      },
+      "validations": {
+        "required": true
+      }
+    }
+  ]
+}

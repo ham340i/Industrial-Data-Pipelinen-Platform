@@ -1,0 +1,229 @@
+{
+  "name": "User story",
+  "description": "A user-valued capability with traceable engineering and acceptance evidence.",
+  "title": "[User story] ",
+  "labels": [
+    "type:story"
+  ],
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Use a short, specific issue title. Keep secrets, private data and personal contact details out of this form. Pending evidence must be marked Pending."
+      }
+    },
+    {
+      "type": "input",
+      "id": "feature",
+      "attributes": {
+        "label": "Feature and source requirement",
+        "description": "Name the primary feature:* label and source requirement/brief section. Apply the label after creation."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "story",
+      "attributes": {
+        "label": "User Story",
+        "description": "Use As a [persona], I want [capability], so that [value]."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "acceptance",
+      "attributes": {
+        "label": "Acceptance Criteria",
+        "description": "Use measurable unchecked checklist items; include failure behavior."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "points",
+      "attributes": {
+        "label": "Story Points",
+        "description": "Team estimate, or Unestimated with reason."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "dropdown",
+      "id": "priority",
+      "attributes": {
+        "label": "Priority / Business Value",
+        "options": [
+          "Critical",
+          "High",
+          "Medium",
+          "Low"
+        ]
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "value",
+      "attributes": {
+        "label": "Business value rationale",
+        "description": "Explain the expected value and how it will be evaluated."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "dropdown",
+      "id": "risk",
+      "attributes": {
+        "label": "Risk",
+        "options": [
+          "High",
+          "Medium",
+          "Low"
+        ]
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "hours",
+      "attributes": {
+        "label": "Ideal Time Estimate",
+        "description": "Estimated focused engineering hours, assumptions, or Unestimated with reason."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "iteration",
+      "attributes": {
+        "label": "Iteration / Milestone",
+        "description": "Use the exact course milestone title; set the issue milestone and Project iteration after creation. Use Unscheduled for backlog work."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "design",
+      "attributes": {
+        "label": "Engineering Design and Implementation Tasks",
+        "description": "Outline approach, component contracts, alternatives and unchecked implementation tasks."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "architecture",
+      "attributes": {
+        "label": "Architecture / Design Links",
+        "description": "Link diagrams and ADRs, or state the design task needed before implementation."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "dependencies",
+      "attributes": {
+        "label": "Dependencies and Discussion Summaries",
+        "description": "Link blocking issues and relevant discussion/meeting summaries, or None."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "testing",
+      "attributes": {
+        "label": "Testing Plan and Unit Tests",
+        "description": "Describe unit cases and other relevant checks, fixtures and expected outcomes; add result links when run."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "signoff",
+      "attributes": {
+        "label": "Stakeholder Signoff",
+        "description": "State Pending, not required with reason, or link an actual authorized review. Never assume approval."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "links",
+      "attributes": {
+        "label": "Related Commits / PRs",
+        "description": "Use Pending at creation; add branch, commit and PR links during work."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "ai",
+      "attributes": {
+        "label": "AI Assistance Disclosure",
+        "description": "State None or complete Tool, Purpose, Human contribution, Verification performed. Do not claim unperformed review."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "checkboxes",
+      "id": "done",
+      "attributes": {
+        "label": "Definition of Done",
+        "description": "Complete at closure; see docs/planning/definition-of-done.md. These are not evidence of completion at issue creation.",
+        "options": [
+          {
+            "label": "Acceptance criteria and implementation complete"
+          },
+          {
+            "label": "Design and documentation updated"
+          },
+          {
+            "label": "Tests and CI pass; evidence linked"
+          },
+          {
+            "label": "Issue, commits and reviewed PR linked; merged into main"
+          },
+          {
+            "label": "Security/performance considered and required stakeholder review recorded"
+          },
+          {
+            "label": "AI assistance disclosed and iteration/contributor evidence updated"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "CI",
+  "on": {
+    "pull_request": {},
+    "push": {
+      "branches": [
+        "main"
+      ]
+    }
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "${{ github.workflow }}-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "check": {
+      "name": "Repository checks",
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 5,
+      "steps": [
+        {
+          "name": "Check out repository",
+          "uses": "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Check repository configuration, syntax and hygiene",
+          "run": "python3 scripts/check_repository.py"
+        },
+        {
+          "name": "Test repository tools",
+          "run": "python3 -m unittest discover -s scripts/tests -v"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "name": "Bug report",
+  "description": "Reproducible incorrect behavior and a regression plan.",
+  "title": "[Bug report] ",
+  "labels": [
+    "type:bug"
+  ],
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Use a short, specific issue title. Keep secrets, private data and personal contact details out of this form. Pending evidence must be marked Pending."
+      }
+    },
+    {
+      "type": "input",
+      "id": "feature",
+      "attributes": {
+        "label": "Feature and source requirement",
+        "description": "Name the primary feature:* label and source requirement/brief section. Apply the label after creation."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "attributes": {
+        "label": "Description",
+        "description": "Describe the defect and affected workflow."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "steps",
+      "attributes": {
+        "label": "Steps to Reproduce",
+        "description": "Minimal numbered steps and a safe synthetic input."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "expected",
+      "attributes": {
+        "label": "Expected Result",
+        "description": "Expected behavior and relevant acceptance criteria."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "actual",
+      "attributes": {
+        "label": "Actual Result",
+        "description": "Observed behavior; do not include sensitive values."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "environment",
+      "attributes": {
+        "label": "Environment",
+        "description": "Revision, OS, runtime and relevant safe configuration."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "dropdown",
+      "id": "severity",
+      "attributes": {
+        "label": "Severity",
+        "options": [
+          "Critical",
+          "High",
+          "Medium",
+          "Low"
+        ]
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "dropdown",
+      "id": "risk",
+      "attributes": {
+        "label": "Risk",
+        "options": [
+          "High",
+          "Medium",
+          "Low"
+        ]
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "logs",
+      "attributes": {
+        "label": "Screenshots / Logs",
+        "description": "Use sanitized evidence only; or None."
+      },
+      "validations": {
+        "required": false
+      }
+    },
+    {
+      "type": "input",
+      "id": "story",
+      "attributes": {
+        "label": "Related Story",
+        "description": "Issue link or Unknown."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "regression",
+      "attributes": {
+        "label": "Regression Test",
+        "description": "Reproducer/test plan; link passing evidence after the fix."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "iteration",
+      "attributes": {
+        "label": "Iteration / Milestone",
+        "description": "Use the exact course milestone title; set the issue milestone and Project iteration after creation. Use Unscheduled for backlog work."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "ai",
+      "attributes": {
+        "label": "AI Assistance Disclosure",
+        "description": "State None or complete Tool, Purpose, Human contribution, Verification performed. Do not claim unperformed review."
+      },
+      "validations": {
+        "required": true
+      }
+    }
+  ]
+}
