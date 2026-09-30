@@ -33,3 +33,11 @@ Start with the [current compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [develop
 | Stakeholder signoff | [Review process and template](stakeholder/README.md) |
 | Contributing | [Workflow](../.github/CONTRIBUTING.md), [Definition of Done](planning/definition-of-done.md) |
 | AI assistance | [Disclosure policy](../.github/AI_USAGE.md) |
+
+## Release 1 engineering plan
+
+- [Setup report: every issue, assignment and next action](release-1-setup-report.md)
+- [Scope and baseline](release-1-plan.md)
+- [Target architecture](architecture/release-1-target.md) and [Block SDK](architecture/block-sdk-release-1.md)
+- [Workload](release-1-workload.md), [review rotation](code-review-plan.md), [dependencies](release-1-dependencies.md), [traceability](release-1-traceability.md)
+- Planned iteration records: [1](releases/iteration-1.md), [2](releases/iteration-2.md), [3](releases/iteration-3.md), [4 / Release 1](releases/iteration-4-release-1.md)

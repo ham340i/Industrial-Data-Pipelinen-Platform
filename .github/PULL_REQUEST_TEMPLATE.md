@@ -48,6 +48,9 @@ Closes #<!-- issue number -->
 ## Documentation Updated
 <!-- Links, including iteration/contribution evidence. -->
 
+## Reviewer
+<!-- Request the planned student reviewer from the issue. No self-review. moar82 is academic oversight, not an engineering reviewer. Record substitutions explicitly. -->
+
 ## Stakeholder Signoff / Impact
 <!-- Acceptance status, feedback and signoff link where required. -->
 

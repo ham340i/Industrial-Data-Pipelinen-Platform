@@ -4,7 +4,7 @@ No product is runnable or packaged yet. Only repository checks run locally and i
 
 | Environment | Intended use | Requirements before use |
 |---|---|---|
-| Development | Implement and run synthetic pipelines locally | Select stack, document exact setup/start/test commands |
+| Development | Implement and run synthetic pipelines locally | Implement the supplied Release 1 stack and document exact setup/start/test commands |
 | Test | Repeatable automated validation | Isolated fixtures/storage, locked dependencies, reproducible test runner |
 | Stakeholder/local | Demonstrate on approved workstation and sources | Data approval, credential setup, hardware validation, acceptance script |
 | Future production | Supported local installation | Packaging/signing decision, upgrade/rollback, recovery, support and security review |

@@ -1,32 +1,16 @@
 # GitHub labels
 
-Live setup created the labels below while preserving existing generic and Dependabot labels. No product application is implemented, so only the implemented repository infrastructure has an active feature label. Labels categorize work; they do not prove feature completion.
+The supplied Release 1 brief now authorizes actual future work in named product areas. Feature labels categorize this planned scope; none implies an implemented feature. Existing labels were preserved.
 
-| Active category | Labels | Use |
-|---|---|---|
-| Implemented feature | `feature:infrastructure` | Repository tools, CI and documentation infrastructure |
-| Type | `type:story`, `type:bug`, `type:task`, `type:spike`, `type:documentation` | One primary work type |
-| Risk | `risk:high`, `risk:medium`, `risk:low` | Assessed delivery/technical risk with rationale |
-| Priority | `priority:critical`, `priority:high`, `priority:medium`, `priority:low` | Agreed business/engineering priority |
-| Stakeholder | `stakeholder:review`, `stakeholder:approved`, `stakeholder:changes-requested` | Actual review status, with evidence for approval |
-| AI | `ai-assisted` | Meaningful assistance; detailed disclosure still required |
+| Category | Labels / policy |
+|---|---|
+| Product features | `feature:frontend`, `feature:builder`, `feature:block-sdk`, `feature:api`, `feature:execution-engine`, `feature:validation`, `feature:sources`, `feature:transforms`, `feature:data-quality`, `feature:preview`, `feature:parquet`, `feature:metadata`, `feature:telemetry`, `feature:testing`, `feature:documentation` |
+| DevOps equivalent | Reuse `feature:infrastructure`; do not create duplicate `feature:devops` |
+| Work types | `type:story`, `type:task`, `type:spike`, `type:bug`, `type:documentation`; reuse `type:task` instead of duplicate `type:technical` |
+| Release | `release:1` for assigned work and the acceptance tracker |
+| Priority | `priority:critical`, `priority:high`, `priority:medium`, `priority:low` |
+| Risk | `risk:high`, `risk:medium`, `risk:low` |
+| Stakeholder | `stakeholder:review`, `stakeholder:approved`, `stakeholder:changes-requested`; apply only with the actual review state |
+| AI | `ai-assisted`; issue/commit/PR disclosure still required |
 
-The [active catalog](../scripts/github-setup/labels.json) and [create-only helper](../scripts/github-setup/README.md) support safe reruns. Retain `type:task` rather than adding an equivalent `type:technical` alias.
-
-## Proposed product labels — not created
-
-These came from the project brief, not implemented code. Add a label only when the team accepts real feature scope and links it to a story/design; do not imply completed functionality.
-
-- `feature:visual-builder` — Visual pipeline authoring and configuration.
-- `feature:data-ingestion` — Approved file, SQL and REST ingestion.
-- `feature:transformations` — Reusable transformation blocks.
-- `feature:data-quality` — Schema validation and data-quality rules.
-- `feature:execution-engine` — Local orchestration and reproducibility.
-- `feature:data-preview` — Intermediate data inspection.
-- `feature:versioning` — Pipeline revisions and reuse.
-- `feature:run-history` — Run metadata, diagnostics and logging.
-- `feature:governed-output` — Validated datasets and publication.
-- `feature:local-api` — Potential local output API.
-- `feature:analytics` — Analytics consumer integration.
-- `feature:ml-preparation` — ML-ready data preparation.
-- `feature:security` — Credentials, privacy and access boundaries.
+See the [catalog](../scripts/github-setup/labels.json) and [Release 1 backlog](planning/release-1-backlog.json). REST sources, advanced connectors and unrelated product categories remain uncommitted. Keep one primary feature per work item unless a real cross-feature query needs another label.

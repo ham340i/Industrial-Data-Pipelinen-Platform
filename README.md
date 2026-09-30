@@ -4,9 +4,13 @@
 
 Local Pipeline Studio is a proposed local-first visual ETL platform for Concordia University’s SOEN 490 capstone. It aims to help process specialists build, validate, execute, inspect, version and reuse manufacturing data pipelines that integrate approved existing sources and models with analytics and machine-learning workflows.
 
+## Release 1 Plan
+
+The team has supplied the **Industrial Data Pipeline Engineering Platform** Release 1 target for industry partner **Pratt & Whitney Canada**. Local Pipeline Studio remains the existing product alias. See the [Release 1 setup report](docs/release-1-setup-report.md) for assigned issues, estimates, dependencies and review rotation, and the [target architecture](docs/architecture/release-1-target.md) for the specified stack. These are future engineering commitments, not completed product features or stakeholder approvals.
+
 ## Project Status
 
-**Planning and repository foundation. No application is implemented yet.** This repository provides engineering workflows, documentation templates and repository CI. Architecture, runtime, product dependencies and initial stories require team decisions. No releases or stakeholder approvals are claimed. See the [baseline audit](SOEN490_REPO_AUDIT.md).
+**Planning and repository foundation. No application is implemented yet.** This repository provides engineering workflows, documentation templates and repository CI. The Release 1 target architecture and backlog are now specified; compatible dependency versions, implementation decisions and team capacity still require refinement. No releases or stakeholder approvals are claimed. See the [baseline audit](SOEN490_REPO_AUDIT.md).
 
 ## Problem
 
@@ -38,8 +42,8 @@ This is a proposed logical architecture. See [component status and boundaries](d
 
 | Area | Current state |
 |---|---|
-| Product language, UI, engine, persistence | Not selected |
-| Application package manager, build and test framework | Not selected |
+| Target product stack (not installed) | React 19/TypeScript/Vite, FastAPI/Python 3.12, Polars/PyArrow, Parquet/DuckDB, SQLite/SQLAlchemy/Alembic |
+| Target product tests/quality (not installed) | pytest, Vitest/React Testing Library, Playwright, Ruff/mypy, ESLint/Prettier; package manager/lock details require foundation work |
 | Repository tooling | Python 3.11+ standard library; Bash; Git |
 | CI | GitHub Actions for repository checks; application CI pending |
 
@@ -113,7 +117,7 @@ docs/demos/             Future video links
 
 ## Development
 
-Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current development concerns Python/Bash repository utilities and documentation; the product stack is still undecided.
+Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current development concerns Python/Bash repository utilities and documentation; the target product stack is documented but not implemented.
 
 ## Team Workflow
 
@@ -121,7 +125,7 @@ Requirement → feature label → issue → design → branch → commits → PR
 
 ## GitHub Project Board
 
-Project URL: **TODO — create/link the actual board**. The authenticated API cannot access Projects with the current token scope. Follow [Project setup](docs/GITHUB_PROJECT_SETUP.md), including sharing with **moar82**. [Milestones](docs/milestones.md) and [active labels](docs/github-labels.md) are now configured.
+Project: **SOEN 490 - Industrial Data Pipeline Platform**. URL: **TODO — create/link the actual board**. The authenticated API cannot access Projects with the current token scope. Follow [Project setup](docs/GITHUB_PROJECT_SETUP.md), including sharing with **moar82**. [Milestones](docs/milestones.md) and [active labels](docs/github-labels.md) are now configured.
 
 ## Iterations & Releases
 

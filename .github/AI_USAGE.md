@@ -30,3 +30,7 @@ The Wiki navigation and publishing helper were also drafted with Codex from thes
 ## Compliance follow-up
 
 Codex inspected live GitHub configuration, configured supported labels/milestones/protection, drafted additional onboarding/consent/contribution documentation, and updated tooling/tests for milestone date normalization and maintained Wiki links. The user supplied requirements; independent human review remains pending. See [issue #2](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/2), its linked PR and the [compliance audit](../docs/SOEN490_COMPLIANCE_AUDIT.md) for actual verification. This does not claim a student personally authored the generated work.
+
+## Release 1 planning
+
+Codex drafted the Release 1 backlog, initial estimates, balanced primary/reviewer allocation, dependency graph, target-architecture documentation and plan checks from the supplied team brief. The brief supplies the partner, stack, roster, dates and product goal; it does not establish implementation or stakeholder approval. Student refinement, design, code, tests, reviews and signoffs remain future work. Live issue creation/assignment is planning activity, not an individual student contribution claim.

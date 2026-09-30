@@ -1,6 +1,8 @@
 """Regression tests for failure detection and non-destructive GitHub setup."""
 
 import contextlib
+import copy
+import json
 import importlib.util
 import io
 from pathlib import Path
@@ -13,6 +15,7 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 from check_docs import check_markdown
 from check_repository import suspicious, validate_configuration
+from check_release_plan import validate as validate_release_plan
 
 spec = importlib.util.spec_from_file_location('github_setup', SCRIPTS / 'github-setup/setup.py')
 setup = importlib.util.module_from_spec(spec)
@@ -119,6 +122,24 @@ class SetupTests(unittest.TestCase):
         with patch.object(setup, 'gh_json') as api, contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(setup.reconcile('owner/repo', 'milestones', [desired], [existing], True), 2)
             api.assert_not_called()
+
+
+class ReleasePlanTests(unittest.TestCase):
+    def setUp(self):
+        self.plan = json.loads((SCRIPTS.parent / 'docs/planning/release-1-backlog.json').read_text())
+
+    def test_professor_cannot_receive_engineering_assignment(self):
+        invalid = copy.deepcopy(self.plan)
+        invalid['items'][0]['owner'] = 'moar82'
+        with self.assertRaises(AssertionError):
+            validate_release_plan(invalid)
+
+    def test_same_iteration_dependency_cycle_is_rejected(self):
+        invalid = copy.deepcopy(self.plan)
+        sdk = next(x for x in invalid['items'] if x['key'] == 'I1-05')
+        sdk['dependencies'].append('I1-06')
+        with self.assertRaises(AssertionError):
+            validate_release_plan(invalid)
 
 
 if __name__ == '__main__':

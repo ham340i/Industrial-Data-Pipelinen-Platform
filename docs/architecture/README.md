@@ -9,7 +9,7 @@
 - [Deployment architecture](deployment-architecture.md)
 - [Architecture decision records](decisions/README.md)
 
-Update status and add code/test links when components become real. No framework or persistence decision has been approved.
+Update status and add code/test links when components become real. The later team-supplied [Release 1 target](release-1-target.md) specifies frameworks and persistence. They are not installed or implemented; detailed decisions and compatibility tests remain to be recorded.
 
 ## Implemented repository tooling
 

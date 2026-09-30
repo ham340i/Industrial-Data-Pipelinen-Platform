@@ -53,3 +53,9 @@ Run the [README checks](../README.md#running-tests) locally. Do not commit secre
 Maintain a [personal contribution record](../docs/individual-contributions/README.md) every iteration/release and link the [traceability chain](../docs/traceability.md). Record who actually designed, implemented and verified each part; disclose AI-generated work. Plan roughly the next two milestones with the team and record estimates before execution where possible. Never invent retrospective estimates.
 
 Main now requires one approving teammate review, both named repository checks, an up-to-date branch and resolved conversations, including for administrators. Stale approvals are dismissed after new commits. Do not bypass the rule to mark a task complete.
+
+## Release 1 ownership
+
+Use the [Release 1 workload](../docs/release-1-workload.md) and [review rotation](../docs/code-review-plan.md). Only the eight named students receive Release 1 engineering assignments. Professor Rodrigo Morales Alvarado (`moar82`) retains academic oversight and must never receive student tasks, story points or routine engineering PR reviews. Primary owners write feature tests and documentation; reviewers are additional students, not substitute implementers.
+
+Use `feature/<issue-number>-short-name`, `fix/<issue-number>-short-name` or `docs/<issue-number>-short-name`; the earlier `bugfix/` convention remains valid for existing branches. Commits use `<type>: <description> (#issue)` (an optional scope is allowed). Actual implementation follows issue → student → branch → tests → PR → CI → student review → approval → merge → closure. Never close a planned story merely because it was assigned.

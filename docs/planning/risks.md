@@ -1,5 +1,7 @@
 # Risk register
 
+For the later assigned Release 1 scope, use the [Release 1 risk register](../release-1-plan.md#release-1-risk-register), which links actual mitigation work and owners. The observations below preserve the earlier compliance-audit baseline; the supplied target/backlog resolves planning gaps but does not implement the product.
+
 The observed risks below are grounded in this repository/API audit. Earlier project hypotheses follow separately and remain unvalidated.
 
 ## Observed priorities before the next iteration

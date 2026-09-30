@@ -4,6 +4,8 @@
 
 You can run repository validation and administration tooling. **The ETL application does not exist yet.** There is no frontend/backend framework, database, development server or product build command to run.
 
+The later [Release 1 target](architecture/release-1-target.md) specifies the intended stack. Foundation issues must implement it and add verified product commands; this guide still documents only currently runnable tooling.
+
 ## Prerequisites
 
 Git, Python 3.11+ and Bash. Tests use the Python standard library only. Optional GitHub administration requires authenticated GitHub CLI; Wiki publication uses authorized SSH access. Repository checks require no network access or credentials.
