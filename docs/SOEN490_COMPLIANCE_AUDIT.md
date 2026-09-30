@@ -1,5 +1,7 @@
 # SOEN 490 compliance audit
 
+This is the compliance follow-up snapshot before the later Release 1 assignment brief. The [Release 1 setup report](release-1-setup-report.md) records the subsequent target stack, assigned product backlog, workload and dependency verification. Earlier missing-backlog/stack findings below are historical, not claims about the later plan.
+
 ## Current delivery status
 
 [PR #3](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/3) contains this follow-up on `docs/2-soen490-compliance`, tracked by [issue #2](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/2). Implementation commit [9c41b3b](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/9c41b3b69c6df6b0e5141cabf199f2ee367c9057) passed both PR workflows. The PR is open and blocked on the required independent review; changes are not claimed merged or accepted. New follow-up commits use the authenticated account’s GitHub noreply attribution; historical commits remain unchanged.

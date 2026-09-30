@@ -22,3 +22,5 @@ Local Pipeline Studio is a SOEN 490 capstone project for a local-first visual ET
 - [Remaining human actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/SOEN490_HUMAN_ACTIONS.md)
 
 GitHub Project board: pending creation and sharing with **moar82**. See [setup instructions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/planning/github-project-setup.md).
+
+[Release 1 assigned engineering plan](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/release-1-setup-report.md) — future work, not completed evidence.

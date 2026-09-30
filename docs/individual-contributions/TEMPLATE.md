@@ -23,6 +23,9 @@ TODO: direct links; preserve accurate authorship.
 ## Tests
 TODO: cases you designed, commands, revision, environment, results and evidence.
 
+## Reviews
+TODO: meaningful PRs you reviewed, design/test findings and follow-up; do not claim planned assignments as completed reviews.
+
 ## Problems Solved
 TODO: constraints, investigation and outcome.
 

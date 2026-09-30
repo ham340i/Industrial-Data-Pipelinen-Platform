@@ -8,7 +8,7 @@ Labels, all 13 milestones and main protection are now configured. The [current a
 2. **Create/reuse the GitHub Project.** Follow [exact setup](docs/GITHUB_PROJECT_SETUP.md); current credentials lack Projects scope. Configure the documented fields/views, link real issues, paste the Project URL into README and share it with **moar82**. Verify the professor can see items and demos.
 3. **Resolve Wiki initialization.** The enabled [Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) still returns repository-not-found over Git. Save its first Home page in the browser, verify its URL, then use the [publisher](scripts/github-setup/wiki-setup.md). Canonical documentation is already maintained in this repository.
 4. **Plan the next two iterations.** Approve a small product vertical slice, assign every student substantial engineering work, create real stories, estimate points/ideal hours, and attach the correct [milestones](docs/milestones.md). Do not retroactively invent estimates for completed setup.
-5. **Confirm stakeholder and technical constraints.** Provide acceptance authority, review cadence, approved source/output contracts, access permission, representative sanitized data and local hardware limits. Select the stack through a reviewed ADR, then implement and test the first slice.
+5. **Confirm stakeholder and technical constraints.** Provide acceptance authority, review cadence, approved source/output contracts, access permission, representative sanitized data and local hardware limits. Refine the supplied [Release 1 target](docs/architecture/release-1-target.md), record detailed ADRs, then implement and test the first slice.
 
 ## Decisions and evidence the team must supply
 
@@ -25,3 +25,7 @@ Labels, all 13 milestones and main protection are now configured. The [current a
 - [ ] Complete real iteration/release notes, velocity and justified contractor estimates. Create tags only on reviewed completed states and provide actual demo URLs with verified access.
 
 The largest remaining grading gaps are a shared live Project, a working/tested product, per-student engineering evidence, authorized stakeholder feedback, and completed iteration/release/demo records. Templates do not close these gaps.
+
+## Release 1 planning follow-up
+
+Use the [assigned Release 1 report](docs/release-1-setup-report.md) and [workload](docs/release-1-workload.md) to confirm estimates, availability and reviewer rotation. The eight students are explicitly listed there; **moar82 is the professor, never an engineering assignee or routine reviewer**. His repository invitation is pending and has been preserved. Project sharing still requires an authorized owner because current API credentials lack Projects scope. The new product backlog supersedes the earlier absence of planned stories; actual implementation and evidence remain pending.

@@ -18,6 +18,8 @@ All 13 milestones were created on GitHub with the supplied calendar dates; no ex
 | Iteration 12 | 2027-03-30 | TODO — team-approved scope | Open; completion not claimed | [Milestone 12](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/milestone/12) |
 | Iteration 13 (Final Release / Release 3) | 2027-04-13 | TODO — team-approved scope | Open; completion not claimed | [Milestone 13](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/milestone/13) |
 
+For the subsequent assigned Release 1 plan, see the [setup report](release-1-setup-report.md) and [iteration records](releases/README.md). Product goals for Iterations 1–4 are now supplied; the original generic goal placeholders above are superseded by that plan.
+
 ## Plan approximately two iterations ahead
 
 At planning, review the next two milestones, choose approved stories, assign owners, agree points/ideal hours, prioritize risk-reduction experiments and reconcile Project iteration with the issue milestone. Do not fabricate future stories or estimates. Candidate discussions supported by the current gaps: approve a minimal vertical slice, choose the stack through an ADR, and validate an approved source/output contract. These are recommendations, not assigned or completed work.

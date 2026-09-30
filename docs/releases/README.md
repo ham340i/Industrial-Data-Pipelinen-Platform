@@ -10,3 +10,7 @@ No releases have occurred. Planned course releases: Release 1 at Iteration 4, Re
 6. Record installation/rollback guidance once a product artifact exists. Never publish secrets or private datasets with artifacts.
 
 A tag, generated notes or a passing repository check alone does not establish product acceptance.
+
+## Planned Release 1 iteration records
+
+The [assigned Release 1 plan](../release-1-setup-report.md) has future-work records for [Iteration 1](iteration-1.md), [Iteration 2](iteration-2.md), [Iteration 3](iteration-3.md) and [Iteration 4 / Release 1](iteration-4-release-1.md). They list actual assignments and initial estimates, with all completed work, reviews, results, demos and approvals explicitly pending.
