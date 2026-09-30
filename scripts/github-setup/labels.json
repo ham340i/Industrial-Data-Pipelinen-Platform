@@ -80,11 +80,6 @@
     "description": "Stakeholder: changes requested"
   },
   {
-    "name": "ai-assisted",
-    "color": "7057FF",
-    "description": "Meaningful AI assistance disclosed in the issue or PR"
-  },
-  {
     "name": "feature:frontend",
     "color": "1D76DB",
     "description": "Release 1 workbench and application UI"
