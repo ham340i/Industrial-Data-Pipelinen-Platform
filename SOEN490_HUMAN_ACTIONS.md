@@ -4,6 +4,8 @@ These require authenticated administration, team decisions or real human evidenc
 
 ## Repository access and administration
 
+- [ ] Initialize the enabled [Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) by saving its first Home page in GitHub. Prepared navigation can then be published with the [Wiki publisher](scripts/github-setup/wiki-setup.md).
+
 - [ ] Review the generated changes, choose a real tracking issue and contributor attribution, and merge through the team’s workflow. No commits were manufactured.
 - [ ] On an authorized administrator’s machine, install/authenticate GitHub CLI; run the [preview/apply helpers](scripts/github-setup/README.md) for labels and all 13 milestones. Inspect and resolve reported drift without overwriting unrelated settings.
 - [ ] Create/reuse the [GitHub Project](docs/planning/github-project-setup.md), configure fields/views and paste its actual URL into README and the guide.

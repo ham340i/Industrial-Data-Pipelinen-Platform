@@ -20,4 +20,8 @@ The tests check broken local links/headings, escaping paths, whitespace, ignored
 
 The Markdown checker covers local inline links and ordinary heading anchors; it does not fetch external URLs or parse reference-style links, embedded HTML or Mermaid semantics. Configuration files use JSON syntax, a valid YAML subset, so the Python standard library can parse them without a dependency installation. Structural checks cover selected rules, not GitHub’s entire remote schema. Keep this serialization when editing `.yml` files, or deliberately add a maintained YAML parser and locked tooling dependencies if the team chooses standard block YAML later.
 
+## Wiki follow-up validation
+
+Prepared eight topic/home pages plus sidebar and footer, and a preview/apply publisher. Repository checks passed for 72 files, documentation checks passed for 54 Markdown files, and the nine existing tool tests passed. All 67 Wiki links to maintained pages or repository documents were checked against local source paths and heading anchors. The publisher help command passed. Live publication remains blocked: the Wiki setting is enabled, but both SSH and HTTPS returned repository-not-found when publication was attempted.
+
 Actions are pinned to a commit SHA with read-only contents permissions, no secrets and no persisted checkout credentials. Dependabot is configured for Actions only. No dependencies exist to install/cache/audit; application gates must be added with the first implementation. Secret scanning here is deliberately limited and does not guarantee absence of secrets.

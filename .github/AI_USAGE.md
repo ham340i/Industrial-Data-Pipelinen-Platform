@@ -24,3 +24,5 @@ Replace placeholders with facts. Do not claim human review until it happens. Con
 - Purpose: audit the initial README-only repository and draft repository tooling, templates and documentation.
 - Human contribution: supplied project requirements; review/edits and acceptance pending.
 - Verification performed: see [actual local validation](../docs/testing/repository-validation.md). Local checks do not establish product correctness or GitHub Actions success.
+
+The Wiki navigation and publishing helper were also drafted with Codex from these repository documents. Local checks and source-link verification are recorded in the validation report; human review remains pending.
