@@ -147,7 +147,7 @@ The [documentation index](docs/README.md) links all engineering and course evide
 | Engineering evidence | [Traceability](docs/traceability.md), [personal contributions](docs/individual-contributions/README.md), [learning](docs/planning/independent-learning.md), [meetings](docs/meetings/README.md) |
 | Delivery | [Iterations](docs/iterations/README.md), [releases](docs/releases/README.md), [demos](docs/demos/README.md) |
 
-The [GitHub Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) provides a documentation entry point. Its navigation pages are prepared in [docs/wiki](docs/wiki/Home.md); first-page initialization and publication are pending. See [Wiki setup](scripts/github-setup/wiki-setup.md).
+The [GitHub Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) provides a documentation entry point. Its eight content pages, sidebar and footer are published; maintained sources are in [docs/wiki](docs/wiki/Home.md). See [Wiki setup](scripts/github-setup/wiki-setup.md).
 
 ## Release Demos
 

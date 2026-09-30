@@ -1,8 +1,8 @@
 # GitHub Wiki setup and maintenance
 
-The repository's Wiki setting was verified as enabled through GitHub's public API. Its separate Git repository was not accessible when checked; first-page initialization and publication are pending. No live pages are claimed yet.
+The Wiki is initialized and published. Commit `6984b4d` contains eight content pages plus the sidebar and footer from `docs/wiki/`. Documentation links use published planning revision `0caf6f9` while the compliance documentation awaits merge into `main`.
 
-## Initialize once
+## Initialize once (completed)
 
 Open the [repository Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki) while signed in with write access. Choose **Create the first page**, keep the title **Home**, enter temporary text and save. The maintained Home page will replace that temporary text on publication. See [GitHub's Wiki instructions](https://docs.github.com/en/communities/documenting-your-project-with-wikis/adding-or-editing-wiki-pages).
 
