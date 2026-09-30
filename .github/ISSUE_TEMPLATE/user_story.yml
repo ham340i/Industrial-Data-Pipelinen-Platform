@@ -157,8 +157,19 @@
       "type": "textarea",
       "id": "testing",
       "attributes": {
-        "label": "Testing Plan and Unit Tests",
-        "description": "Describe unit cases and other relevant checks, fixtures and expected outcomes; add result links when run."
+        "label": "Unit Tests Required",
+        "description": "List cases, fixtures and expected outcomes. Add test/result links when implemented; Pending at creation is honest."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "integration",
+      "attributes": {
+        "label": "Integration Tests Required",
+        "description": "Specify component boundaries, fixtures, expected outcomes and result links, or not applicable with reason."
       },
       "validations": {
         "required": true
@@ -205,22 +216,58 @@
         "description": "Complete at closure; see docs/planning/definition-of-done.md. These are not evidence of completion at issue creation.",
         "options": [
           {
-            "label": "Acceptance criteria and implementation complete"
+            "label": "User story complete"
           },
           {
-            "label": "Design and documentation updated"
+            "label": "Story points assigned"
           },
           {
-            "label": "Tests and CI pass; evidence linked"
+            "label": "Priority/value specified"
           },
           {
-            "label": "Issue, commits and reviewed PR linked; merged into main"
+            "label": "Risk documented"
           },
           {
-            "label": "Security/performance considered and required stakeholder review recorded"
+            "label": "Feature label assigned"
           },
           {
-            "label": "AI assistance disclosed and iteration/contributor evidence updated"
+            "label": "Iteration milestone assigned"
+          },
+          {
+            "label": "Ideal task time estimated"
+          },
+          {
+            "label": "Design/architecture evidence linked"
+          },
+          {
+            "label": "Implementation complete"
+          },
+          {
+            "label": "Unit tests added or explicit applicability rationale"
+          },
+          {
+            "label": "Integration tests added if applicable"
+          },
+          {
+            "label": "Tests passing"
+          },
+          {
+            "label": "Commits/PR linked"
+          },
+          {
+            "label": "Documentation updated"
+          },
+          {
+            "label": "Stakeholder signoff obtained or status documented"
+          },
+          {
+            "label": "AI assistance acknowledged"
+          },
+          {
+            "label": "Acceptance criteria satisfied"
+          },
+          {
+            "label": "Independent PR review complete and merged into main"
           }
         ]
       }

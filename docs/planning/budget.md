@@ -1,9 +1,11 @@
 # Budget
 
-No spending or credits are recorded. Confirm currency, estimates, approvals and actual expenses with the team. `TBD` is unknown, not zero; do not invent receipts or savings.
+No spending, plan prices or credits have been verified. Unknown cost is not zero. Confirm currency, plan limits, receipts and responsibility with the owner before commitments.
 
-| Resource | Purpose | Estimated Cost | Free/Education Credit | Actual Cost | Receipt |
+| Resource | Purpose | Normal Cost | Student/Free Cost | Actual Cost | Notes |
 |---|---|---:|---:|---:|---|
-| TODO approved resource | TODO | TBD | TBD | TBD | TODO restricted reference if sensitive |
+| GitHub repository / Issues / Actions | Observed source hosting, workflow and CI | TBD | TBD — verify current plan/allowance | TBD | Existing service; no purchase made by this setup |
+| Local workstation | Observed development and validation environment | TBD | TBD | TBD | Existing equipment; ownership/specifications/cost not audited |
+| SonarCloud integration | Neutral code-analysis check observed remotely | TBD | TBD | TBD | Owner must confirm intended account, plan and data access |
 
-Review candidate costs for test hardware, approved storage, tooling and deployment only when needed. Keep personal/payment details out of the repository. Owner and approval threshold: TODO.
+Approved receipts or billing references: TODO restricted storage. No hosting, database, domain, API or monitoring purchases were discovered, so none are invented here. Confirm any tooling licenses/education eligibility independently. Owner and spending approval threshold: TODO.

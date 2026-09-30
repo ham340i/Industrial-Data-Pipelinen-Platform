@@ -33,6 +33,10 @@
           "run": "python3 scripts/check_repository.py"
         },
         {
+          "name": "Validate Release 1 ownership, estimates and dependencies",
+          "run": "python3 scripts/check_release_plan.py"
+        },
+        {
           "name": "Test repository tools",
           "run": "python3 -m unittest discover -s scripts/tests -v"
         }

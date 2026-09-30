@@ -1,0 +1,508 @@
+{
+  "scope": "Release 1 setup snapshot; future work only",
+  "verified_items": [
+    {
+      "key": "I1-01",
+      "issue_number": 4,
+      "owner": "ham340i",
+      "reviewer": "aboudka2003",
+      "milestone": "Iteration 1",
+      "story_points": 5,
+      "ideal_hours": 10,
+      "native_blocked_by": [
+        5,
+        6
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I1-02",
+      "issue_number": 5,
+      "owner": "aboudka2003",
+      "reviewer": "adamoug",
+      "milestone": "Iteration 1",
+      "story_points": 5,
+      "ideal_hours": 10,
+      "native_blocked_by": [],
+      "state": "open"
+    },
+    {
+      "key": "I1-03",
+      "issue_number": 6,
+      "owner": "adamoug",
+      "reviewer": "Al-Yousef",
+      "milestone": "Iteration 1",
+      "story_points": 5,
+      "ideal_hours": 10,
+      "native_blocked_by": [],
+      "state": "open"
+    },
+    {
+      "key": "I1-04",
+      "issue_number": 7,
+      "owner": "Al-Yousef",
+      "reviewer": "joedaswagger",
+      "milestone": "Iteration 1",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        6
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I1-05",
+      "issue_number": 8,
+      "owner": "joedaswagger",
+      "reviewer": "karimikhaeil",
+      "milestone": "Iteration 1",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [],
+      "state": "open"
+    },
+    {
+      "key": "I1-06",
+      "issue_number": 9,
+      "owner": "karimikhaeil",
+      "reviewer": "MarcElHaddad1",
+      "milestone": "Iteration 1",
+      "story_points": 5,
+      "ideal_hours": 10,
+      "native_blocked_by": [
+        8
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I1-07",
+      "issue_number": 10,
+      "owner": "MarcElHaddad1",
+      "reviewer": "menaboulus",
+      "milestone": "Iteration 1",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        8,
+        9
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I1-08",
+      "issue_number": 11,
+      "owner": "menaboulus",
+      "reviewer": "ham340i",
+      "milestone": "Iteration 1",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        5,
+        6
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I1-09",
+      "issue_number": 12,
+      "owner": "adamoug",
+      "reviewer": "Al-Yousef",
+      "milestone": "Iteration 1",
+      "story_points": 3,
+      "ideal_hours": 6,
+      "native_blocked_by": [],
+      "state": "open"
+    },
+    {
+      "key": "I1-10",
+      "issue_number": 13,
+      "owner": "karimikhaeil",
+      "reviewer": "MarcElHaddad1",
+      "milestone": "Iteration 1",
+      "story_points": 3,
+      "ideal_hours": 6,
+      "native_blocked_by": [
+        8
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-01",
+      "issue_number": 14,
+      "owner": "ham340i",
+      "reviewer": "adamoug",
+      "milestone": "Iteration 2",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        7,
+        9,
+        15,
+        19
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-02",
+      "issue_number": 15,
+      "owner": "aboudka2003",
+      "reviewer": "Al-Yousef",
+      "milestone": "Iteration 2",
+      "story_points": 8,
+      "ideal_hours": 20,
+      "native_blocked_by": [
+        5,
+        8,
+        9
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-03",
+      "issue_number": 16,
+      "owner": "adamoug",
+      "reviewer": "joedaswagger",
+      "milestone": "Iteration 2",
+      "story_points": 5,
+      "ideal_hours": 12,
+      "native_blocked_by": [
+        8,
+        10
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-04",
+      "issue_number": 17,
+      "owner": "Al-Yousef",
+      "reviewer": "karimikhaeil",
+      "milestone": "Iteration 2",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        6,
+        8,
+        15
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-05",
+      "issue_number": 18,
+      "owner": "joedaswagger",
+      "reviewer": "MarcElHaddad1",
+      "milestone": "Iteration 2",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        8,
+        10
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-06",
+      "issue_number": 19,
+      "owner": "karimikhaeil",
+      "reviewer": "menaboulus",
+      "milestone": "Iteration 2",
+      "story_points": 5,
+      "ideal_hours": 12,
+      "native_blocked_by": [
+        5,
+        7
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-07",
+      "issue_number": 20,
+      "owner": "MarcElHaddad1",
+      "reviewer": "ham340i",
+      "milestone": "Iteration 2",
+      "story_points": 5,
+      "ideal_hours": 10,
+      "native_blocked_by": [
+        8,
+        10
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I2-08",
+      "issue_number": 21,
+      "owner": "menaboulus",
+      "reviewer": "aboudka2003",
+      "milestone": "Iteration 2",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        6,
+        8,
+        9,
+        15
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-01",
+      "issue_number": 22,
+      "owner": "ham340i",
+      "reviewer": "Al-Yousef",
+      "milestone": "Iteration 3",
+      "story_points": 8,
+      "ideal_hours": 20,
+      "native_blocked_by": [
+        10,
+        16,
+        18,
+        20,
+        21
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-02",
+      "issue_number": 23,
+      "owner": "aboudka2003",
+      "reviewer": "joedaswagger",
+      "milestone": "Iteration 3",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        12,
+        16
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-03",
+      "issue_number": 24,
+      "owner": "adamoug",
+      "reviewer": "karimikhaeil",
+      "milestone": "Iteration 3",
+      "story_points": 8,
+      "ideal_hours": 20,
+      "native_blocked_by": [
+        13,
+        18
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-04",
+      "issue_number": 25,
+      "owner": "Al-Yousef",
+      "reviewer": "MarcElHaddad1",
+      "milestone": "Iteration 3",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        13,
+        18
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-05",
+      "issue_number": 26,
+      "owner": "joedaswagger",
+      "reviewer": "menaboulus",
+      "milestone": "Iteration 3",
+      "story_points": 8,
+      "ideal_hours": 18,
+      "native_blocked_by": [
+        22,
+        25
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-06",
+      "issue_number": 27,
+      "owner": "karimikhaeil",
+      "reviewer": "ham340i",
+      "milestone": "Iteration 3",
+      "story_points": 8,
+      "ideal_hours": 18,
+      "native_blocked_by": [
+        7,
+        22
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-07",
+      "issue_number": 28,
+      "owner": "MarcElHaddad1",
+      "reviewer": "aboudka2003",
+      "milestone": "Iteration 3",
+      "story_points": 8,
+      "ideal_hours": 18,
+      "native_blocked_by": [
+        7,
+        13,
+        20,
+        22
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I3-08",
+      "issue_number": 29,
+      "owner": "menaboulus",
+      "reviewer": "adamoug",
+      "milestone": "Iteration 3",
+      "story_points": 5,
+      "ideal_hours": 12,
+      "native_blocked_by": [
+        14,
+        22,
+        27
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-01",
+      "issue_number": 30,
+      "owner": "ham340i",
+      "reviewer": "joedaswagger",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        15,
+        27,
+        29
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-02",
+      "issue_number": 31,
+      "owner": "aboudka2003",
+      "reviewer": "karimikhaeil",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 8,
+      "ideal_hours": 18,
+      "native_blocked_by": [
+        14,
+        23,
+        24,
+        25,
+        26,
+        28,
+        29,
+        30,
+        33
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-03",
+      "issue_number": 32,
+      "owner": "adamoug",
+      "reviewer": "MarcElHaddad1",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 5,
+      "ideal_hours": 12,
+      "native_blocked_by": [
+        16,
+        23,
+        28
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-04",
+      "issue_number": 33,
+      "owner": "Al-Yousef",
+      "reviewer": "menaboulus",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 5,
+      "ideal_hours": 12,
+      "native_blocked_by": [
+        17,
+        26,
+        27
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-05",
+      "issue_number": 34,
+      "owner": "joedaswagger",
+      "reviewer": "ham340i",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        22,
+        27,
+        28,
+        29
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-06",
+      "issue_number": 35,
+      "owner": "karimikhaeil",
+      "reviewer": "aboudka2003",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        24,
+        26,
+        28
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-07",
+      "issue_number": 36,
+      "owner": "MarcElHaddad1",
+      "reviewer": "adamoug",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        4,
+        31,
+        32,
+        34,
+        35,
+        37
+      ],
+      "state": "open"
+    },
+    {
+      "key": "I4-08",
+      "issue_number": 37,
+      "owner": "menaboulus",
+      "reviewer": "Al-Yousef",
+      "milestone": "Iteration 4 (Release 1)",
+      "story_points": 8,
+      "ideal_hours": 16,
+      "native_blocked_by": [
+        11,
+        23,
+        24,
+        25,
+        28,
+        29
+      ],
+      "state": "open"
+    }
+  ],
+  "acceptance_issue": 38,
+  "acceptance_unassigned": true,
+  "native_dependency_count": 98,
+  "student_count": 8,
+  "professor_engineering_assignees": 0,
+  "professor_requested_pr_reviews": 0,
+  "professor_invitation": "Existing repository invitation remains pending and unchanged",
+  "projects": "MANUAL ACTION REQUIRED: current token lacks Projects scope",
+  "verification": "PASS: live issues, owners, labels, milestone, estimates, criteria/tests/disclosure, native dependencies and professor exclusion"
+}

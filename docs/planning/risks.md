@@ -1,5 +1,21 @@
 # Risk register
 
+For the later assigned Release 1 scope, use the [Release 1 risk register](../release-1-plan.md#release-1-risk-register), which links actual mitigation work and owners. The observations below preserve the earlier compliance-audit baseline; the supplied target/backlog resolves planning gaps but does not implement the product.
+
+The observed risks below are grounded in this repository/API audit. Earlier project hypotheses follow separately and remain unvalidated.
+
+## Observed priorities before the next iteration
+
+| Risk | Likelihood | Impact | Why it matters | Mitigation | Evidence / related issue | Owner | Status |
+|---|---|---|---|---|---|---|---|
+| E1: No runnable product or selected stack | Gap present | Could prevent demonstrable engineering delivery | Repository tooling alone cannot satisfy substantial product implementation | Agree and implement one tested vertical slice after a stack ADR | No application manifests/source; [audit](../SOEN490_COMPLIANCE_AUDIT.md), issue #2 | Team must assign | Open; setup does not resolve this |
+| E2: Project access/setup blocked | Gap present | Course planning evidence inaccessible | Current API cannot inspect/create Projects | Owner configures browser board or grants project scope; share with moar82 | API INSUFFICIENT_SCOPES; [setup](../GITHUB_PROJECT_SETUP.md) | Repository owner | Open |
+| E3: Missing per-student stories/evidence | Gap present in inspected repository | Individual course outcomes cannot be assessed | A technical setup issue is not every student’s engineering contribution | Plan two iterations, assign real work and maintain personal records | No product stories/iteration records; [personal records](../individual-contributions/README.md) | Team must assign | Open |
+| E4: Unconfirmed source/output and acceptance contracts | No approved contract recorded; real availability unknown | Wrong design may require major rework | Proposed ETL scope has no recorded validated data contract | Obtain an approved representative schema/workflow and acceptance criteria early | [proposed architecture](../architecture/system-architecture.md), no signoff record | Team/stakeholder must assign | Open; do not infer stakeholder unavailability |
+| E5: Public attribution/data-handling decisions unresolved | Metadata exposure present; future data risk unassessed | Privacy or agreement failures can restrict collaboration | Commit metadata includes a non-noreply email and legal/data decisions are pending | Confirm public identity, use noreply prospectively, approve data access before samples are added | [privacy review](../SOEN490_COMPLIANCE_AUDIT.md#privacy-review), [legal register](../legal/README.md) | Repository owner / team | Open; no history rewrite |
+
+## Earlier project hypotheses — validate before treating as facts
+
 Initial hypotheses for team validation. Probability and impact are **unassessed** until evidence is gathered; owners must be assigned during planning. Prioritize risks that could prevent a usable, accepted product.
 
 | ID / Risk | Probability | Impact | Why it matters | Mitigation / next evidence | Evidence / related issues | Owner | Status |

@@ -17,3 +17,9 @@ Status: questions for authorized team/stakeholder review, not legal conclusions 
 | Employment and job disruption | Discuss effects on process specialists; preserve human oversight, provide training and avoid unsupported productivity/job claims |
 
 Owner, review date and approved evidence references: TODO. Link outcomes to issues, risks and ADRs. Never represent a checklist as stakeholder consent.
+
+## Third-party services and consent
+
+GitHub stores repository, issue and CI metadata. A SonarCloud check was observed on the baseline revision with a neutral result; repository-local SonarCloud configuration and its account/data-retention choices were not found. The owner should verify the integration’s permissions and intended scope. Do not infer that product data is approved for either service.
+
+Decide whether user consent or an EULA is applicable before introducing telemetry, external processing or distribution; use the clearly unapproved [draft](../user-consent-eula.md). No acceptance or legal review is claimed.

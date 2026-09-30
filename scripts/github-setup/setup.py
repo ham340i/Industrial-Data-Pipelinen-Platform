@@ -44,7 +44,14 @@ def reconcile(repo, kind, desired, existing, apply=False):
     for record in desired:
         old = indexed.get(record[key].casefold())
         if old is not None:
-            differs = any(old.get(field) != value for field, value in record.items())
+            # GitHub normalizes milestone due times to midnight UTC. The
+            # course catalog specifies calendar dates, not submission times.
+            differs = any(
+                (str(old.get(field, ''))[:10] != value[:10]
+                 if kind == 'milestones' and field == 'due_on'
+                 else old.get(field) != value)
+                for field, value in record.items()
+            )
             drift |= differs
             print(('DRIFT (unchanged): ' if differs else 'Exists: ') + record[key])
             continue

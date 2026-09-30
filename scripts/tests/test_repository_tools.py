@@ -1,6 +1,8 @@
 """Regression tests for failure detection and non-destructive GitHub setup."""
 
 import contextlib
+import copy
+import json
 import importlib.util
 import io
 from pathlib import Path
@@ -13,6 +15,7 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 from check_docs import check_markdown
 from check_repository import suspicious, validate_configuration
+from check_release_plan import validate as validate_release_plan
 
 spec = importlib.util.spec_from_file_location('github_setup', SCRIPTS / 'github-setup/setup.py')
 setup = importlib.util.module_from_spec(spec)
@@ -43,6 +46,22 @@ class DocumentationTests(unittest.TestCase):
             root = Path(tmp)
             source = root / 'source.md'
             source.write_text('[escape](../outside.md)  ')
+            self.assertEqual(len(check_markdown(source, root)), 2)
+
+    def test_absolute_repository_and_wiki_links_are_checked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'target.md').write_text('# Existing heading\n')
+            (root / 'docs/wiki').mkdir(parents=True)
+            (root / 'docs/wiki/Home.md').write_text('# Wiki home\n')
+            source = root / 'source.md'
+            base = 'https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/'
+            source.write_text(
+                f'[good]({base}blob/main/target.md#existing-heading)\n'
+                f'[home]({base}wiki/Home)\n'
+                f'[missing]({base}blob/main/absent.md)\n'
+                f'[missing wiki]({base}wiki/Absent)\n'
+            )
             self.assertEqual(len(check_markdown(source, root)), 2)
 
 
@@ -89,6 +108,38 @@ class SetupTests(unittest.TestCase):
         with patch.object(setup, 'gh_json', side_effect=[[{'title': str(i)} for i in range(100)], []]) as api:
             self.assertEqual(len(setup.existing_records('owner/repo', 'milestones')), 100)
             self.assertIn('page=2&state=all', api.call_args.args[0][1])
+
+    def test_normalized_milestone_time_is_not_drift(self):
+        desired = {'title': 'Iteration 1', 'due_on': '2026-10-06T23:59:59Z'}
+        existing = dict(desired, due_on='2026-10-06T00:00:00Z')
+        with patch.object(setup, 'gh_json') as api, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(setup.reconcile('owner/repo', 'milestones', [desired], [existing], True), 0)
+            api.assert_not_called()
+
+    def test_different_milestone_date_is_preserved_and_reported(self):
+        desired = {'title': 'Iteration 1', 'due_on': '2026-10-06T23:59:59Z'}
+        existing = dict(desired, due_on='2026-10-07T00:00:00Z')
+        with patch.object(setup, 'gh_json') as api, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(setup.reconcile('owner/repo', 'milestones', [desired], [existing], True), 2)
+            api.assert_not_called()
+
+
+class ReleasePlanTests(unittest.TestCase):
+    def setUp(self):
+        self.plan = json.loads((SCRIPTS.parent / 'docs/planning/release-1-backlog.json').read_text())
+
+    def test_professor_cannot_receive_engineering_assignment(self):
+        invalid = copy.deepcopy(self.plan)
+        invalid['items'][0]['owner'] = 'moar82'
+        with self.assertRaises(AssertionError):
+            validate_release_plan(invalid)
+
+    def test_same_iteration_dependency_cycle_is_rejected(self):
+        invalid = copy.deepcopy(self.plan)
+        sdk = next(x for x in invalid['items'] if x['key'] == 'I1-05')
+        sdk['dependencies'].append('I1-06')
+        with self.assertRaises(AssertionError):
+            validate_release_plan(invalid)
 
 
 if __name__ == '__main__':

@@ -13,3 +13,7 @@ No learning records are asserted. Add a dated section per real investigation usi
 - Related issue/PR: TODO
 - Time spent: TODO actual time if recorded
 - AI assistance and human verification: TODO or None
+
+## Evidence requirements
+
+Name the resources used and link the actual issue, PR and commit separately. Explain which uncertainty the learning resolved and how it changed the design or implementation. Use [personal contribution records](../individual-contributions/README.md) to distinguish personal learning from team knowledge. No retrospective learning history is inferred by this template.

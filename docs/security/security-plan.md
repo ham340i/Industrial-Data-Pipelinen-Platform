@@ -23,3 +23,9 @@ Assets: manufacturing inputs, source credentials, pipeline definitions, previews
 `python3 scripts/check_repository.py` performs a limited filename/private-key/token-pattern check and reports **paths only**, never matching values. It is not comprehensive secret scanning. GitHub secret scanning/push protection should be enabled if available after the owner reviews settings.
 
 If exposure is suspected: privately notify the repository owner without posting values; revoke/rotate credentials; determine scope; remove data from current files and coordinate any history cleanup with the team. Deletion alone does not revoke a secret. Do not rewrite shared history without coordination. No secrets were found in the inspected initial commit; remote-only content was not audited.
+
+## Current implementation and remaining product controls
+
+No product authentication/authorization, API, network server or database exists. Rate limiting and application error handling are therefore not implemented; add them when an actual exposed interface requires them. Repository helpers use existing credentials without printing values, and CI uses read-only permissions. The private-reporting entry point is [SECURITY.md](../../SECURITY.md); a dedicated private contact still needs team confirmation.
+
+Live main-branch protection now requires independent review, both GitHub Actions checks and conversation resolution. Existing third-party integrations still need owner review; a neutral SonarCloud check is not evidence of a passed security audit.

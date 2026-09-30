@@ -30,7 +30,7 @@ test(validation): add null-handling edge cases (#63)
 docs(architecture): document local execution model (#71)
 ```
 
-These are examples, not existing work. A useful body explains the change:
+These are illustrative formats, not existing issues or work. Replace example numbers with a real issue; new meaningful commits must reference it. The earlier setup commits lacked issue links and will not be rewritten. A useful body explains the change:
 
 ```text
 Implements the initial transformation-node configuration flow.
@@ -47,3 +47,15 @@ Use that footer only when true. Never manufacture commits or attribution. When s
 Main should require PRs, one reviewer, resolved conversations and passing checks. Follow [protection setup](../scripts/github-setup/branch-protection.md) after the checks have run. Current gates validate repository tooling and documentation; application install/lint/type/test/build gates must be added with the selected stack.
 
 Run the [README checks](../README.md#running-tests) locally. Do not commit secrets or stakeholder datasets. Report suspected exposure privately to the repository owner; rotate exposed credentials before removing them. Do not include secret values in issues.
+
+## Personal evidence and milestone planning
+
+Maintain a [personal contribution record](../docs/individual-contributions/README.md) every iteration/release and link the [traceability chain](../docs/traceability.md). Record who actually designed, implemented and verified each part; disclose AI-generated work. Plan roughly the next two milestones with the team and record estimates before execution where possible. Never invent retrospective estimates.
+
+Main now requires one approving teammate review, both named repository checks, an up-to-date branch and resolved conversations, including for administrators. Stale approvals are dismissed after new commits. Do not bypass the rule to mark a task complete.
+
+## Release 1 ownership
+
+Use the [Release 1 workload](../docs/release-1-workload.md) and [review rotation](../docs/code-review-plan.md). Only the eight named students receive Release 1 engineering assignments. Professor Rodrigo Morales Alvarado (`moar82`) retains academic oversight and must never receive student tasks, story points or routine engineering PR reviews. Primary owners write feature tests and documentation; reviewers are additional students, not substitute implementers.
+
+Use `feature/<issue-number>-short-name`, `fix/<issue-number>-short-name` or `docs/<issue-number>-short-name`; the earlier `bugfix/` convention remains valid for existing branches. Commits use `<type>: <description> (#issue)` (an optional scope is allowed). Actual implementation follows issue → student → branch → tests → PR → CI → student review → approval → merge → closure. Never close a planned story merely because it was assigned.

@@ -1,70 +1,5 @@
 [
   {
-    "name": "feature:visual-builder",
-    "color": "1D76DB",
-    "description": "Visual pipeline authoring and configuration"
-  },
-  {
-    "name": "feature:data-ingestion",
-    "color": "1D76DB",
-    "description": "Approved file, SQL and REST ingestion"
-  },
-  {
-    "name": "feature:transformations",
-    "color": "1D76DB",
-    "description": "Reusable transformation blocks"
-  },
-  {
-    "name": "feature:data-quality",
-    "color": "1D76DB",
-    "description": "Schema validation and data-quality rules"
-  },
-  {
-    "name": "feature:execution-engine",
-    "color": "1D76DB",
-    "description": "Local orchestration and reproducibility"
-  },
-  {
-    "name": "feature:data-preview",
-    "color": "1D76DB",
-    "description": "Intermediate data inspection"
-  },
-  {
-    "name": "feature:versioning",
-    "color": "1D76DB",
-    "description": "Pipeline revisions and reuse"
-  },
-  {
-    "name": "feature:run-history",
-    "color": "1D76DB",
-    "description": "Run metadata, diagnostics and logging"
-  },
-  {
-    "name": "feature:governed-output",
-    "color": "1D76DB",
-    "description": "Validated datasets and publication"
-  },
-  {
-    "name": "feature:local-api",
-    "color": "1D76DB",
-    "description": "Potential local output API"
-  },
-  {
-    "name": "feature:analytics",
-    "color": "1D76DB",
-    "description": "Analytics consumer integration"
-  },
-  {
-    "name": "feature:ml-preparation",
-    "color": "1D76DB",
-    "description": "ML-ready data preparation"
-  },
-  {
-    "name": "feature:security",
-    "color": "1D76DB",
-    "description": "Credentials, privacy and access boundaries"
-  },
-  {
     "name": "feature:infrastructure",
     "color": "1D76DB",
     "description": "Repository, CI and developer tooling"
@@ -143,5 +78,90 @@
     "name": "stakeholder:changes-requested",
     "color": "0E8A16",
     "description": "Stakeholder: changes requested"
+  },
+  {
+    "name": "ai-assisted",
+    "color": "7057FF",
+    "description": "Meaningful AI assistance disclosed in the issue or PR"
+  },
+  {
+    "name": "feature:frontend",
+    "color": "1D76DB",
+    "description": "Release 1 workbench and application UI"
+  },
+  {
+    "name": "feature:builder",
+    "color": "1D76DB",
+    "description": "Release 1 graph authoring and connection editing"
+  },
+  {
+    "name": "feature:block-sdk",
+    "color": "1D76DB",
+    "description": "Versioned reusable block contracts and registry"
+  },
+  {
+    "name": "feature:api",
+    "color": "1D76DB",
+    "description": "Local REST schemas, endpoints and trigger entry points"
+  },
+  {
+    "name": "feature:execution-engine",
+    "color": "1D76DB",
+    "description": "Headless local DAG execution and lifecycle"
+  },
+  {
+    "name": "feature:validation",
+    "color": "1D76DB",
+    "description": "Graph, port and configuration validation"
+  },
+  {
+    "name": "feature:sources",
+    "color": "1D76DB",
+    "description": "Approved file and SQL ingestion"
+  },
+  {
+    "name": "feature:transforms",
+    "color": "1D76DB",
+    "description": "Configured Polars transformations"
+  },
+  {
+    "name": "feature:data-quality",
+    "color": "1D76DB",
+    "description": "Schema, null and row-count quality rules"
+  },
+  {
+    "name": "feature:preview",
+    "color": "1D76DB",
+    "description": "Bounded intermediate data inspection"
+  },
+  {
+    "name": "feature:parquet",
+    "color": "1D76DB",
+    "description": "Persisted artifacts and governed local queries"
+  },
+  {
+    "name": "feature:metadata",
+    "color": "1D76DB",
+    "description": "Projects, definitions and database metadata"
+  },
+  {
+    "name": "feature:telemetry",
+    "color": "1D76DB",
+    "description": "Run states, logs, timings and row counts"
+  },
+  {
+    "name": "feature:testing",
+    "color": "1D76DB",
+    "description": "Shared test harnesses and integration verification"
+  },
+  {
+    "name": "feature:documentation",
+    "color": "1D76DB",
+    "description": "Engineering and operator documentation"
+  },
+  {
+    "name": "release:1",
+    "color": "006B75",
+    "description": "Release 1 planned work and acceptance tracking"
   }
 ]

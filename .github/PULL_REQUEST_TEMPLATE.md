@@ -4,6 +4,12 @@
 ## Related Issue
 Closes #<!-- issue number -->
 
+## Iteration
+<!-- Exact milestone and Project iteration. -->
+
+## Feature
+<!-- Primary feature label and source requirement. -->
+
 ## Engineering Problem
 <!-- Requirement, user impact and constraints. -->
 
@@ -42,13 +48,17 @@ Closes #<!-- issue number -->
 ## Documentation Updated
 <!-- Links, including iteration/contribution evidence. -->
 
-## Stakeholder Impact
+## Reviewer
+<!-- Request the planned student reviewer from the issue. No self-review. moar82 is academic oversight, not an engineering reviewer. Record substitutions explicitly. -->
+
+## Stakeholder Signoff / Impact
 <!-- Acceptance status, feedback and signoff link where required. -->
 
 ## AI Assistance
 Tool:
 Purpose:
-Human contribution:
+What the developer personally designed:
+What the developer changed/reviewed/tested:
 Verification:
 <!-- State None if no meaningful assistance; no assumed human review. -->
 

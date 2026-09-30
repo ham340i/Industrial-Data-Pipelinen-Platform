@@ -39,4 +39,8 @@ No database exists. Decide how to persist pipeline versions, run state, metadata
 
 ## APIs and extension points
 
-No endpoints or extension SDK exist. A local API is optional planned scope. Connector/block interfaces need explicit schemas, error handling, compatibility and trust boundaries before plugins are accepted. Existing manufacturing models remain authoritative; model mapping needs stakeholder approval.
+No endpoints or extension SDK exist. The supplied Release 1 target now requires local FastAPI validation, execution, preview, run and output capabilities. Connector/block interfaces need explicit schemas, error handling, compatibility and trust boundaries before plugins are accepted. Existing manufacturing models remain authoritative; model mapping needs stakeholder approval.
+
+## Release 1 scope update
+
+The subsequent team brief specifies the [Release 1 target stack and boundaries](release-1-target.md) and [Block SDK](block-sdk-release-1.md). It resolves the earlier stack direction to React/TypeScript, FastAPI/Python 3.12, Polars/PyArrow, Parquet/DuckDB and SQLite/SQLAlchemy/Alembic, while leaving implementation and interface decisions open. All product components are still planned. No undocumented existing implementation is overridden.

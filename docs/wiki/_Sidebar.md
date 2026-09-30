@@ -1,6 +1,6 @@
-## Local Pipeline Studio
+## Industrial Data Pipeline Engineering Platform
 
-- [Local Pipeline Studio Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Home)
+- [Industrial Data Pipeline Engineering Platform Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Home)
 - [Getting started](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Getting-Started)
 - [Architecture and design](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Architecture)
 - [Engineering workflow and contributions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Engineering-Workflow)
