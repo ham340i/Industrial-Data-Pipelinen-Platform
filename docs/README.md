@@ -1,6 +1,6 @@
 # Documentation index
 
-Start with the [current compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [developer guide](getting-started.md), [project README](../README.md), [baseline audit](../SOEN490_REPO_AUDIT.md), [requirements matrix](SOEN490_REQUIREMENTS_MATRIX.md) and [human actions](../SOEN490_HUMAN_ACTIONS.md). Product functionality is planned; templates are not completed evidence.
+Start with the [project setup summary](project-setup-summary.md), [current compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [developer guide](getting-started.md), [project README](../README.md), [baseline audit](../SOEN490_REPO_AUDIT.md), [requirements matrix](SOEN490_REQUIREMENTS_MATRIX.md) and [human actions](../SOEN490_HUMAN_ACTIONS.md). Product functionality is planned; templates are not completed evidence.
 
 | Topic | Reference |
 |---|---|
@@ -21,7 +21,7 @@ Start with the [current compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [develop
 | Labels / milestones | [Active features](github-labels.md), [live schedule](milestones.md) |
 | GitHub Project | [Fields, views and professor access](planning/github-project-setup.md) |
 | GitHub administration | [Scripts and protection instructions](../scripts/github-setup/README.md) |
-| GitHub Wiki | [Prepared home page](wiki/Home.md), [publishing instructions](../scripts/github-setup/wiki-setup.md) |
+| GitHub Wiki | [Published Wiki](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki), [maintained Home source](wiki/Home.md), [publishing instructions](../scripts/github-setup/wiki-setup.md) |
 | Testing/CI | [Testing plan](testing/testing-plan.md), [actual repository validation](testing/repository-validation.md) |
 | Security | [Threats and controls](security/security-plan.md) |
 | Performance | [Measurement plan](performance/performance-plan.md) |
