@@ -4,7 +4,7 @@
 
 Created 34 future engineering items (17 user stories, 13 technical tasks, 4 spikes) plus one unassigned acceptance tracker. Reused existing milestones and management labels; added Release 1 feature categories and `release:1`. Each work item has one primary student and a distinct planned student reviewer. Existing issue #2, PR #3, Dependabot PR #1, branches and invitations were preserved. No application implementation, completed work, student contributions or approvals are claimed.
 
-Live verification passed: 34 correct student assignments, 98 native blocking relationships, matching metadata and zero professor engineering assignments/review requests. Planning PR details are recorded below after publication.
+Live verification passed: 34 correct student assignments, 98 native blocking relationships, matching metadata and zero professor engineering assignments/review requests. The documentation and plan checks are delivered in [PR #39](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/39), stacked on compliance PR #3; both require independent review before main.
 
 ## 2. Milestones Created
 
@@ -117,7 +117,7 @@ Early risk work targets SDK/definitions, headless ETL, safe data/SQL contracts a
 
 ## 12. Manual Actions Required
 
-1. Review the planning PR and prerequisite compliance PR #3; use the existing main-protection gates. Do not bypass independent approval.
+1. Review/merge compliance PR #3 first. Retarget planning PR #39 from `docs/2-soen490-compliance` to `main`, rerun/verify checks, and obtain independent student approval before merging. Do not merge into the compliance branch to bypass main protection.
 2. Create/reuse and configure the Project through the browser or authorize Projects scope locally. Add all actual Release 1 issues, copy metadata and share with moar82.
 3. Confirm each student's capacity, estimates and reviewer availability; refine/split oversized scope before starting.
 4. Confirm the partner’s authorized representative, source/output contract, data/credential permissions and local hardware. Do not upload confidential inputs to GitHub.
@@ -168,3 +168,7 @@ All 19 distinct required block types are accounted for; Schema Validation / Vali
 | Application acceptance / benchmarks / release tags | NOT RUN / NOT CREATED — this is planning, not product completion |
 
 Run `python3 scripts/check_release_plan.py`, `python3 scripts/check_repository.py`, `python3 scripts/check_docs.py` and `python3 -m unittest discover -s scripts/tests -v` from the repository root. Current commands verify the planning/repository tooling only.
+
+### Published planning revision
+
+Commit `ff1b8f6` passed [Repository checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/36663929695), [Documentation checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/36663929702), and the existing SonarCloud check. These validate repository/planning changes only. See [PR #39](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/39) for the latest revision’s checks and review state; no human approval is claimed.
