@@ -6,6 +6,8 @@ Assigned issue: [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platfo
 
 The user requested implementation, comprehensive documentation, a PR and Mena as reviewer. Codex generated the implementation, design notes, tests and documentation and ran the recorded checks. This is not a claim that the student manually wrote, independently understood or personally tested generated code. Student design review, modifications, learning reflection and confirmation of this evidence remain pending.
 
+PR: [#43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43). Implementation commit: [f5eefe8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/f5eefe8). Review requested from `menaboulus`; approval pending.
+
 ## Artifacts
 
 - [Frontend source and commands](../../frontend/README.md)

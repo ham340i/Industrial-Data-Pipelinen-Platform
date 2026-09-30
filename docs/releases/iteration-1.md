@@ -76,7 +76,7 @@ Pending implemented changes; [target architecture](../architecture/release-1-tar
 | Contributor | Assigned issues (planned) | PRs | Commits | Engineering contribution evidence |
 |---|---|---|---|---|
 | ham340i | [#4](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/4) | Pending | Pending | Not recorded; assignments are not contributions |
-| aboudka2003 | [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5) | Pending | See implementation branch | [AI-assisted work and pending human verification](../individual-contributions/aboudka2003-iteration-1.md) |
+| aboudka2003 | [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5) | [#43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43) | [f5eefe8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/f5eefe8) | [AI-assisted work and pending human verification](../individual-contributions/aboudka2003-iteration-1.md) |
 | adamoug | [#6](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/6), [#12](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/12) | Pending | Pending | Not recorded; assignments are not contributions |
 | Al-Yousef | [#7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7) | Pending | Pending | Not recorded; assignments are not contributions |
 | joedaswagger | [#8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/8) | Pending | Pending | Not recorded; assignments are not contributions |

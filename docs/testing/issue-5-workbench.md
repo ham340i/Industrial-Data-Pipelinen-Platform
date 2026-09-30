@@ -1,6 +1,6 @@
 # Issue #5 workbench verification
 
-Scope: [React 19 workbench shell and typed API client](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5). Branch: `feature/5-workbench-shell`, based on `be74eb5`. Validation date: 2026-09-30. Agent environment: macOS, Node 24.19.0, npm 11.17.0. Results apply to the implementation accompanying this record; CI validates the PR commit separately.
+Scope: [React 19 workbench shell and typed API client](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5). Branch: `feature/5-workbench-shell`, based on `be74eb5`. Validation date: 2026-09-30. Agent environment: macOS, Node 24.19.0, npm 11.17.0. Implementation revision: [f5eefe8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/f5eefe8). [PR #43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43) tracks hosted CI and independent review. This record follows the implementation with documentation-only traceability updates.
 
 ## Acceptance evidence
 
