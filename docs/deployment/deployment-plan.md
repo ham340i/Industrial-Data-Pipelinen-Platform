@@ -41,3 +41,7 @@ Copy this record for each actual deployment:
 - Result / failures / rollback performed: TODO
 - Rollback target and data-compatibility constraints: TODO
 - Related issue, PR and stakeholder review: TODO
+
+## Frontend foundation artifact
+
+Issue #5 adds `frontend/dist/` via `npm ci` and `npm run build` in `frontend/`. `npm run preview` serves a loopback verification build. Hash routing works on static hosting without route rewrites. `VITE_API_BASE_URL` is embedded at build time and must reference the intended API with matching CORS configuration. This is not a complete ETL deployment; the backend, storage and execution services remain future work. See the [frontend guide](../frontend/workbench.md).

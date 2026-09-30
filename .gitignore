@@ -31,3 +31,11 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+# Frontend dependencies and generated artifacts
+node_modules/
+frontend/dist/
+frontend/coverage/
+*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/

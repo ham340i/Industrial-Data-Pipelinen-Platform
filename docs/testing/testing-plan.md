@@ -32,3 +32,7 @@ The issue owner owns test design, fixtures and recorded evidence. An independent
 ## Definition of Done
 
 Apply the [project-wide checklist](../planning/definition-of-done.md). A story needs tests appropriate to its behavior, passing CI, independent review and required stakeholder evidence. Attach command, revision, environment, result and any limitations to the PR and iteration record.
+
+## Issue #5 frontend foundation
+
+The first implemented feature adds Vitest/Testing Library/MSW tests and Playwright production-shell smoke tests. See [actual verification](issue-5-workbench.md) and [runnable commands](../frontend/workbench.md). Synthetic health mocks verify the UI boundary; they do not establish backend/engine integration or release acceptance.

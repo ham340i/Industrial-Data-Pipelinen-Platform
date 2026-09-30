@@ -1,6 +1,6 @@
 # Documentation index
 
-Start with the [project setup summary](project-setup-summary.md), [current compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [developer guide](getting-started.md), [project README](../README.md), [baseline audit](../SOEN490_REPO_AUDIT.md), [requirements matrix](SOEN490_REQUIREMENTS_MATRIX.md) and [human actions](../SOEN490_HUMAN_ACTIONS.md). Product functionality is planned; templates are not completed evidence.
+Start with the [project setup summary](project-setup-summary.md), [current compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [developer guide](getting-started.md), [project README](../README.md), [baseline audit](../SOEN490_REPO_AUDIT.md), [requirements matrix](SOEN490_REQUIREMENTS_MATRIX.md) and [human actions](../SOEN490_HUMAN_ACTIONS.md). The frontend foundation is implemented; backend and ETL functionality remain planned. Templates are not completed evidence.
 
 | Topic | Reference |
 |---|---|
@@ -41,3 +41,9 @@ Start with the [project setup summary](project-setup-summary.md), [current compl
 - [Target architecture](architecture/release-1-target.md) and [Block SDK](architecture/block-sdk-release-1.md)
 - [Workload](release-1-workload.md), [review rotation](code-review-plan.md), [dependencies](release-1-dependencies.md), [traceability](release-1-traceability.md)
 - Planned iteration records: [1](releases/iteration-1.md), [2](releases/iteration-2.md), [3](releases/iteration-3.md), [4 / Release 1](releases/iteration-4-release-1.md)
+
+## Frontend implementation
+
+- [Workbench developer and user guide](frontend/workbench.md)
+- [State and API design decision](architecture/decisions/ADR-0001-workbench-shell.md)
+- [Issue #5 verification](testing/issue-5-workbench.md)

@@ -8,12 +8,12 @@ Initial estimates for future work, not actual time or student contribution claim
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | ham340i | 5 | 8 | 8 | 8 | 29 | 62 | 4 | 8 | 70 |
 | aboudka2003 | 5 | 8 | 8 | 8 | 29 | 64 | 4 | 8 | 72 |
-| adamoug | 8 | 5 | 8 | 5 | 26 | 60 | 4 | 8 | 68 |
+| adamoug | 8 | 5 | 8 | 5 | 26 | 60 | 3 | 6 | 66 |
 | Al-Yousef | 8 | 8 | 8 | 5 | 29 | 60 | 5 | 9 | 69 |
 | joedaswagger | 8 | 8 | 8 | 8 | 32 | 66 | 4 | 8 | 74 |
 | karimikhaeil | 8 | 5 | 8 | 8 | 29 | 62 | 4 | 8 | 70 |
 | MarcElHaddad1 | 8 | 5 | 8 | 8 | 29 | 60 | 5 | 9 | 69 |
-| menaboulus | 8 | 8 | 5 | 8 | 29 | 60 | 4 | 8 | 68 |
+| menaboulus | 8 | 8 | 5 | 8 | 29 | 60 | 5 | 10 | 70 |
 
 ## Iteration totals
 
@@ -31,6 +31,8 @@ Total: **232 SP; 494 primary ideal hours; 66 review hours; 560 hours including r
 
 Only ham340i-attributed repository setup history was available. It supports continuity on local foundations, not an assumption of product expertise. Other students’ frontend/backend competence cannot be inferred from this repository. Allocation is therefore balanced and rotates across layers: UI owners take SQL/integration work, metadata owners take configuration/quality work, SDK owners take transforms/preview/engine hardening, and test-infrastructure owners implement validation/triggers/compatibility work.
 
-Point totals range from 26 to 32; primary effort ranges from 60 to 66 hours. The difference reflects uncertain SDK/preview/engine boundaries and the sizes of decomposed tasks rather than student ability. Do not force equal points by adding fake work. Every student owns implementation/design and feature tests in all four iterations, and every student has at least four planned reviews. Cross-review knowledge sharing supplements the task rotation.
+Point totals range from 26 to 32; primary effort ranges from 60 to 66 hours. The difference reflects uncertain SDK/preview/engine boundaries and the sizes of decomposed tasks rather than student ability. Do not force equal points by adding fake work. Every student owns implementation/design and feature tests in all four iterations, and review counts reflect the issue #5 substitution requested by @aboudka2003. Cross-review knowledge sharing supplements the task rotation.
 
 Re-estimate in refinement; if a story exceeds 13 SP, split it with a clear dependency and rebalance both primary and reviewer effort. Story points are not personal productivity scores. I3/I4 assignments provide release direction and are refined as the next-two-iteration commitment window moves.
+
+Issue #5 review transfers from `adamoug` to `menaboulus` at the owner’s request; two review hours move with it. Total release effort is unchanged.

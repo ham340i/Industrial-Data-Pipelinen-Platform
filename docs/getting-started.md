@@ -2,33 +2,32 @@
 
 ## Current capability
 
-You can run repository validation and administration tooling. **The ETL application does not exist yet.** There is no frontend/backend framework, database, development server or product build command to run.
+The React workbench shell is implemented under issue #5, alongside repository validation tools. Backend services, project persistence, the graph editor and ETL execution remain future work. See the [frontend guide](frontend/workbench.md) for configuration, architecture, usage and troubleshooting.
 
-The later [Release 1 target](architecture/release-1-target.md) specifies the intended stack. Foundation issues must implement it and add verified product commands; this guide still documents only currently runnable tooling.
+## Prerequisites and setup
 
-## Prerequisites
-
-Git, Python 3.11+ and Bash. Tests use the Python standard library only. Optional GitHub administration requires authenticated GitHub CLI; Wiki publication uses authorized SSH access. Repository checks require no network access or credentials.
-
-## Clone
+Use Git, Python 3.11+ for repository checks, and Node.js 24 with npm 11 for the frontend. Bash is used by administration scripts. GitHub administration additionally requires authenticated tooling.
 
 ```sh
 git clone https://github.com/ham340i/Industrial-Data-Pipelinen-Platform.git
 cd Industrial-Data-Pipelinen-Platform
-python3 --version
+cd frontend
+npm ci
+npm run dev
 ```
 
-## Install and environment setup
+The frontend runs on the loopback URL printed by Vite. The API defaults to http://127.0.0.1:8000; an offline warning is expected without a backend. Optional public configuration is documented in [the frontend guide](frontend/workbench.md) and `frontend/.env.example`. Database setup is not available yet.
 
-No dependency installation, package manager, virtual environment or environment variables are required for current tooling. There is no `.env.example` because no application variables have been defined. Do not create dummy credentials. Future implementation must add safe variable examples, a lockfile and verified installation instructions.
+## Frontend validation and build
 
-## Database setup
+From `frontend/`:
 
-Not available: no database/schema/migration tooling exists.
+```sh
+npm run check
+npm run preview
+```
 
-## Development server and build
-
-Not available: no application server or build system exists. Do not assume `npm`, Docker or framework-specific commands. Develop repository tooling on an [issue-linked branch](../.github/CONTRIBUTING.md).
+`check` includes lint, formatting, types, tests and build. Preview serves the built shell locally; it is not a deployment service.
 
 ## Tests
 
@@ -50,7 +49,7 @@ The first command checks Python/Bash syntax, selected configuration rules, trail
 
 ## Deployment / local production
 
-No product artifact or production mode exists. See the [deployment plan](deployment/deployment-plan.md). Wiki publishing is documentation administration, described in [Wiki setup](../scripts/github-setup/wiki-setup.md).
+A frontend static build is available via `npm run build` in `frontend/`; the full ETL product is not deployable yet. See the [deployment plan](deployment/deployment-plan.md). Wiki publishing is documentation administration, described in [Wiki setup](../scripts/github-setup/wiki-setup.md).
 
 ## Troubleshooting
 
