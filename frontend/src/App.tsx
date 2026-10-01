@@ -36,6 +36,32 @@ const theme = createTheme({
 
 function HealthStatus() {
   const health = useHealth();
+  let feedback = <Alert severity="success">Local API is connected.</Alert>;
+  if (health.isPending) {
+    feedback = (
+      <Stack direction="row" role="status" sx={{ gap: 1.5 }}>
+        <CircularProgress size={20} aria-label="Checking API" />
+        <Typography>Checking the local API…</Typography>
+      </Stack>
+    );
+  } else if (health.isError) {
+    feedback = (
+      <Alert
+        severity="warning"
+        action={
+          <Button
+            color="inherit"
+            onClick={() => void health.refetch()}
+            disabled={health.isFetching}
+          >
+            Retry
+          </Button>
+        }
+      >
+        {health.error.message}
+      </Alert>
+    );
+  }
   return (
     <Paper variant="outlined" sx={{ p: 3 }}>
       <Stack
@@ -52,29 +78,7 @@ function HealthStatus() {
         </Typography>
         <Chip size="small" variant="outlined" label="Live check" />
       </Stack>
-      {health.isPending ? (
-        <Stack direction="row" role="status" sx={{ gap: 1.5 }}>
-          <CircularProgress size={20} aria-label="Checking API" />
-          <Typography>Checking the local API…</Typography>
-        </Stack>
-      ) : health.isError ? (
-        <Alert
-          severity="warning"
-          action={
-            <Button
-              color="inherit"
-              onClick={() => void health.refetch()}
-              disabled={health.isFetching}
-            >
-              Retry
-            </Button>
-          }
-        >
-          {health.error.message}
-        </Alert>
-      ) : (
-        <Alert severity="success">Local API is connected.</Alert>
-      )}
+      {feedback}
       <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
         The workbench can open while the API is offline. Project storage and
         pipeline execution require the backend.

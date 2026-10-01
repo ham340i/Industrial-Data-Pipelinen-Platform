@@ -5,7 +5,7 @@ React 19 workbench foundation for issue #5. See the [complete guide](../docs/fro
 Use Node 24 and npm 11:
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run dev
 npm run check
 npm run preview

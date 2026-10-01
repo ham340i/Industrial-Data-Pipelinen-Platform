@@ -8,7 +8,7 @@ Use Node.js 24 and npm 11. From the repository root:
 
 ```sh
 cd frontend
-npm ci
+npm ci --ignore-scripts
 npm run dev
 ```
 
@@ -21,7 +21,7 @@ npm run build
 npm run preview
 ```
 
-`check` runs ESLint, Prettier validation, strict TypeScript, Vitest and the production build. Build output is in `frontend/dist/`; preview serves it locally, normally on port 4173. Preview is a verification server, not a production deployment. Commit package.json and package-lock.json together; use `npm ci` in clean environments.
+`check` runs ESLint, Prettier validation, strict TypeScript, Vitest and the production build. Build output is in `frontend/dist/`; preview serves it locally, normally on port 4173. Preview is a verification server, not a production deployment. Commit package.json and package-lock.json together; use `npm ci --ignore-scripts` in clean environments.
 
 ## Use the workbench
 
@@ -58,11 +58,11 @@ After building, install Playwright Chromium and run the production-shell tests:
 
 ```sh
 cd frontend
-npx playwright install chromium
+npm run browser:install
 npm run test:browser
 ```
 
-CI installs Chromium with its Linux dependencies. To use an existing local Chrome, set `PLAYWRIGHT_CHROME_PATH` to its executable path when running the command. The suite starts and stops a loopback preview server on port 4173; keep that port free. These are shell smoke tests with synthetic health responses, not full ETL end-to-end acceptance. Screenshots and failure traces are written to ignored `frontend/test-results/`.
+CI installs Chromium with its Linux dependencies using the locked local Playwright executable. Dependency lifecycle scripts are disabled during npm installation; the build uses packaged native binaries. To use an existing local Chrome, set `PLAYWRIGHT_CHROME_PATH` to its executable path when running the command. The suite starts and stops a loopback preview server on port 4173; keep that port free. These are shell smoke tests with synthetic health responses, not full ETL end-to-end acceptance. Screenshots and failure traces are written to ignored `frontend/test-results/`.
 
 ## Tests and troubleshooting
 
@@ -73,7 +73,7 @@ Tests use MSW at the HTTP boundary and isolated query clients. They cover pendin
 | Offline API warning | Start the backend when available; verify the configured address and CORS origin, then Retry |
 | Unsupported health response | Reconcile the backend schema with the provisional contract |
 | Blank page after configuration change | Inspect the browser console for configuration errors; use the safe example URL and restart Vite |
-| npm engine error | Use Node 24 and reinstall with npm ci |
+| npm engine error | Use Node 24 and reinstall with npm ci --ignore-scripts |
 | Port already occupied | Use the URL Vite prints or run npm run dev -- --port 5174; update backend CORS accordingly |
 | Draft disappeared on refresh | Expected: this iteration has no persistence |
 

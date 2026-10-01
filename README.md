@@ -63,7 +63,7 @@ cd Industrial-Data-Pipelinen-Platform
 python3 --version
 ```
 
-For the frontend, use Node.js 24 and npm 11, then run `npm ci` in `frontend/`. Repository Python tooling uses only the standard library.
+For the frontend, use Node.js 24 and npm 11, then run `npm ci --ignore-scripts` in `frontend/`. Repository Python tooling uses only the standard library.
 
 ## Configuration
 
@@ -80,7 +80,7 @@ These validate the repository. Start the frontend with:
 
 ```sh
 cd frontend
-npm ci
+npm ci --ignore-scripts
 npm run dev
 ```
 

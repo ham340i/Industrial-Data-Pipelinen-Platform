@@ -12,7 +12,7 @@ Use Git, Python 3.11+ for repository checks, and Node.js 24 with npm 11 for the 
 git clone https://github.com/ham340i/Industrial-Data-Pipelinen-Platform.git
 cd Industrial-Data-Pipelinen-Platform
 cd frontend
-npm ci
+npm ci --ignore-scripts
 npm run dev
 ```
 

@@ -33,3 +33,7 @@ Screenshots: [desktop, 1440px](../frontend/screenshots/workbench-desktop.png) an
 ## Design and outstanding review
 
 See [ADR-0001](../architecture/decisions/ADR-0001-workbench-shell.md), [frontend guide](../frontend/workbench.md), and [accurate contribution/AI disclosure](../individual-contributions/aboudka2003-iteration-1.md). Backend health schema/CORS agreement, Mena’s independent review, hosted CI results, merge and stakeholder acceptance remain separate gates. No issue closure, student manual implementation or independent approval is fabricated.
+
+## Hosted-analysis follow-up
+
+The first SonarCloud run flagged lifecycle-enabled installation, an on-demand `npx` command and nested conditional rendering. CI now runs `npm ci --ignore-scripts`, invokes Playwright through the locked local npm script, and uses explicit health-state branches. A clean offline install from the downloaded npm cache with lifecycle scripts disabled succeeded and reported zero known vulnerabilities. The frontend checks were rerun after these corrections; the PR tracks the resulting hosted analysis.
