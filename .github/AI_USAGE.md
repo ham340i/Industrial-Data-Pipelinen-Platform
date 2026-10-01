@@ -34,3 +34,7 @@ Codex inspected live GitHub configuration, configured supported labels/milestone
 ## Release 1 planning
 
 Codex drafted the Release 1 backlog, initial estimates, balanced primary/reviewer allocation, dependency graph, target-architecture documentation and plan checks from the supplied team brief. The brief supplies the partner, stack, roster, dates and product goal; it does not establish implementation or stakeholder approval. Student refinement, design, code, tests, reviews and signoffs remain future work. Live issue creation/assignment is planning activity, not an individual student contribution claim.
+
+## Iteration structure reorganization
+
+Tool: OpenAI Codex. Used to inspect repository/GitHub state and draft iteration, acceptance, traceability and workflow documentation. The user supplied the scope and preservation rules; human review and acceptance remain pending. Existing application implementation and student work retain their authorship. Actual checks and limitations are recorded in the [organization audit](../docs/testing/iteration-structure-validation.md).
