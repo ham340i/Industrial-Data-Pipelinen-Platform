@@ -11,6 +11,5 @@ The supplied Release 1 brief now authorizes actual future work in named product 
 | Priority | `priority:critical`, `priority:high`, `priority:medium`, `priority:low` |
 | Risk | `risk:high`, `risk:medium`, `risk:low` |
 | Stakeholder | `stakeholder:review`, `stakeholder:approved`, `stakeholder:changes-requested`; apply only with the actual review state |
-| AI | `ai-assisted`; issue/commit/PR disclosure still required |
 
 See the [catalog](../scripts/github-setup/labels.json) and [Release 1 backlog](planning/release-1-backlog.json). REST sources, advanced connectors and unrelated product categories remain uncommitted. Keep one primary feature per work item unless a real cross-feature query needs another label.
