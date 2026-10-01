@@ -10,7 +10,7 @@ The team has supplied the **Industrial Data Pipeline Engineering Platform** Rele
 
 ## Project Status
 
-**Planning and repository foundation. No application is implemented yet.** This repository provides engineering workflows, documentation templates and repository CI. The Release 1 target architecture and backlog are now specified; compatible dependency versions, implementation decisions and team capacity still require refinement. No releases or stakeholder approvals are claimed. See the [baseline audit](SOEN490_REPO_AUDIT.md).
+**Foundation in progress: the FastAPI shell and API tests are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI. The Release 1 target architecture and backlog are now specified; compatible dependency versions, implementation decisions and team capacity still require refinement. No releases or stakeholder approvals are claimed. See the [baseline audit](SOEN490_REPO_AUDIT.md).
 
 ## Problem
 
@@ -49,7 +49,7 @@ This is a proposed logical architecture. See [component status and boundaries](d
 
 ## Getting Started
 
-Follow the [detailed developer guide](docs/getting-started.md), including troubleshooting and unavailable application commands. A new developer can clone and validate the repository today. Running the product will become possible after the first application implementation; no application install/start/build commands currently exist.
+Follow the [detailed developer guide](docs/getting-started.md), including troubleshooting and unavailable application commands. A new developer can clone and validate the repository today. The FastAPI shell startup and test commands are recorded in the FastAPI section below; the full pipeline workflow is not yet implemented.
 
 ## Prerequisites
 
@@ -157,7 +157,7 @@ docs/demos/             Future video links
 
 ## Development
 
-Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current development concerns Python/Bash repository utilities and documentation; the target product stack is documented but not implemented.
+Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current development includes the FastAPI shell in `app/`, API tests in `tests/`, repository utilities and documentation. The remaining target workflow is planned.
 
 ## Team Workflow
 
@@ -169,7 +169,7 @@ Project: **SOEN 490 - Industrial Data Pipeline Platform**. URL: **TODO — creat
 
 ## Iterations & Releases
 
-See the [live milestone schedule](docs/milestones.md) and [iteration process](docs/iterations/README.md). Completion tags are `Iteration1` … `Iteration13`; release tags are `Release1`, `Release2`, `Release3`. Create them only after real completion. [Release process](docs/releases/README.md).
+See the [live milestone schedule](docs/milestones.md) and [iteration process](docs/iterations/README.md). Use the [planned versioned tags](docs/iterations/README.md#completion-tags) for Iterations 1–4 / Release 1, only after genuine completion and explicit owner instruction. [Release process](docs/releases/README.md).
 
 ## Documentation / Wiki
 
@@ -226,3 +226,12 @@ No license has been selected. Team/stakeholder approval is required; see [licens
 | Demo videos | [Demos](docs/demos/README.md) |
 | Stakeholder evidence | [Signoff records](docs/stakeholder/README.md) |
 | Remaining gaps | [Human actions](SOEN490_HUMAN_ACTIONS.md), [requirements matrix](docs/SOEN490_REQUIREMENTS_MATRIX.md) |
+
+## Development Roadmap
+
+- Iteration 1 — Foundation & Architecture
+- Iteration 2 — Visual Pipeline Builder
+- Iteration 3 — Execution Engine & Data Processing
+- Iteration 4 — Integration, Quality & Release
+
+Application code evolves continuously on `main` through reviewed PRs. Iteration-specific documentation and evidence live under [docs/iterations/](docs/iterations/README.md). Git tags preserve the exact application state used for iteration demonstrations. [Release 1 documentation](docs/release-1/README.md) contains target acceptance and traceability.

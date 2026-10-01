@@ -42,3 +42,22 @@ My own design, changes and verification: TODO
 
 ## Evidence Links
 TODO: design → code → PR/review → tests/CI → iteration/release.
+
+## Record identification
+
+Developer: TODO GitHub identity
+Iteration: TODO
+
+## Assigned Stories
+
+TODO: link actual assigned issues; describe your engineering design, implementation, tests written and code reviews in the existing sections above.
+
+## Problems Encountered
+
+TODO: distinguish unresolved problems from problems solved.
+
+## Independent Learning
+
+TODO: link actual learning evidence and explain how it affected your work.
+
+AI assistance details: record how the tool was used and the human contribution in the AI Assistance section. No human review should be claimed before it occurs.

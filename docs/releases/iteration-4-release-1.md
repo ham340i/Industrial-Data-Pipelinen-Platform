@@ -89,5 +89,9 @@ Pending personal evidence; preserve unsuccessful experiments.
 Codex drafted this future plan from team requirements. Student implementation, tests and review are pending; add actual individual disclosures.
 
 ## Tag / Demo
-`Iteration4`; `Release1` only after accepted release completion: not created.
+`v1.0.0-release1`: not created.
 Demo: Pending actual recording and access verification.
+
+## Current evidence record
+
+This file preserves the original planning snapshot. Record ongoing results in the [Iteration 4 / Release 1 evidence directory](../iterations/iteration-4-release-1/README.md). Initial pending statuses above are historical planning statements; current completion evidence belongs in that directory.

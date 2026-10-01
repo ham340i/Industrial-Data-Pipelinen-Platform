@@ -89,5 +89,9 @@ Pending personal evidence; preserve unsuccessful experiments.
 Codex drafted this future plan from team requirements. Student implementation, tests and review are pending; add actual individual disclosures.
 
 ## Tag / Demo
-`Iteration3`: not created.
+`v0.3.0-iteration3`: not created.
 Demo: Pending actual recording and access verification.
+
+## Current evidence record
+
+This file preserves the original planning snapshot. Record ongoing results in the [Iteration 3 evidence directory](../iterations/iteration-3/README.md). Initial pending statuses above are historical planning statements; current completion evidence belongs in that directory.
