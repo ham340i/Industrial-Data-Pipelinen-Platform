@@ -69,6 +69,46 @@ There are no application dependencies to install. Repository tooling uses only t
 
 Repository checks require no configuration. No application environment variables exist yet, so no `.env.example` is supplied. Future configuration must document non-secret defaults and use local secret storage; see the [security plan](docs/security/security-plan.md).
 
+## API Development
+
+The API uses Python 3.12, FastAPI and Pydantic v2.
+
+Create and activate the virtual environment:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+```
+
+Install the application dependencies:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Start the local API:
+
+```bash
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The API is available at:
+
+- Health endpoint: `http://127.0.0.1:8000/api/v1/health`
+- OpenAPI documentation: `http://127.0.0.1:8000/docs`
+- OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
+
+Run the API tests:
+
+```bash
+python -m pytest -q
+```
+
+The API shell currently provides versioned contracts, request validation, structured error responses and correlation IDs. Pipeline-engine execution logic is outside the scope of this initial API implementation.
+
+To stop the local server, press `Ctrl+C` in the terminal running Uvicorn.
+
 ## Running Locally
 
 ```sh
