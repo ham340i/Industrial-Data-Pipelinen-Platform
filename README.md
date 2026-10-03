@@ -10,7 +10,7 @@ The team has supplied the **Industrial Data Pipeline Engineering Platform** Rele
 
 ## Project Status
 
-**Foundation in progress: the FastAPI shell and API tests are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI. The Release 1 target architecture and backlog are now specified; compatible dependency versions, implementation decisions and team capacity still require refinement. No releases or stakeholder approvals are claimed. See the [baseline audit](SOEN490_REPO_AUDIT.md).
+ **Foundation in progress: the React workbench, FastAPI shell and their respective tests are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI.
 
 ## Problem
 
@@ -42,14 +42,14 @@ This is a proposed logical architecture. See [component status and boundaries](d
 
 | Area | Current state |
 |---|---|
-| Target product stack (not installed) | React 19/TypeScript/Vite, FastAPI/Python 3.12, Polars/PyArrow, Parquet/DuckDB, SQLite/SQLAlchemy/Alembic |
-| Target product tests/quality (not installed) | pytest, Vitest/React Testing Library, Playwright, Ruff/mypy, ESLint/Prettier; package manager/lock details require foundation work |
+| Release 1 target stack (frontend implemented) | React 19/TypeScript/Vite, FastAPI/Python 3.12, Polars/PyArrow, Parquet/DuckDB, SQLite/SQLAlchemy/Alembic |
+| Release 1 quality stack (frontend implemented) | pytest, Vitest/React Testing Library, Playwright, Ruff/mypy, ESLint/Prettier; frontend uses npm/package-lock.json |
 | Repository tooling | Python 3.11+ standard library; Bash; Git |
-| CI | GitHub Actions for repository checks; application CI pending |
+| CI | GitHub Actions for repository checks; frontend lint/format/type/test/build gate |
 
 ## Getting Started
 
-Follow the [detailed developer guide](docs/getting-started.md), including troubleshooting and unavailable application commands. A new developer can clone and validate the repository today. The FastAPI shell startup and test commands are recorded in the FastAPI section below; the full pipeline workflow is not yet implemented.
+Follow the [developer guide](docs/getting-started.md) and [frontend workbench guide](docs/frontend/workbench.md). The shell runs locally; backend services, project storage and graph execution are not implemented yet.
 
 ## Prerequisites
 
@@ -63,11 +63,11 @@ cd Industrial-Data-Pipelinen-Platform
 python3 --version
 ```
 
-There are no application dependencies to install. Repository tooling uses only the standard library.
+For the frontend, use Node.js 24 and npm 11, then run `npm ci --ignore-scripts` in `frontend/`. Repository Python tooling uses only the standard library.
 
 ## Configuration
 
-Repository checks require no configuration. No application environment variables exist yet, so no `.env.example` is supplied. Future configuration must document non-secret defaults and use local secret storage; see the [security plan](docs/security/security-plan.md).
+Repository checks require no configuration. Frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
 
 ## API Development
 
@@ -116,7 +116,15 @@ python3 scripts/check_repository.py
 python3 scripts/check_docs.py
 ```
 
-These validate the repository; they do not start an ETL application. The first implementation PR must add verified install, configuration, start, test and build commands here.
+These validate the repository. Start the frontend with:
+
+```sh
+cd frontend
+npm ci --ignore-scripts
+npm run dev
+```
+
+Run `npm run check` for frontend lint/format/type/test/build verification. Run `npm run preview` to inspect the production build. An offline API warning is expected until the backend is available.
 
 ## Testing
 
@@ -126,20 +134,21 @@ These validate the repository; they do not start an ETL application. The first i
 python3 -m unittest discover -s scripts/tests -v
 ```
 
-These exercise repository-checking tools. Product unit, integration and end-to-end tests do not exist yet. See the [testing plan](docs/testing/testing-plan.md) and [observed validation](docs/testing/repository-validation.md).
+These exercise repository-checking tools. Frontend unit and HTTP-mock integration tests run with `npm test` in `frontend/`; full product end-to-end tests remain future work. See the [testing plan](docs/testing/testing-plan.md) and [observed validation](docs/testing/repository-validation.md).
 
 ## Continuous Integration
 
-[GitHub Actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions) runs `Repository checks` and `Documentation checks` on PRs and pushes to main. Both passed on the audited baseline. Main requires these checks, an up-to-date branch, one teammate approval and resolved conversations. See [compliance evidence](docs/SOEN490_COMPLIANCE_AUDIT.md).
+[GitHub Actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions) runs `Repository checks`, `Documentation checks` and the new `Frontend checks` job on PRs and pushes to main. The frontend job installs locked dependencies, checks lint/format/types/tests/build and runs Chromium shell smoke tests. Both passed on the audited baseline. Main requires these checks, an up-to-date branch, one teammate approval and resolved conversations. See [compliance evidence](docs/SOEN490_COMPLIANCE_AUDIT.md).
 
 ## Deployment
 
-There is no product deployment artifact yet. See the [environment, rollout and rollback plan](docs/deployment/deployment-plan.md); no stakeholder or production release is claimed.
+The frontend produces a static `frontend/dist/` build; the complete ETL product is not deployable yet. See the [environment, rollout and rollback plan](docs/deployment/deployment-plan.md); no stakeholder or production release is claimed.
 
 ## Repository Structure
 
 ```text
 .github/                Issue/PR forms, contribution policy and Actions
+frontend/               React workbench, typed API client and feature tests
 scripts/                Repository checks and GitHub administration helpers
 docs/architecture/      Proposed boundaries and ADR template
 docs/planning/          Schedule, Project setup, risks, scope and learning
@@ -157,7 +166,7 @@ docs/demos/             Future video links
 
 ## Development
 
-Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current development includes the FastAPI shell in `app/`, API tests in `tests/`, repository utilities and documentation. The remaining target workflow is planned.
+Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current implementation includes the React workbench and frontend feature tests, the FastAPI shell in `app/`, API tests in `tests/`, and Python/Bash repository utilities.
 
 ## Team Workflow
 

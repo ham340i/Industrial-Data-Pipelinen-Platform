@@ -41,6 +41,50 @@
           "run": "python3 -m unittest discover -s scripts/tests -v"
         }
       ]
+    },
+    "frontend": {
+      "name": "Frontend checks",
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 10,
+      "defaults": {
+        "run": {
+          "working-directory": "frontend"
+        }
+      },
+      "steps": [
+        {
+          "name": "Check out repository",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Set up Node.js",
+          "uses": "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "with": {
+            "node-version": "24",
+            "cache": "npm",
+            "cache-dependency-path": "frontend/package-lock.json"
+          }
+        },
+        {
+          "name": "Install locked dependencies",
+          "run": "npm ci --ignore-scripts"
+        },
+        {
+          "name": "Lint, format, typecheck, test and build",
+          "run": "npm run check"
+        },
+        {
+          "name": "Install Chromium for shell smoke tests",
+          "run": "npm run browser:install -- --with-deps"
+        },
+        {
+          "name": "Verify production shell in Chromium",
+          "run": "npm run test:browser"
+        }
+      ]
     }
   }
 }

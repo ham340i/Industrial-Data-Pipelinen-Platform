@@ -14,7 +14,7 @@ This record contains the initial plan only. Actual achievements will be summariz
 | Issue | Title | Primary Owner | Reviewer | SP | Ideal Hours | Priority | Risk | Dependencies |
 |---|---|---|---|---:|---:|---|---|---|
 | [#4](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/4) | Reproducible local workspace and Compose startup (task) | ham340i | aboudka2003 | 5 | 10 | Critical | Medium | [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5), [#6](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/6) |
-| [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5) | React 19 workbench shell and typed API client (task) | aboudka2003 | adamoug | 5 | 10 | Critical | Medium | None |
+| [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5) | React 19 workbench shell and typed API client (task) | aboudka2003 | menaboulus | 5 | 10 | Critical | Medium | None |
 | [#6](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/6) | FastAPI shell with typed health and error contracts (task) | adamoug | Al-Yousef | 5 | 10 | Critical | Medium | None |
 | [#7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7) | SQLite metadata models and migration foundation (task) | Al-Yousef | joedaswagger | 8 | 16 | High | High | [#6](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/6) |
 | [#8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/8) | Versioned Block SDK and typed registry contract (task) | joedaswagger | karimikhaeil | 8 | 16 | Critical | High | None |
@@ -25,7 +25,7 @@ This record contains the initial plan only. Actual achievements will be summariz
 | [#13](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/13) | Spike Polars Arrow schema and memory behavior (spike) | karimikhaeil | MarcElHaddad1 | 3 | 6 | High | High | [#8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/8) |
 
 ## Completed Work
-Pending actual issue/PR/test evidence.
+No merged completion asserted. Issue #5 implementation is on `feature/5-workbench-shell`; see [verification](../testing/issue-5-workbench.md) and [AI-assisted contribution record](../individual-contributions/aboudka2003-iteration-1.md). Independent review, CI and merge remain required.
 
 ## Slipped Work
 Pending retrospective; do not infer slippage from open future issues.
@@ -46,7 +46,7 @@ Estimated professional value: Not calculated
 Assumptions: Planning estimates are not recorded actual effort; no dollar amount invented.
 
 ## Engineering Decisions
-Pending actual alternatives, ADRs and design evidence.
+Issue #5 records frontend state, routing and transport choices in [ADR-0001](../architecture/decisions/ADR-0001-workbench-shell.md); teammate approval is pending.
 
 ## Testing
 Planned tests are specified per issue; results pending. Link exact revision, commands and environment.
@@ -76,7 +76,7 @@ Pending implemented changes; [target architecture](../architecture/release-1-tar
 | Contributor | Assigned issues (planned) | PRs | Commits | Engineering contribution evidence |
 |---|---|---|---|---|
 | ham340i | [#4](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/4) | Pending | Pending | Not recorded; assignments are not contributions |
-| aboudka2003 | [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5) | Pending | Pending | Not recorded; assignments are not contributions |
+| aboudka2003 | [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5) | [#43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43) | [f5eefe8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/f5eefe8) | [AI-assisted work and pending human verification](../individual-contributions/aboudka2003-iteration-1.md) |
 | adamoug | [#6](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/6), [#12](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/12) | Pending | Pending | Not recorded; assignments are not contributions |
 | Al-Yousef | [#7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7) | Pending | Pending | Not recorded; assignments are not contributions |
 | joedaswagger | [#8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/8) | Pending | Pending | Not recorded; assignments are not contributions |

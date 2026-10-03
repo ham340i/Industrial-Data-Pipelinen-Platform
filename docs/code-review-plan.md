@@ -8,12 +8,12 @@ Primary owners and designated reviewers are recorded in every planned issue. The
 |---|---|---:|
 | ham340i | [#11](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/11), [#20](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/20), [#27](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/27), [#34](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/34) | 8 |
 | aboudka2003 | [#4](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/4), [#21](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/21), [#28](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/28), [#35](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/35) | 8 |
-| adamoug | [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5), [#14](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/14), [#29](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/29), [#36](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/36) | 8 |
+| adamoug | [#14](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/14), [#29](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/29), [#36](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/36) | 6 |
 | Al-Yousef | [#6](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/6), [#12](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/12), [#15](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/15), [#22](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/22), [#37](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/37) | 9 |
 | joedaswagger | [#7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7), [#16](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/16), [#23](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/23), [#30](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/30) | 8 |
 | karimikhaeil | [#8](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/8), [#17](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/17), [#24](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/24), [#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31) | 8 |
 | MarcElHaddad1 | [#9](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/9), [#13](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/13), [#18](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/18), [#25](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/25), [#32](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/32) | 9 |
-| menaboulus | [#10](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/10), [#19](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/19), [#26](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/26), [#33](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/33) | 8 |
+| menaboulus | [#5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5), [#10](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/10), [#19](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/19), [#26](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/26), [#33](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/33) | 10 |
 
 
 ## Review procedure
@@ -26,3 +26,7 @@ Primary owners and designated reviewers are recorded in every planned issue. The
 6. Resolve comments, rerun checks, obtain independent approval and merge under main protection. Update real contribution/review records.
 
 If unavailable, choose a different eligible student with capacity, update the issue and workload, and document the reason. Never substitute moar82 or self-approval. For high-risk SDK/data/security changes, involve a second student as an optional consulted reviewer without silently assigning unbudgeted work.
+
+## Issue #5 reviewer substitution
+
+At @aboudka2003’s request, Mena (`menaboulus`) replaces `adamoug` for issue #5. The two-hour review estimate transfers with the assignment; no approval or completed review is claimed.

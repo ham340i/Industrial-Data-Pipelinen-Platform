@@ -1,6 +1,6 @@
 # Release 1 target architecture
 
-Status: **team-supplied target for future implementation**, not implemented and not a retrospectively accepted ADR. Industry partner: Pratt & Whitney Canada; authorized data contracts and access still need confirmation. The existing product alias is Local Pipeline Studio.
+Status: **Release 1 target; frontend foundation implemented under issue #5**. Backend, graph editor and execution layers remain planned. See [ADR-0001](decisions/ADR-0001-workbench-shell.md) and the [frontend guide](../frontend/workbench.md). Industry partner: Pratt & Whitney Canada; authorized data contracts and access still need confirmation. The existing product alias is Local Pipeline Studio.
 
 ## Boundaries
 
@@ -40,7 +40,7 @@ flowchart TD
 | Quality/CI | Ruff, mypy, ESLint, Prettier, GitHub Actions | Real lint/type/format/test/build gates once sources exist |
 | Packaging | Docker Compose initially | Reproducible local startup and persistent metadata/artifact volumes |
 
-No dependency versions beyond the supplied major versions are invented. Foundation owners must verify compatibility, select package managers/lockfiles and record runnable commands. No dependencies are installed by this planning change.
+No dependency versions beyond the supplied major versions are invented. Foundation owners must verify compatibility, select package managers/lockfiles and record runnable commands. The issue #5 frontend now records selected versions in `frontend/package-lock.json`; other layers remain uninstalled.
 
 ## Definition and data boundaries
 
