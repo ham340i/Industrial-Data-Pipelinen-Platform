@@ -75,6 +75,6 @@ TODO: personal learning records and effects on design.
 TODO: tools, purposes, human work and verification; or None.
 
 ## Tag
-IterationN — TODO actual tag link after completion.
+TODO actual tag link after completion and explicit owner instruction; follow the [tag strategy](README.md#completion-tags).
 
 Link each contributor’s [personal record](../individual-contributions/README.md); no team result should be claimed as one person’s work.

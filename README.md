@@ -10,7 +10,7 @@ The team has supplied the **Industrial Data Pipeline Engineering Platform** Rele
 
 ## Project Status
 
-**Frontend foundation implemented; backend and pipeline execution remain planned.** This repository provides engineering workflows, documentation templates and repository CI. The Release 1 target architecture and backlog are now specified; The frontend shell has locked dependencies and a documented design; backend decisions and team capacity still require refinement. No releases or stakeholder approvals are claimed. See the [baseline audit](SOEN490_REPO_AUDIT.md).
+ **Foundation in progress: the React workbench, FastAPI shell and their respective tests are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI.
 
 ## Problem
 
@@ -69,6 +69,46 @@ For the frontend, use Node.js 24 and npm 11, then run `npm ci --ignore-scripts` 
 
 Repository checks require no configuration. Frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
 
+## API Development
+
+The API uses Python 3.12, FastAPI and Pydantic v2.
+
+Create and activate the virtual environment:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+```
+
+Install the application dependencies:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Start the local API:
+
+```bash
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The API is available at:
+
+- Health endpoint: `http://127.0.0.1:8000/api/v1/health`
+- OpenAPI documentation: `http://127.0.0.1:8000/docs`
+- OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
+
+Run the API tests:
+
+```bash
+python -m pytest -q
+```
+
+The API shell currently provides versioned contracts, request validation, structured error responses and correlation IDs. Pipeline-engine execution logic is outside the scope of this initial API implementation.
+
+To stop the local server, press `Ctrl+C` in the terminal running Uvicorn.
+
 ## Running Locally
 
 ```sh
@@ -126,7 +166,7 @@ docs/demos/             Future video links
 
 ## Development
 
-Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current implementation includes the React workbench, its feature tests and Python/Bash repository utilities. See [ADR-0001](docs/architecture/decisions/ADR-0001-workbench-shell.md) for frontend boundaries.
+Use an issue-linked branch and the [contribution guide](CONTRIBUTING.md). Current implementation includes the React workbench and frontend feature tests, the FastAPI shell in `app/`, API tests in `tests/`, and Python/Bash repository utilities.
 
 ## Team Workflow
 
@@ -138,7 +178,7 @@ Project: **SOEN 490 - Industrial Data Pipeline Platform**. URL: **TODO — creat
 
 ## Iterations & Releases
 
-See the [live milestone schedule](docs/milestones.md) and [iteration process](docs/iterations/README.md). Completion tags are `Iteration1` … `Iteration13`; release tags are `Release1`, `Release2`, `Release3`. Create them only after real completion. [Release process](docs/releases/README.md).
+See the [live milestone schedule](docs/milestones.md) and [iteration process](docs/iterations/README.md). Use the [planned versioned tags](docs/iterations/README.md#completion-tags) for Iterations 1–4 / Release 1, only after genuine completion and explicit owner instruction. [Release process](docs/releases/README.md).
 
 ## Documentation / Wiki
 
@@ -195,3 +235,12 @@ No license has been selected. Team/stakeholder approval is required; see [licens
 | Demo videos | [Demos](docs/demos/README.md) |
 | Stakeholder evidence | [Signoff records](docs/stakeholder/README.md) |
 | Remaining gaps | [Human actions](SOEN490_HUMAN_ACTIONS.md), [requirements matrix](docs/SOEN490_REQUIREMENTS_MATRIX.md) |
+
+## Development Roadmap
+
+- Iteration 1 — Foundation & Architecture
+- Iteration 2 — Visual Pipeline Builder
+- Iteration 3 — Execution Engine & Data Processing
+- Iteration 4 — Integration, Quality & Release
+
+Application code evolves continuously on `main` through reviewed PRs. Iteration-specific documentation and evidence live under [docs/iterations/](docs/iterations/README.md). Git tags preserve the exact application state used for iteration demonstrations. [Release 1 documentation](docs/release-1/README.md) contains target acceptance and traceability.

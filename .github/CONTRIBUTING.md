@@ -59,3 +59,7 @@ Main now requires one approving teammate review, both named repository checks, a
 Use the [Release 1 workload](../docs/release-1-workload.md) and [review rotation](../docs/code-review-plan.md). Only the eight named students receive Release 1 engineering assignments. Professor Rodrigo Morales Alvarado (`moar82`) retains academic oversight and must never receive student tasks, story points or routine engineering PR reviews. Primary owners write feature tests and documentation; reviewers are additional students, not substitute implementers.
 
 Use `feature/<issue-number>-short-name`, `fix/<issue-number>-short-name` or `docs/<issue-number>-short-name`; the earlier `bugfix/` convention remains valid for existing branches. Commits use `<type>: <description> (#issue)` (an optional scope is allowed). Actual implementation follows issue → student → branch → tests → PR → CI → student review → approval → merge → closure. Never close a planned story merely because it was assigned.
+
+## Iteration evidence and snapshots
+
+Keep one evolving application on `main`; never duplicate source by iteration. Record reporting, demos, testing and retrospectives under [docs/iterations](../docs/iterations/README.md). Follow its completion-tag strategy and [Release 1 acceptance](../docs/release-1/acceptance.md). Never develop directly on `main` or create completion tags before completion and explicit owner instruction.

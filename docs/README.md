@@ -47,3 +47,7 @@ Start with the [project setup summary](project-setup-summary.md), [current compl
 - [Workbench developer and user guide](frontend/workbench.md)
 - [State and API design decision](architecture/decisions/ADR-0001-workbench-shell.md)
 - [Issue #5 verification](testing/issue-5-workbench.md)
+## Release 1 evidence
+
+- [Iteration records and tag strategy](iterations/README.md)
+- [Release target](release-1/README.md), [acceptance checklist](release-1/acceptance.md) and [current traceability](release-1/traceability.md)
