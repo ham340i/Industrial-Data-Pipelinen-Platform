@@ -29,6 +29,30 @@ npm run preview
 
 `check` includes lint, formatting, types, tests and build. Preview serves the built shell locally; it is not a deployment service.
 
+## Backend validation
+
+Use Python 3.12. From the repository root:
+
+```sh
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --require-hashes -r requirements.lock
+python -m ruff check
+python -m ruff format --check
+python -m mypy
+python -m pytest
+```
+
+These are the commands the `Backend checks` CI job runs. Ruff, mypy and pytest are configured in `pyproject.toml` for `app/` and `tests/`. `python -m ruff format` rewrites files to the expected format.
+
+`requirements.lock` is generated; do not edit it by hand. To add or upgrade a package, edit the range in `requirements.txt` (runtime and test packages) or `requirements-dev.txt` (lint/type tools), then regenerate with [uv](https://docs.astral.sh/uv/) and commit both files:
+
+```sh
+uv pip compile --universal --generate-hashes --python-version 3.12 requirements-dev.txt -o requirements.lock
+```
+
+Shared API test fixtures live in `tests/conftest.py`. Feature owners add their own tests beside their feature; see the [issue #11 verification record](testing/issue-11-test-harnesses-ci.md).
+
 ## Tests
 
 ```sh
@@ -45,7 +69,7 @@ python3 scripts/check_docs.py
 git diff --check
 ```
 
-The first command checks Python/Bash syntax, selected configuration rules, trailing whitespace and limited secret patterns. The second checks local Markdown links/headings and whitespace. No general Python linter, automatic formatter or static type checker is configured. Avoid claiming these commands provide those broader checks. `.yml` configuration currently uses JSON-compatible YAML, deliberately parsed with the standard library.
+The first command checks Python/Bash syntax, selected configuration rules, trailing whitespace and limited secret patterns. The second checks local Markdown links/headings and whitespace. They are not a general linter, formatter or type checker; Ruff and mypy cover `app/` and `tests/` as described under [Backend validation](#backend-validation), and `scripts/` is outside their scope. `.yml` configuration currently uses JSON-compatible YAML, deliberately parsed with the standard library.
 
 ## Deployment / local production
 
@@ -55,6 +79,7 @@ A frontend static build is available via `npm run build` in `frontend/`; the ful
 
 | Symptom | Resolution |
 |---|---|
+| `pip` reports a hash mismatch or an unpinned requirement | Regenerate `requirements.lock` with the command under Backend validation; do not drop `--require-hashes` |
 | Python command unavailable or older than 3.11 | Install an approved Python 3.11+ interpreter and confirm `python3 --version` |
 | Script cannot find Git files | Use a Git clone; run the commands from its root |
 | Broken document link/heading | Correct the relative target or heading; rerun `check_docs.py` |

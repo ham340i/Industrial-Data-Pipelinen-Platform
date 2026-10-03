@@ -1,0 +1,6 @@
+# Backend development and CI tooling (issue #11).
+# Edit version ranges here or in requirements.txt, then regenerate requirements.lock:
+#   uv pip compile --universal --generate-hashes --python-version 3.12 requirements-dev.txt -o requirements.lock
+-r requirements.txt
+ruff>=0.9,<1
+mypy>=1.14,<3

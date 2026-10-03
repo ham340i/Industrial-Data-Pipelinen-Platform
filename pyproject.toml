@@ -1,0 +1,34 @@
+# Backend quality and test configuration (issue #11).
+# Tool configuration only: dependencies stay in requirements.txt,
+# requirements-dev.txt and the generated requirements.lock.
+
+[tool.ruff]
+target-version = "py312"
+# Application source and its tests. scripts/ is standard-library repository
+# tooling with its own checks (scripts/check_repository.py).
+include = ["app/**/*.py", "tests/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Two unused imports predate this configuration. Issue #11 adds checks without
+# editing application source; remove this entry when app/main.py is next changed.
+"app/main.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app", "tests"]
+strict = true
+
+[[tool.mypy.overrides]]
+# Test functions may omit "-> None"; their bodies are still type-checked.
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true
