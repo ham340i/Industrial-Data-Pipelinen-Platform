@@ -43,9 +43,9 @@ This is a proposed logical architecture. See [component status and boundaries](d
 | Area | Current state |
 |---|---|
 | Release 1 target stack (frontend implemented) | React 19/TypeScript/Vite, FastAPI/Python 3.12, Polars/PyArrow, Parquet/DuckDB, SQLite/SQLAlchemy/Alembic |
-| Release 1 quality stack (frontend implemented) | pytest, Vitest/React Testing Library, Playwright, Ruff/mypy, ESLint/Prettier; frontend uses npm/package-lock.json |
+| Release 1 quality stack (frontend and API shell implemented) | pytest, Vitest/React Testing Library, Playwright, Ruff/mypy, ESLint/Prettier; frontend uses npm/package-lock.json, backend uses the hash-pinned requirements.lock |
 | Repository tooling | Python 3.11+ standard library; Bash; Git |
-| CI | GitHub Actions for repository checks; frontend lint/format/type/test/build gate |
+| CI | GitHub Actions for repository checks; backend lint/format/type/test gate; frontend lint/format/type/test/build gate |
 
 ## Getting Started
 
@@ -80,12 +80,14 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install the application dependencies:
+Install the locked application and development dependencies:
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install --only-binary :all: --require-hashes -r requirements.lock
 ```
+
+`requirements.lock` pins exact versions and hashes for everything in `requirements.txt` and `requirements-dev.txt`; CI installs the same file. See the [developer guide](docs/getting-started.md#backend-validation) for how to regenerate it.
 
 Start the local API:
 
@@ -99,10 +101,13 @@ The API is available at:
 - OpenAPI documentation: `http://127.0.0.1:8000/docs`
 - OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
 
-Run the API tests:
+Run the backend checks that CI runs:
 
 ```bash
-python -m pytest -q
+python -m ruff check
+python -m ruff format --check
+python -m mypy
+python -m pytest
 ```
 
 The API shell currently provides versioned contracts, request validation, structured error responses and correlation IDs. Pipeline-engine execution logic is outside the scope of this initial API implementation.
@@ -138,7 +143,7 @@ These exercise repository-checking tools. Frontend unit and HTTP-mock integratio
 
 ## Continuous Integration
 
-[GitHub Actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions) runs `Repository checks`, `Documentation checks` and the new `Frontend checks` job on PRs and pushes to main. The frontend job installs locked dependencies, checks lint/format/types/tests/build and runs Chromium shell smoke tests. Both passed on the audited baseline. Main requires these checks, an up-to-date branch, one teammate approval and resolved conversations. See [compliance evidence](docs/SOEN490_COMPLIANCE_AUDIT.md).
+[GitHub Actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions) runs `Repository checks`, `Documentation checks`, `Backend checks` and `Frontend checks` on PRs and pushes to main. The backend job installs the hash-pinned `requirements.lock` and runs Ruff lint/format, mypy and pytest. The frontend job installs locked dependencies, checks lint/format/types/tests/build and runs Chromium shell smoke tests. See the [issue #11 verification record](docs/testing/issue-11-test-harnesses-ci.md). Both passed on the audited baseline. Main requires these checks, an up-to-date branch, one teammate approval and resolved conversations. See [compliance evidence](docs/SOEN490_COMPLIANCE_AUDIT.md).
 
 ## Deployment
 

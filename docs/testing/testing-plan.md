@@ -33,6 +33,10 @@ The issue owner owns test design, fixtures and recorded evidence. An independent
 
 Apply the [project-wide checklist](../planning/definition-of-done.md). A story needs tests appropriate to its behavior, passing CI, independent review and required stakeholder evidence. Attach command, revision, environment, result and any limitations to the PR and iteration record.
 
+## Issue #11 application harnesses and CI gates
+
+Backend Ruff, mypy and pytest configuration, a hash-pinned lockfile, shared API fixtures, API contract tests and a `Backend checks` CI job were added alongside the existing frontend gate. Controlled harness tests in both stacks prove that a broken fixture makes each check fail. See [actual verification](issue-11-test-harnesses-ci.md). The "not applicable yet" statements under CI integration above describe the state before issues #5 and #11.
+
 ## Issue #5 frontend foundation
 
 The first implemented feature adds Vitest/Testing Library/MSW tests and Playwright production-shell smoke tests. See [actual verification](issue-5-workbench.md) and [runnable commands](../frontend/workbench.md). Synthetic health mocks verify the UI boundary; they do not establish backend/engine integration or release acceptance.
