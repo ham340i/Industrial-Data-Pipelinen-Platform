@@ -36,7 +36,7 @@ Use Python 3.12. From the repository root:
 ```sh
 python3.12 -m venv .venv
 source .venv/bin/activate
-python -m pip install --require-hashes -r requirements.lock
+python -m pip install --only-binary :all: --require-hashes -r requirements.lock
 python -m ruff check
 python -m ruff format --check
 python -m mypy

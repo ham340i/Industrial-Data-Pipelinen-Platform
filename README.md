@@ -84,7 +84,7 @@ Install the locked application and development dependencies:
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install --require-hashes -r requirements.lock
+python -m pip install --only-binary :all: --require-hashes -r requirements.lock
 ```
 
 `requirements.lock` pins exact versions and hashes for everything in `requirements.txt` and `requirements-dev.txt`; CI installs the same file. See the [developer guide](docs/getting-started.md#backend-validation) for how to regenerate it.

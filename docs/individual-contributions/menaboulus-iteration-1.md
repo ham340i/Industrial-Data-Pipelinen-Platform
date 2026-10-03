@@ -6,7 +6,7 @@ Assigned issue: [#11](https://github.com/ham340i/Industrial-Data-Pipelinen-Platf
 
 The student requested the implementation, asked that existing code stay unchanged and supplied the issue requirements. Claude Code generated the configuration, tests, CI job and documentation and ran the recorded checks. This is not a claim that the student manually wrote, independently understood or personally tested the generated work. Student design review, modifications, learning reflection and confirmation of this evidence remain pending.
 
-Pull request, commits and hosted Actions runs: pending. Planned reviewer: `ham340i`; review not yet requested.
+Pull request: [#46](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/46). Hosted failure/pass run links: pending. Planned reviewer: `ham340i`; review not yet requested.
 
 ## Artifacts
 

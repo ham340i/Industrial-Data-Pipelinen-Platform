@@ -1,6 +1,6 @@
 # Issue #11 test harness and CI verification
 
-Scope: [Application test harnesses and real stack CI gates](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/11). Branch: `feature/11-test-harnesses-ci`, based on `62d02bb` (main after [PR #43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43) and [PR #44](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/44)). Validation date: 2026-10-03. Hosted Actions results, the pull request and independent review are pending and must be linked here before the issue is closed.
+Scope: [Application test harnesses and real stack CI gates](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/11). Branch: `feature/11-test-harnesses-ci`, based on `62d02bb` (main after [PR #43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43) and [PR #44](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/44)). Validation date: 2026-10-03. Pull request: [#46](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/46). Hosted failure/pass run links and independent review are pending and must be linked here before the issue is closed.
 
 ## What this change adds
 
@@ -22,7 +22,7 @@ Existing application source, existing tests and the existing `Repository checks`
 |---|---|---|
 | pytest and Vitest/React Testing Library harnesses with meaningful shell/contract tests | pytest configuration, shared fixture and 14 new contract test cases; the Vitest/Testing Library/MSW harness from issue #5 is reused | 24 backend tests and 22 frontend tests pass locally |
 | Ruff/mypy and ESLint/Prettier against actual source | Ruff and mypy configured for `app/` and `tests/`; ESLint/Prettier from issue #5 cover `frontend/` | All four commands pass on the real source and fail on broken fixtures |
-| Locked installs and useful dependency caching | `pip install --require-hashes -r requirements.lock` with the setup-python pip cache keyed on the lockfile; the frontend job already uses `npm ci` and the npm cache keyed on `package-lock.json` | Clean virtual environment installed from the lockfile, then all backend tests passed |
+| Locked installs and useful dependency caching | `pip install --only-binary :all: --require-hashes -r requirements.lock` with the setup-python pip cache keyed on the lockfile; the frontend job already uses `npm ci` and the npm cache keyed on `package-lock.json` | Clean virtual environment installed from the lockfile, then all backend tests passed |
 | Backend checks and frontend lint/tests/build using verified package commands | `Backend checks` job; existing `Frontend checks` job | Each command below was run locally; hosted results pending |
 | Preserve documentation/repository checks and avoid empty-success placeholder tests | Existing jobs untouched; every new test asserts observable behavior; pytest uses strict markers/config and fails when nothing is collected | Repository, release-plan and documentation checks pass |
 
@@ -32,7 +32,7 @@ Environment: macOS (arm64), Python 3.12.15, Ruff 0.16.10, mypy 2.4.0, pytest 8.4
 
 Backend, from the repository root:
 
-- `python -m pip install --require-hashes -r requirements.lock` in a new virtual environment: installed 34 pinned packages.
+- `python -m pip install --only-binary :all: --require-hashes -r requirements.lock` in a new virtual environment: installed 34 pinned packages.
 - `python -m ruff check`: passed.
 - `python -m ruff format --check`: 12 files already formatted.
 - `python -m mypy`: no issues in 12 source files.
@@ -78,6 +78,7 @@ Hosted demonstration (a deliberately failing commit turning the Actions run red,
 - **Scope of Ruff and mypy.** They cover `app/` and `tests/`. `scripts/` is standard-library repository tooling written in a different style and already checked by `scripts/check_repository.py`; bringing it under Ruff would mean reformatting files outside this issue.
 - **Rule set.** Ruff uses `E`, `F`, `W`, `B` and `UP`. Import sorting (`I`) is left off because the existing files would need reordering.
 - **mypy strictness.** `app/` is checked in strict mode. Tests may omit `-> None`, because the existing API tests do; their bodies are still type-checked.
+- **Wheels only.** The locked install passes `--only-binary :all:` so pip never runs a package setup script. SonarCloud flagged the first version of the CI step on PR #46 for omitting it. Every locked package publishes a wheel for Python 3.12 on Linux x86_64 and macOS arm64 (verified with a clean install and `pip download`).
 - **Separate CI steps.** The backend job runs one tool per step so the failing check is visible in the Actions summary.
 - **Harness tests use subprocesses.** This exercises the same commands and exit codes that CI depends on instead of mocking them.
 
