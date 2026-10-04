@@ -23,7 +23,7 @@ Backend checks in the Python 3.12.15 image: 24 pytest tests passed; Ruff lint/fo
 
 The clean clone installed dependencies with `npm ci --ignore-scripts`. Both documented lock regeneration commands passed with no Git diff: `npm install --package-lock-only --ignore-scripts` under the pinned Node 24/npm 11 image, and `uv pip compile --universal --generate-hashes --python-version 3.12 requirements-dev.txt -o requirements.lock` under uv 0.12.23. The Python command resolved 35 packages.
 
-Final repository, documentation and release-plan checks passed; `git diff --check` passed. The later evidence commit changes documentation only. CI and independent review are not yet claimed.
+Final repository, documentation and release-plan checks passed; `git diff --check` passed. The later evidence commit changes documentation only. The first remote run passed all five GitHub Actions jobs, including the real Compose/Chromium smoke: [CI run](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37206618624). Independent review remains pending in [PR #47](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/47).
 
 ## Limits and troubleshooting encountered
 
@@ -34,3 +34,7 @@ The first browser smoke attempt correctly reached the real API but incorrectly e
 The metadata test writes a synthetic marker; it does not claim a working database schema. Full ETL workflow and Iteration 4 E2E acceptance remain separate work. Repository Definition of Done still requires passing remote CI, an independent student review and merge. No stakeholder acceptance is asserted.
 
 AI assistance: Codex generated the workspace implementation, documentation and tests and executed the recorded checks at the user's request. Human review is pending.
+
+## Quality analysis follow-up
+
+The initial SonarCloud analysis flagged three combined tag/digest image references, a duplicated health-path literal and a generic HTTP URL in the smoke test. Image references now use only the same immutable digests with refresh tags in comments. The health path has one constant. The smoke URL explicitly uses `127.0.0.1` and validates the port; HTTP remains appropriate for synthetic loopback-only test traffic. No rule suppression or TLS-verification bypass was introduced. The PR checks are the authoritative current analysis result.
