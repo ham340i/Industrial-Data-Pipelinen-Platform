@@ -49,7 +49,7 @@ This is a proposed logical architecture. See [component status and boundaries](d
 
 ## Getting Started
 
-Follow the [developer guide](docs/getting-started.md) and [frontend workbench guide](docs/frontend/workbench.md). The shell runs locally; backend services, project storage and graph execution are not implemented yet.
+Follow the [developer guide](docs/getting-started.md) and [frontend workbench guide](docs/frontend/workbench.md). The React and FastAPI shells run together through Compose. Project storage and graph execution remain planned.
 
 ## Prerequisites
 
@@ -67,7 +67,7 @@ For the frontend, use Node.js 24 and npm 11, then run `npm ci --ignore-scripts` 
 
 ## Configuration
 
-Repository checks require no configuration. Frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
+Repository checks require no configuration. Root `.env.example` documents safe Compose port defaults. The containerized frontend uses `/api/v1` through its same-origin proxy. Standalone frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
 
 ## API Development
 
@@ -116,6 +116,15 @@ To stop the local server, press `Ctrl+C` in the terminal running Uvicorn.
 
 ## Running Locally
 
+Start both real application shells with Docker:
+
+```sh
+cp .env.example .env
+docker compose up --build --detach --wait
+```
+
+Open http://127.0.0.1:3000. Stop with `docker compose down` (metadata is retained). See the [workspace guide](docs/local-workspace.md) for prerequisites, configuration, reset, dependency locks and integration tests.
+
 ```sh
 python3 scripts/check_repository.py
 python3 scripts/check_docs.py
@@ -143,11 +152,11 @@ These exercise repository-checking tools. Frontend unit and HTTP-mock integratio
 
 ## Continuous Integration
 
-[GitHub Actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions) runs `Repository checks`, `Documentation checks`, `Backend checks` and `Frontend checks` on PRs and pushes to main. The backend job installs the hash-pinned `requirements.lock` and runs Ruff lint/format, mypy and pytest. The frontend job installs locked dependencies, checks lint/format/types/tests/build and runs Chromium shell smoke tests. See the [issue #11 verification record](docs/testing/issue-11-test-harnesses-ci.md). Both passed on the audited baseline. Main requires these checks, an up-to-date branch, one teammate approval and resolved conversations. See [compliance evidence](docs/SOEN490_COMPLIANCE_AUDIT.md).
+[GitHub Actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions) runs `Repository checks`, `Documentation checks`, `Backend checks` and `Frontend checks` on PRs and pushes to main. The backend job installs the hash-pinned `requirements.lock` and runs Ruff lint/format, mypy and pytest. The frontend job installs locked dependencies, checks lint/format/types/tests/build and runs Chromium shell smoke tests. See the [issue #11 verification record](docs/testing/issue-11-test-harnesses-ci.md). The `Compose workspace smoke` job verifies real services, browser connectivity, metadata persistence and teardown. Main requires these checks, an up-to-date branch, one teammate approval and resolved conversations. See [compliance evidence](docs/SOEN490_COMPLIANCE_AUDIT.md).
 
 ## Deployment
 
-The frontend produces a static `frontend/dist/` build; the complete ETL product is not deployable yet. See the [environment, rollout and rollback plan](docs/deployment/deployment-plan.md); no stakeholder or production release is claimed.
+Compose packages the built frontend and API for local use; the complete ETL product is not deployable yet. See the [environment, rollout and rollback plan](docs/deployment/deployment-plan.md); no stakeholder or production release is claimed.
 
 ## Repository Structure
 

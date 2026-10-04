@@ -55,6 +55,7 @@ describe("API boundary", () => {
     await expect(getHealth()).resolves.toEqual({ status: "ok" });
   });
   it("validates public API configuration", () => {
+    expect(resolveApiBaseUrl("/api/v1")).toBe("/api/v1");
     expect(resolveApiBaseUrl(undefined)).toBe("http://127.0.0.1:8000");
     expect(resolveApiBaseUrl("https://example.test/api/")).toBe(
       "https://example.test/api",

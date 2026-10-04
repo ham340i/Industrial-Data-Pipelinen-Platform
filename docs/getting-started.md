@@ -2,7 +2,11 @@
 
 ## Current capability
 
-The React workbench shell is implemented under issue #5, alongside repository validation tools. Backend services, project persistence, the graph editor and ETL execution remain future work. See the [frontend guide](frontend/workbench.md) for configuration, architecture, usage and troubleshooting.
+The React workbench shell is implemented under issue #5, alongside repository validation tools. The FastAPI shell is also implemented; project persistence, the graph editor and ETL execution remain future work. To start both shells together, follow the [Compose workspace guide](local-workspace.md). See the [frontend guide](frontend/workbench.md) for configuration, architecture, usage and troubleshooting.
+
+## Compose startup
+
+With Docker running, execute `docker compose up --build --detach --wait` from the repository root and open http://127.0.0.1:3000. Root `.env.example` provides optional host port settings. Stop with `docker compose down`; metadata is retained. Full startup/reset and test commands are in the [workspace guide](local-workspace.md).
 
 ## Prerequisites and setup
 

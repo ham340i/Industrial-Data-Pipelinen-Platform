@@ -1,0 +1,8 @@
+**
+!requirements.lock
+!app/
+!app/**
+!docker/
+!docker/api.Dockerfile
+app/**/__pycache__/
+app/**/*.pyc

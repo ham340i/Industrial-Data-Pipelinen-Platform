@@ -19,5 +19,12 @@
       "node"
     ]
   },
-  "include": ["src", "vite.config.ts", "playwright.config.ts", "browser-tests"]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "playwright.config.ts",
+    "browser-tests",
+    "playwright.compose.config.ts",
+    "compose-tests"
+  ]
 }

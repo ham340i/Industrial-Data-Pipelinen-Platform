@@ -68,7 +68,7 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 
 ## Individual Contributions
 
-Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Actual personal record links: Not recorded. Assignment is not contribution evidence.
+Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Workspace implementation evidence: [ham340i](../../individual-contributions/ham340i-iteration-1.md), including explicit AI assistance and pending human review. Assignment is not contribution evidence.
 
 ## Retrospective
 
