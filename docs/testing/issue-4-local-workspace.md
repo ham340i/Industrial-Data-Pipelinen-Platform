@@ -19,7 +19,11 @@ Date: 2026-10-04 (America/Toronto). Owner: ham340i. Branch: `feature/4-local-wor
 - `python3 scripts/smoke_workspace.py`: passed real API and proxy health, frontend assets, SPA fallback, non-root metadata writes, persistence across down/up and isolated teardown.
 - Docker Desktop Engine 29.3.1, Compose 5.1.1, macOS ARM64. Application runtime: Python 3.12 and Node 24 from digest-pinned images. Repository test runner: Python 3.13.
 
-Backend checks in the Python 3.12.15 image: 24 pytest tests passed; Ruff lint/format and mypy passed (12 source files). Nine pre-existing Starlette deprecation warnings were emitted. Browser and clean-clone verification are being recorded before completion. CI and independent review are not yet claimed.
+Backend checks in the Python 3.12.15 image: 24 pytest tests passed; Ruff lint/format and mypy passed (12 source files). Nine pre-existing Starlette deprecation warnings were emitted. Final implementation revision `9651490` was validated in the separate clean clone (initially cloned at `fd83984`, then fast-forwarded to the final implementation). `python3 scripts/smoke_workspace.py --browser` passed: Chromium connected to the real API, Builder direct navigation/refresh worked, both containers ran without root, metadata survived container recreation and the isolated test stack/volume was removed. No existing developer volumes were modified.
+
+The clean clone installed dependencies with `npm ci --ignore-scripts`. Both documented lock regeneration commands passed with no Git diff: `npm install --package-lock-only --ignore-scripts` under the pinned Node 24/npm 11 image, and `uv pip compile --universal --generate-hashes --python-version 3.12 requirements-dev.txt -o requirements.lock` under uv 0.12.23. The Python command resolved 35 packages.
+
+Final repository, documentation and release-plan checks passed; `git diff --check` passed. The later evidence commit changes documentation only. CI and independent review are not yet claimed.
 
 ## Limits and troubleshooting encountered
 
