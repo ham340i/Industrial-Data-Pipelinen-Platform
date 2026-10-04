@@ -42,6 +42,7 @@ export function normalizeApiError(error: unknown): ApiError {
 }
 
 export function resolveApiBaseUrl(value: string | undefined): string {
+  if (value?.trim() === "/api/v1") return "/api/v1";
   const input = value?.trim() || "http://127.0.0.1:8000";
   const url = new URL(input);
   if (

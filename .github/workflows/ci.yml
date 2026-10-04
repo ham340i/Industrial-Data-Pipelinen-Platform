@@ -128,6 +128,37 @@
           "run": "npm run test:browser"
         }
       ]
+    },
+    "workspace": {
+      "name": "Compose workspace smoke",
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 15,
+      "steps": [
+        {
+          "name": "Check out repository",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Set up Node.js",
+          "uses": "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "with": {
+            "node-version": "24",
+            "cache": "npm",
+            "cache-dependency-path": "frontend/package-lock.json"
+          }
+        },
+        {
+          "name": "Install browser test dependencies",
+          "run": "npm ci --ignore-scripts --prefix frontend\ncd frontend && npm run browser:install -- --with-deps"
+        },
+        {
+          "name": "Build and verify real services, persistence and teardown",
+          "run": "python3 scripts/smoke_workspace.py --browser"
+        }
+      ]
     }
   }
 }
