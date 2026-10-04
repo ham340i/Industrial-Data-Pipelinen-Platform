@@ -56,10 +56,12 @@ def main():
             get(frontend + asset)
         if get(frontend + '/builder') != html:
             raise RuntimeError('SPA deep link failed')
+        if compose('exec', '-T', 'frontend', 'id', '-u').strip() == '0':
+            raise RuntimeError('Frontend must run as a non-root user')
         marker = uuid4().hex
         compose('exec', '-T', 'api', 'python', '-c',
-                "import os; from pathlib import Path; "
-                "assert os.getuid() != 0; "
+                "import os\nfrom pathlib import Path\n"
+                "if os.getuid() == 0:\n    raise RuntimeError('API must be non-root')\n"
                 f"Path('/var/lib/lps/smoke.txt').write_text('{marker}')")
         if args.browser:
             subprocess.run(['npm', 'exec', '--', 'playwright', 'test', '--config', 'playwright.compose.config.ts'],
