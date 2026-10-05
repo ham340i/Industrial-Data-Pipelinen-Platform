@@ -10,6 +10,8 @@ Main contains the React shell, versioned FastAPI health/example/error contracts,
 
 A complete platform still needs graph authoring/configuration, save/reload APIs, validated blocks, execution, preview, telemetry, governed outputs and the tested acceptance workflow already allocated in [the backlog](release-1-plan.md). A health-connected shell is foundation evidence.
 
+During this audit, adamoug published [SQL spike PR #52](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/52) for #12 and requested Al-Yousef's review. It has all six checks passing and 23 SQL feature tests pass locally. [The additional review](testing/pr-52-sql-review.md) reproduces three missed result-corruption cases: an unescaped `#` in the database path reads the wrong file; comment removal changes quoted SQL values; duplicate result names lose a value. Fix these before merge. Its missing issue-derived labels/milestone were added during this audit.
+
 [PR #51](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/51) proposes the standalone health/correlation-header and Windows harness corrections from issue #49. All six checks passed at `f5850406d82b465fae18187811065a1664c47c62`, including [real Compose CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37254078423), [documentation](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37254078437) and SonarCloud. Local results: 33 backend tests, 25 frontend tests and 3 browser checks. Review is requested from `adamoug`; merge is pending. A merge preflight with metadata PR #48 is clean.
 
 ## Merged PR review and traceability
@@ -27,7 +29,7 @@ During this audit, PRs #43/#44/#46/#47 received the labels and Iteration 1 miles
 
 ## Iteration 1 work that must become reviewable
 
-Due: October 6, 2026, with course submission time/time zone still requiring confirmation. Four of ten original work items are merged (#4/#5/#6/#11), one has an open implementation PR (#7) and five have no published implementation PR in the inspected repository. This is published status, not a claim that owners have done no local work.
+Due: October 6, 2026, with course submission time/time zone still requiring confirmation. Four of ten original work items are merged (#4/#5/#6/#11), two have open implementation PRs (#7/#12) and four have no published implementation PR in the inspected repository (#8/#9/#10/#13). This is published status, not a claim that owners have done no local work. The #12 PR appeared while the audit was in progress, and the record was refreshed accordingly.
 
 | Item / owner | Next concrete deliverable | Reviewer / dependency |
 |---|---|---|
@@ -35,7 +37,7 @@ Due: October 6, 2026, with course submission time/time zone still requiring conf
 | [#8 Block SDK](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/8) / joedaswagger | Publish typed block/port/config/error contracts immediately, plus registry/sample-block and serialization/execution tests. This is the broadest upstream blocker. | karimikhaeil; no prerequisite |
 | [#9 portable DAG](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/9) / karimikhaeil | Publish versioned node/edge models, round-trips, deterministic ordering and cycle/dangling-reference failures against the agreed SDK. | MarcElHaddad1; #8 |
 | [#10 headless proof](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/10) / MarcElHaddad1 | Run a deterministic CSV → Select Columns → Parquet fixture, read back and assert rows/schema, and record missing-column failure and limits. | menaboulus; #8/#9 |
-| [#12 safe SQL/data contracts](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/12) / adamoug | Publish the bounded synthetic/read-only connectivity spike, source/output contract decisions and failure tests; obtain actual permission for stakeholder data separately. | Al-Yousef; no prerequisite |
+| [#12 safe SQL/data contracts](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/12) / adamoug | [PR #52](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/52) is open with passing CI; fix the [three reproduced correctness findings](testing/pr-52-sql-review.md), complete evidence and obtain independent review. Stakeholder data permission remains separate. | Al-Yousef requested; no prerequisite |
 | [#13 Polars/Arrow](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/13) / karimikhaeil | Publish schema/null/type/row behavior and bounded memory observations on documented fixtures, including limitations. | ham340i; #8 |
 
 Contract drafts and mock-based tests can proceed while prerequisites are open; completion/integration must respect the agreed contracts. Owners should record scope cuts or slippage at iteration review rather than silently marking unfinished work Done. Initial estimates remain 58 SP / 116 primary ideal hours plus 18 reviewer hours; this audit claims no accepted velocity or actual hours.

@@ -19,6 +19,7 @@ Actual iteration/stakeholder demonstration is not recorded. Use the prepared [de
 - Main `eef36f3`: [CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37232745680) and [documentation](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37232745665), successful.
 - Metadata PR #48 `a23c8e5`: [CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37247597035) and [documentation](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37247597034), successful; six checks passed, pending review/merge.
 - Integration PR #51 `f585040`: [CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37254078423) and [documentation](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37254078437), successful; six checks passed, pending review/merge.
+- SQL spike PR #52 `5f1f5d6`: [current checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/52/checks), all six successful; 23 SQL feature tests passed locally, but [additional synthetic probes](../../testing/pr-52-sql-review.md) reproduce three missed result-corruption cases. Pending corrections and review.
 
 ## Failed Tests / Known Problems
 
