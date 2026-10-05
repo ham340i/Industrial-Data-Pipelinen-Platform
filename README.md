@@ -67,7 +67,7 @@ For the frontend, use Node.js 24 and npm 11, then run `npm ci --ignore-scripts` 
 
 ## Configuration
 
-Repository checks require no configuration. Root `.env.example` documents safe Compose port defaults. The containerized frontend uses `/api/v1` through its same-origin proxy. Standalone frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
+Repository checks require no configuration. Root `.env.example` documents safe Compose port defaults. The containerized frontend uses `/api/v1` through its same-origin proxy. Standalone frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000/api/v1`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
 
 ## API Development
 

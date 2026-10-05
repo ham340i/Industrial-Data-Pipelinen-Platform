@@ -43,7 +43,7 @@ export function normalizeApiError(error: unknown): ApiError {
 
 export function resolveApiBaseUrl(value: string | undefined): string {
   if (value?.trim() === "/api/v1") return "/api/v1";
-  const input = value?.trim() || "http://127.0.0.1:8000";
+  const input = value?.trim() || "http://127.0.0.1:8000/api/v1";
   const url = new URL(input);
   if (
     !["http:", "https:"].includes(url.protocol) ||
@@ -56,6 +56,7 @@ export function resolveApiBaseUrl(value: string | undefined): string {
       "VITE_API_BASE_URL must be an HTTP(S) URL without credentials, query or fragment.",
     );
   }
+  if (url.pathname === "/") url.pathname = "/api/v1";
   return url.href.replace(/\/$/, "");
 }
 

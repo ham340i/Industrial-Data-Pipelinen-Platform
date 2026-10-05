@@ -20,7 +20,7 @@ npm ci --ignore-scripts
 npm run dev
 ```
 
-The frontend runs on the loopback URL printed by Vite. The API defaults to http://127.0.0.1:8000; an offline warning is expected without a backend. Optional public configuration is documented in [the frontend guide](frontend/workbench.md) and `frontend/.env.example`. Database setup is not available yet.
+The frontend runs on the loopback URL printed by Vite. Its API base defaults to http://127.0.0.1:8000/api/v1; an offline warning is expected without a backend. Optional public configuration is documented in [the frontend guide](frontend/workbench.md) and `frontend/.env.example`. Database setup is not available yet.
 
 ## Frontend validation and build
 
