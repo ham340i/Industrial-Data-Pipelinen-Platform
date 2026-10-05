@@ -1,6 +1,6 @@
 # ham340i — Iteration 1 workspace evidence
 
-October 4 delivery update: PR #47 merged after `menaboulus` approved; hosted CI passed. The [verification update](../testing/issue-4-local-workspace.md#october-4-delivery-update) records exact links and timestamps. Planned reviewer aboudka2003 differs; substitution reason remains unrecorded. Earlier preparation statements below are historical. Owner personal reflection, hours, independent verification and stakeholder demonstration remain separate evidence.
+October 4 delivery update: PR #47 merged after `menaboulus` approved; hosted CI passed. The [verification update](../testing/issue-4-local-workspace.md#october-4-delivery-update) records exact links and timestamps. Planned reviewer aboudka2003 differs; substitution reason remains unrecorded. Earlier preparation statements below are historical; this update records the linked merge, review and CI events.
 
 Issue: [#4](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/4). Branch: `feature/4-local-workspace`. Planned reviewer: aboudka2003; actual approver menaboulus.
 

@@ -70,7 +70,7 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 
 ## Individual Contributions
 
-Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Existing AI-assisted foundation records: [ham340i](../../individual-contributions/ham340i-iteration-1.md), [aboudka2003](../../individual-contributions/aboudka2003-iteration-1.md) and [menaboulus](../../individual-contributions/menaboulus-iteration-1.md). PR #48 includes Al-Yousef's pending metadata record; adamoug's API record is absent from this main snapshot. Independent PR approvals are recorded, while each student's personal understanding, learning, modifications and actual hours require their own evidence. Assignment is not contribution evidence.
+Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Existing AI-assisted foundation records: [ham340i](../../individual-contributions/ham340i-iteration-1.md), [aboudka2003](../../individual-contributions/aboudka2003-iteration-1.md) and [menaboulus](../../individual-contributions/menaboulus-iteration-1.md). PR #48 includes Al-Yousef's metadata record; adamoug's API record is absent from this main snapshot. Independent PR approvals are linked separately from implementation, test, demonstration and contribution records.
 
 ## Retrospective
 

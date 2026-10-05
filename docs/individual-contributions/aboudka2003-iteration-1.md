@@ -2,7 +2,7 @@
 
 ## October 4 delivery update
 
-PR #43 merged October 3 after `menaboulus` approved. This matches the owner's documented replacement of planned reviewer `adamoug`. Latest [main CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37232745680) verifies the integrated shell. Earlier pending statements below describe preparation status; personal design/learning/verification and stakeholder acceptance are not established by this update. Standalone health defaults are corrected in [PR #51](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/51), pending review.
+PR #43 merged October 3 after `menaboulus` approved. This matches the owner's documented replacement of planned reviewer `adamoug`. Latest [main CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37232745680) verifies the integrated shell. Earlier pending statements below describe preparation status; this update records the linked merge, review and CI events. Standalone health defaults are corrected in [PR #51](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/51), pending review.
 
 ## Scope and attribution
 

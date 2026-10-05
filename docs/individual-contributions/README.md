@@ -2,7 +2,7 @@
 
 ## Current record availability: October 4, 2026
 
-Main includes AI-assisted work records for [ham340i](ham340i-iteration-1.md), [aboudka2003](aboudka2003-iteration-1.md) and [menaboulus](menaboulus-iteration-1.md); [PR #48](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48) includes Al-Yousef's pending record. The API owner's record and remaining owners' engineering/learning evidence require their own input. These files distinguish generated work from students' pending personal understanding, modifications, learning and actual hours. See the [current audit](../team-readiness-2026-10-04.md).
+Main includes AI-assisted work records for [ham340i](ham340i-iteration-1.md), [aboudka2003](aboudka2003-iteration-1.md) and [menaboulus](menaboulus-iteration-1.md); [PR #48](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48) includes Al-Yousef's metadata record. The API owner's record is absent from this snapshot. These files link engineering changes, AI assistance, executed checks and recorded reviews. Contributors maintain their own contribution records. See the [current audit](../team-readiness-2026-10-04.md).
 
 ## Evidence policy
 
