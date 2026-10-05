@@ -115,4 +115,16 @@ Run:
 python -m pytest tests/test_sql_source_contract.py
 python -m pytest tests/test_sql_source_execution.py
 python -m pytest
+```
+
+## Result-correctness follow-up: issue #54
+
+Review of PR #52 found three missed correctness cases: unescaped special filename characters could select the wrong database, comment removal changed quoted SQL text, and duplicate aliases lost values during dictionary conversion. The follow-up fixes these without changing the spike's local/synthetic scope.
+
+- Database URI paths are percent-encoded with `Path.resolve().as_uri()` before adding `mode=ro`; a test bypasses all query policy and proves the actual special-filename connection still rejects writes.
+- Query inspection masks quoted strings/identifiers and actual comments. SQLite executes the original query, preserving literal values and column names. The bounded SELECT/WITH policy still rejects real unsafe operations and unquoted statement separators; it is not a general SQL parser.
+- Duplicate result aliases raise a clear `SqlSourceError` requiring unique aliases, even for an empty result. Distinct aliases, including names differing only by case, retain their positional values.
+- The original parameter binding and SQLite authorizer remain. An execution test proves a write attempted inside a SELECT callback is denied and leaves the fixture unchanged.
+
+Actual regression baseline, commands, results, limits and AI attribution are recorded in [the issue #54 verification](testing/issue-54-sql-results.md). Independent student review and integration into PR #52 remain pending; the original contributor's personal claims are not supplied by this follow-up.
 
