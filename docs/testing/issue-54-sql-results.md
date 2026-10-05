@@ -35,4 +35,4 @@ Docker is unavailable on this host. Hosted clean installs and real Compose CI mu
 
 ## AI assistance
 
-Codex reproduced the defects, implemented these corrections, wrote/ran tests and prepared this evidence at Al-Yousef's direction. Independent teammate review is tracked in PR #55. Adam's original spike implementation and disclosure are preserved.
+Yousef led and delivered the SQL fixes, regression tests and documentation, with AI assistance. Independent teammate review is tracked in PR #55. Adam's original spike implementation and disclosure are preserved.
