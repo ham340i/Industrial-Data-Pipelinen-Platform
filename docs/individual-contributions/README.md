@@ -6,4 +6,4 @@ Copy [template](TEMPLATE.md) to `<github-handle>-iteration-N.md` after real work
 
 Do not infer contributions from file ownership, commit count or this AI-generated repository foundation. No personal contribution records are asserted here. Verify each account of work with the contributor before release.
 
-Recorded implementation evidence: [Al-Yousef, Iteration 1 metadata](Al-Yousef-iteration-1.md). The record identifies Codex-generated work separately from the student's pending review, understanding and demonstration.
+Recorded implementation evidence: [Al-Yousef, Iteration 1 metadata](Al-Yousef-iteration-1.md). The record links the implementation, AI assistance, executed checks and PR review status.

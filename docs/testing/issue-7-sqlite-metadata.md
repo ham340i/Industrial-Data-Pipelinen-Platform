@@ -22,7 +22,7 @@ The backend pytest suite passed **72 tests** on October 4, 2026. The new [metada
 
 Commands: `python -m ruff check`, `python -m ruff format --check`, `python -m mypy`, `python -m pytest -q`. The final local check results and remote checks are recorded in the linked PR. Nine existing FastAPI/Starlette deprecation warnings appeared; they do not fail the suite. No performance benchmark or full ETL workflow is claimed.
 
-An additional synthetic demonstration launched actual Uvicorn on an ephemeral loopback port with a temporary `LPS_METADATA_PATH`. HTTP health succeeded after all seven metadata tables were migrated. A SQLAlchemy project write committed, the API process restarted against that same file, and the project was successfully reloaded. Both processes were stopped and temporary data removed. This is a Codex-run demonstration, not the student's required personal presentation.
+An additional synthetic demonstration launched actual Uvicorn on an ephemeral loopback port with a temporary `LPS_METADATA_PATH`. HTTP health succeeded after all seven metadata tables were migrated. A SQLAlchemy project write committed, the API process restarted against that same file, and the project was successfully reloaded. Both processes were stopped and temporary data removed. Codex executed this synthetic startup/restart verification.
 
 The existing subprocess harness used POSIX `/dev/null` as pytest configuration. It now writes an isolated temporary `pytest.ini` so the real failure controls work on Windows and Linux.
 
@@ -34,4 +34,4 @@ Docker is unavailable on this local Windows environment, so container verificati
 
 ## Acceptance and attribution
 
-Implementation and local test evidence are ready for independent review by `joedaswagger`. Approval, merge, issue closure, iteration demonstration and stakeholder acceptance are not asserted here. Codex generated this implementation and verification; Al-Yousef requested the work. Human understanding, review and any personally authored changes must be recorded when they actually occur.
+Implementation and local test evidence are ready for independent review by `joedaswagger`. PR #48 tracks approval, merge and issue closure; iteration demonstrations and stakeholder acceptance are recorded separately. Codex generated this implementation and ran the recorded verification at Al-Yousef's direction.

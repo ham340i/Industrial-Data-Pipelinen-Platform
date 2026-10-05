@@ -32,4 +32,4 @@ Tests must exercise real temporary SQLite files, constraints and foreign keys, p
 
 Implementation references: [SQLAlchemy SQLite transaction control](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#transactions-with-sqlite-and-the-sqlite3-driver) and [Alembic shared connections](https://alembic.sqlalchemy.org/en/latest/cookbook.html#sharing-a-connection-with-a-series-of-migration-commands-and-environments).
 
-AI assistance: Codex drafted this design and its implementation at Al-Yousef's request. Independent design review and student understanding/demonstration remain pending.
+AI assistance: Codex drafted this design and its implementation at Al-Yousef's direction. Independent design review is tracked in PR #48.
