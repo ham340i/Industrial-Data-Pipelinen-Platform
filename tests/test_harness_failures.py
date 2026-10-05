@@ -30,7 +30,9 @@ def test_pytest_fails_on_failing_test(tmp_path: Path):
     (tmp_path / "test_failing.py").write_text(
         "def test_broken():\n    assert 1 + 1 == 3\n", encoding="utf-8"
     )
-    isolated = ("pytest", "-q", "-c", "/dev/null", "-p", "no:cacheprovider")
+    config = tmp_path / "pytest.ini"
+    config.write_text("[pytest]\n", encoding="utf-8")
+    isolated = ("pytest", "-q", "-c", str(config), "-p", "no:cacheprovider")
 
     control = run_tool(*isolated, "test_passing.py", cwd=tmp_path)
     broken = run_tool(*isolated, "test_failing.py", cwd=tmp_path)
@@ -41,8 +43,10 @@ def test_pytest_fails_on_failing_test(tmp_path: Path):
 
 
 def test_pytest_fails_when_no_tests_are_collected(tmp_path: Path):
+    config = tmp_path / "pytest.ini"
+    config.write_text("[pytest]\n", encoding="utf-8")
     result = run_tool(
-        "pytest", "-q", "-c", "/dev/null", "-p", "no:cacheprovider", cwd=tmp_path
+        "pytest", "-q", "-c", str(config), "-p", "no:cacheprovider", cwd=tmp_path
     )
 
     assert result.returncode == 5, result.stdout

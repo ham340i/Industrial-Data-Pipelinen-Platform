@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, status
@@ -11,6 +12,8 @@ from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import settings
+from app.metadata.database import Database
+from app.metadata.migrate import upgrade
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
@@ -62,10 +65,24 @@ class CorrelationIdMiddleware:
         await self.app(scope, receive, send_with_correlation_id)
 
 
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    application.state.database = None
+    database = Database(settings.metadata_path)
+    try:
+        upgrade(database)
+        application.state.database = database
+        yield
+    finally:
+        database.close()
+        application.state.database = None
+
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.api_version,
     description="Local-first API contracts for the Industrial Data Pipeline Platform.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(CorrelationIdMiddleware)

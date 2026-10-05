@@ -5,3 +5,5 @@ Every contributor must record their **personal** engineering design and implemen
 Copy [template](TEMPLATE.md) to `<github-handle>-iteration-N.md` after real work occurs. Link it from iteration/release contribution tables. Record substantial decisions, implementation, problems solved and unsuccessful experiments. Failed approaches with evidence are useful engineering work and should not be hidden.
 
 Do not infer contributions from file ownership, commit count or this AI-generated repository foundation. No personal contribution records are asserted here. Verify each account of work with the contributor before release.
+
+Recorded implementation evidence: [Al-Yousef, Iteration 1 metadata](Al-Yousef-iteration-1.md). The record identifies Codex-generated work separately from the student's pending review, understanding and demonstration.

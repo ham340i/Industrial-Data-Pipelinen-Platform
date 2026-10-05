@@ -32,7 +32,7 @@ The optional root `.env` only controls `FRONTEND_PORT` (3000) and `API_PORT` (80
 
 The frontend image uses the public build-time value `VITE_API_BASE_URL=/api/v1`. Nginx proxies it to the internal `api:8000` service, so changing host ports requires no application source edits or CORS changes. Standalone frontend development can use the existing absolute URL setting; to reach the actual API use `VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1` and run Vite on port 3000, an origin allowed by the API.
 
-The Compose-managed `metadata` volume mounts at `/var/lib/lps`, writable by API UID/GID 10001. `down` and rebuilds preserve it. The current API shell has no metadata schema: issue #7 must configure its database in this directory. The smoke test verifies storage with a synthetic marker, not a fabricated database feature.
+The Compose-managed `metadata` volume mounts at `/var/lib/lps`, writable by API UID/GID 10001. `down` and rebuilds preserve it. Issue #7 configures `LPS_METADATA_PATH=/var/lib/lps/metadata.sqlite3`; API startup runs Alembic before serving traffic. The smoke test verifies a real synthetic project row across container recreation. See the [metadata guide](metadata.md) for schema, configuration and backup/reset behavior.
 
 Do not put credentials into `VITE_*` variables; they are visible in browser code. No credentials are needed by these shells. Git ignores local `.env`, secrets, datasets and database files. Docker build contexts allow only required application sources and locks, excluding host secrets, datasets, Git history and local dependencies.
 

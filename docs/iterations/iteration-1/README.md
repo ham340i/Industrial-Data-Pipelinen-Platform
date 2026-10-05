@@ -41,7 +41,7 @@ Not Yet Demonstrated. Complete the [demo record](demo.md) from observed behavior
 
 ## Architecture Changes
 
-Not recorded for the iteration review. Link actual design decisions and changes; the [target architecture](../../architecture/release-1-target.md) remains a plan.
+Issue #7 adds [SQLite metadata and portable revision boundaries](../../architecture/decisions/ADR-0002-sqlite-metadata.md), pending independent review. The [target architecture](../../architecture/release-1-target.md) remains the broader plan; no iteration review or demonstration is implied.
 
 ## Testing Summary
 
@@ -69,6 +69,8 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 ## Individual Contributions
 
 Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Workspace implementation evidence: [ham340i](../../individual-contributions/ham340i-iteration-1.md), including explicit AI assistance and pending human review. Assignment is not contribution evidence.
+
+Metadata implementation evidence: [Al-Yousef](../../individual-contributions/Al-Yousef-iteration-1.md), with explicit Codex authorship, actual local tests and pending student review/demonstration.
 
 ## Retrospective
 
