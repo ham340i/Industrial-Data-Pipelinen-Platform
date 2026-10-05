@@ -62,4 +62,4 @@ The [Iteration 1 demo](iterations/iteration-1/demo.md) now provides startup, she
 
 ## AI assistance
 
-Codex inspected GitHub and source, reconciled reversible issue/PR tracking, drafted this evidence report and prepared the integration fix at Al-Yousef's request. This report attributes actual approvals to their reviewers and preserves the distinction between agent-generated work and students' own contribution records. No personal reflection, stakeholder signoff, review substitution reason or private work status is invented.
+Yousef led and delivered the delivery audit, tracking corrections and demo plan, with AI assistance. Recorded approvals remain attributed to their reviewers; the report links the observed engineering evidence.

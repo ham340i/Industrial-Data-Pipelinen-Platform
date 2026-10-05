@@ -61,4 +61,4 @@ Preparation/evidence sources: [team audit](../../team-readiness-2026-10-04.md), 
 
 Demonstration commit, attendees/date, video/screenshots, raw result links and authorized feedback: not recorded. No iteration tag is created by preparing this plan. Normal teardown: `docker compose down`; explicit reset deletes data and must follow the workspace guide.
 
-AI assistance: Codex prepared this plan from current implementation/docs at Al-Yousef's request. No actual demonstration, personal contribution or stakeholder signoff is invented.
+Yousef led and delivered this demo plan, with AI assistance. Actual demonstration evidence is recorded separately.

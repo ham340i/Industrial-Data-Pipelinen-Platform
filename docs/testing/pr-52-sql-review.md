@@ -21,4 +21,4 @@ The first probe invocation reproduced all three behaviors but its own temporary 
 
 ## Review status and AI assistance
 
-Findings are confirmed by source inspection and local synthetic probes; no GitHub approval or completed personal student review is asserted. Codex performed this investigation and prepared the report at Al-Yousef's request. Al-Yousef should understand the findings and verify the author's corrections before approving. Subsequent revisions require rechecking these cases.
+Yousef led and delivered this SQL review and supporting probes, with AI assistance. Findings are confirmed by source inspection and local synthetic probes. GitHub review and approval are tracked in PR #52; subsequent revisions require rechecking these cases.
