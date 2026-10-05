@@ -34,4 +34,4 @@ Docker is unavailable on this host. The existing hosted Compose smoke must pass 
 
 ## AI assistance
 
-Codex identified and reproduced the failures, implemented the corrections and ran the recorded checks at Al-Yousef's request. Al-Yousef's own understanding, independent verification, learning reflection and teammate approval are not asserted. No personally authored teammate work is reassigned by this fix.
+Codex identified and reproduced the failures, implemented the corrections and ran the recorded checks at Al-Yousef's direction. Independent teammate review is tracked in PR #51. Existing implementation authors retain their attribution.
