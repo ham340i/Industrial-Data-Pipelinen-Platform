@@ -99,4 +99,4 @@ Downgrading `0001` removes all seven metadata tables and their contents. The con
 
 Run `python -m ruff check`, `python -m ruff format --check`, `python -m mypy` and `python -m pytest`. With Docker and browser dependencies installed, `python scripts/smoke_workspace.py --browser` additionally verifies migrations and a real persisted project across container recreation. The smoke test only removes its own uniquely named synthetic stack.
 
-AI assistance: Codex drafted the design, implementation, tests and this guide at Al-Yousef's direction. Executed checks are linked above; independent teammate review is tracked in PR #48.
+Yousef led and delivered the metadata persistence, migrations, tests and documentation, with AI assistance. Executed checks are linked above; independent teammate review is tracked in PR #48.

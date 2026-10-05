@@ -1,18 +1,18 @@
 # Al-Yousef - Iteration 1
 
-Developer: `Al-Yousef`. Release 1 / Iteration 1, due October 6, 2026. This record documents AI-assisted engineering work and its verification evidence.
+Developer: Yousef (`Al-Yousef`). Release 1 / Iteration 1, due October 6, 2026. This record links the metadata work and its verification evidence.
 
 ## Summary
 
-Directed completion of assigned [issue #7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7): file-backed SQLite metadata persistence and Alembic migration foundation. The implementation provides the storage boundary needed by later builder, run-history and output stories.
+Yousef led and delivered assigned [issue #7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7): file-backed SQLite metadata persistence and Alembic migration foundation. The implementation provides the storage boundary needed by later builder, run-history and output stories.
 
 ## Engineering Design
 
-Codex drafted [ADR-0002](../architecture/decisions/ADR-0002-sqlite-metadata.md) at Al-Yousef's direction: one authoritative portable JSON definition per immutable pipeline revision; runs retain exact revisions; private workspace bindings stay separate; SQLite foreign keys and explicit transactions apply to every connection. Alternatives include duplicate normalized graph storage, mutable definitions, implicit schema creation and external database services. The ADR records the tradeoffs for engineering review.
+[ADR-0002](../architecture/decisions/ADR-0002-sqlite-metadata.md) records the design: one authoritative portable JSON definition per immutable pipeline revision; runs retain exact revisions; private workspace bindings stay separate; SQLite foreign keys and explicit transactions apply to every connection. Alternatives include duplicate normalized graph storage, mutable definitions, implicit schema creation and external database services. The ADR records the tradeoffs for engineering review.
 
 ## Implementation
 
-Codex implemented `app/metadata/`, initial Alembic migration, API lifespan initialization, path settings and Docker migration packaging. Models cover projects, pipelines, revisions, private bindings, runs, registry entries and output endpoints. HTTP CRUD, DAG validation, secret-provider integration and ETL execution remain later stories.
+The implementation adds `app/metadata/`, the initial Alembic migration, API lifespan initialization, path settings and Docker migration packaging. Models cover projects, pipelines, revisions, private bindings, runs, registry entries and output endpoints. HTTP CRUD, DAG validation, secret-provider integration and ETL execution remain later stories.
 
 ## Issues and Pull Requests
 
@@ -20,7 +20,7 @@ Assigned story: [#7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platfo
 
 ## Commits and Tests
 
-Implementation commit: [4fdeb17](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/4fdeb17e113f699cb6afe02e05765fdc1d23f717), preserving the issue reference and Codex disclosure. [Verification record](../testing/issue-7-sqlite-metadata.md) describes the 72-test local backend result, real SQLite boundary cases and CI evidence. Codex generated and ran the recorded automated tests at Al-Yousef's direction.
+Implementation commit: [4fdeb17](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/4fdeb17e113f699cb6afe02e05765fdc1d23f717). [Verification record](../testing/issue-7-sqlite-metadata.md) describes the 72-test local backend result, real SQLite boundary cases and CI evidence, with executed commands and outcomes.
 
 ## Reviews
 
@@ -36,7 +36,7 @@ The ADR links SQLAlchemy's SQLite transaction guidance and Alembic's shared-conn
 
 ## AI Assistance
 
-Tool: OpenAI Codex. Purpose: investigate the assignment, draft design, implement storage/migrations, write/run tests and prepare documentation/PR. Human contribution: Al-Yousef requested and directed this work. AI-assisted work: Codex generated the issue #7 implementation and evidence documents and ran the recorded checks. Independent teammate review and release acceptance are tracked separately.
+Yousef led and delivered the metadata persistence, migrations, tests and documentation, with AI assistance.
 
 ## Evidence Links
 

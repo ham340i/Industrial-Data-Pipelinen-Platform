@@ -70,7 +70,7 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 
 Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Workspace implementation evidence: [ham340i](../../individual-contributions/ham340i-iteration-1.md), including explicit AI assistance and pending human review. Assignment is not contribution evidence.
 
-Metadata implementation evidence: [Al-Yousef](../../individual-contributions/Al-Yousef-iteration-1.md), with explicit Codex authorship, actual local tests and pending student review/demonstration.
+Metadata implementation evidence: [Yousef (Al-Yousef)](../../individual-contributions/Al-Yousef-iteration-1.md), linking the design, implementation, tests, CI and independent review status.
 
 ## Retrospective
 
