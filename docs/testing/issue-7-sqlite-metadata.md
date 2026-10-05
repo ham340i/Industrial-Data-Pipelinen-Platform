@@ -2,6 +2,8 @@
 
 Scope: [issue #7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7), Iteration 1. Branch: `feature/7-sqlite-metadata`, based on main after workspace PR #47. Design: [ADR-0002](../architecture/decisions/ADR-0002-sqlite-metadata.md). Operations: [metadata guide](../metadata.md).
 
+Implementation revision: [4fdeb17](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/4fdeb17e113f699cb6afe02e05765fdc1d23f717). [PR #48](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48) contains the exact head and final check results; [current CI checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48/checks). `joedaswagger` was requested as reviewer. Subsequent evidence-link edits do not alter the implementation tested locally.
+
 ## Actual local observations
 
 Environment: Windows, CPython 3.12.10, isolated `.venv`, dependencies installed from the regenerated hash-pinned `requirements.lock`, SQLite files in pytest temporary directories. No manufacturing datasets or real secret values are used.

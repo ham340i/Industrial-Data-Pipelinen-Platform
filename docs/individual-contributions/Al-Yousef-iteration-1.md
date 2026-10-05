@@ -16,11 +16,11 @@ Codex implemented `app/metadata/`, initial Alembic migration, API lifespan initi
 
 ## Issues and Pull Requests
 
-Assigned story: [#7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7). Implementation branch: `feature/7-sqlite-metadata`. Its issue-linked PR records the exact commit, CI results and reviewer request. Planned reviewer: `joedaswagger`; no approval is claimed before review occurs.
+Assigned story: [#7](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/7). Implementation branch: `feature/7-sqlite-metadata`. [PR #48](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48) records the exact commit, CI results and actual reviewer request to `joedaswagger`; no approval is claimed before review occurs.
 
 ## Commits and Tests
 
-Preserve the issue reference and truthful Codex disclosure in commit/PR history. [Verification record](../testing/issue-7-sqlite-metadata.md) describes the 72-test local backend result, real SQLite boundary cases and actual CI limitations. Codex authored and ran these tests. Al-Yousef's own test design/execution and code inspection: pending.
+Implementation commit: [4fdeb17](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/4fdeb17e113f699cb6afe02e05765fdc1d23f717), preserving the issue reference and truthful Codex disclosure. [Verification record](../testing/issue-7-sqlite-metadata.md) describes the 72-test local backend result, real SQLite boundary cases and actual CI limitations. Codex authored and ran these tests. Al-Yousef's own test design/execution and code inspection: pending.
 
 ## Reviews
 
