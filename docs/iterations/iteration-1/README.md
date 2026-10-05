@@ -29,7 +29,9 @@ Assignments verified against GitHub on October 1, 2026. Existing assignments rem
 
 ## Completed Issues
 
-[#6](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/6) is closed; [PR #44](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/44) merged into main. This records repository status, not iteration demonstration or stakeholder acceptance.
+Verified October 4, 2026: #4 workspace ([PR #47](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/47)), #5 workbench ([PR #43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43)), #6 API ([PR #44](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/44)) and #11 harness/CI ([PR #46](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/46)) are closed and merged into main after independent approvals. This records repository status, not iteration demonstration, accepted velocity or stakeholder acceptance. See the [team audit](../../team-readiness-2026-10-04.md) for reviewer and CI links.
+
+Metadata #7 has [PR #48](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48) open with passing checks and review requested. #8/#9/#10/#12/#13 have no published implementation PR in the inspected repository; local/private progress is unknown. Additional integration defects are tracked in [#49](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/49).
 
 ## Slipped Issues
 
@@ -49,7 +51,7 @@ See [testing evidence](testing-evidence.md). Record commands, commit, environmen
 
 ## Risks / Blockers
 
-Review the [existing risk register](../../release-1-plan.md#release-1-risk-register). Iteration-specific findings and mitigation evidence: Not recorded.
+Review the [existing risk register](../../release-1-plan.md#release-1-risk-register) and [current owner checklist](../../team-readiness-2026-10-04.md#iteration-1-work-that-must-become-reviewable). SDK #8 gates DAG #9, headless proof #10 and several later block/UI stories. Publish contracts and fixture tests promptly; completion/integration still depends on reviewed prerequisites. Project sharing, required-check configuration and actual demo evidence require owner/team follow-up.
 
 ## Stakeholder Feedback
 
@@ -68,7 +70,7 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 
 ## Individual Contributions
 
-Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Workspace implementation evidence: [ham340i](../../individual-contributions/ham340i-iteration-1.md), including explicit AI assistance and pending human review. Assignment is not contribution evidence.
+Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Existing AI-assisted foundation records: [ham340i](../../individual-contributions/ham340i-iteration-1.md), [aboudka2003](../../individual-contributions/aboudka2003-iteration-1.md) and [menaboulus](../../individual-contributions/menaboulus-iteration-1.md). PR #48 includes Al-Yousef's pending metadata record; adamoug's API record is absent from this main snapshot. Independent PR approvals are recorded, while each student's personal understanding, learning, modifications and actual hours require their own evidence. Assignment is not contribution evidence.
 
 ## Retrospective
 

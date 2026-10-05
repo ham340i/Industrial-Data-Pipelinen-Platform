@@ -1,6 +1,6 @@
 # Release 1 dependency graph
 
-Arrows mean prerequisite → dependent. These are engineering completion/integration dependencies, not a ban on parallel contract design, mocks or tests. All nodes are future work. The authoritative mapping is the [backlog](planning/release-1-backlog.json); each issue also lists what it blocks and what blocks it. Native GitHub relationships are verified in the setup report.
+Arrows mean prerequisite → dependent. These are engineering completion/integration dependencies, not a ban on parallel contract design, mocks or tests. This is the planned dependency map; the [October 4 audit](team-readiness-2026-10-04.md) distinguishes merged foundations from pending work. The authoritative mapping is the [backlog](planning/release-1-backlog.json); each issue also lists what it blocks and what blocks it. Native GitHub relationships are verified in the setup report.
 
 ## Major paths
 

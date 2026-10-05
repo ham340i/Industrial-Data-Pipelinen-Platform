@@ -2,6 +2,10 @@
 
 Scope: [Application test harnesses and real stack CI gates](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/11). Branch: `feature/11-test-harnesses-ci`, based on `62d02bb` (main after [PR #43](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/43) and [PR #44](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/44)). Validation date: 2026-10-03. Pull request: [#46](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/46). Hosted failure/pass run links and independent review are pending and must be linked here before the issue is closed.
 
+## October 4, 2026 delivery update
+
+PR #46 merged October 3 after `adamoug` approved at 20:29:56 UTC. The final [hosted CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37151591429) and [documentation run](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/37151591373) succeeded at `ab5f54d8f0fd97b8d84fe7e08707e74532aee791`. Planned reviewer `ham340i` differs from the actual approver; the substitution reason is unrecorded. The original preparation record below is retained as historical evidence. Deliberate hosted failure-then-recovery run links remain absent; existing controlled local/CI failure-propagation tests are distinct evidence. Integration defects and Windows harness issues are corrected in [PR #51](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/51), pending independent review. Required-check configuration still needs administrator verification.
+
 ## What this change adds
 
 Existing application source, existing tests and the existing `Repository checks`, `Documentation checks` and `Frontend checks` jobs are unchanged. This change adds:
