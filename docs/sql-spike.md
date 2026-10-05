@@ -126,5 +126,5 @@ Review of PR #52 found three missed correctness cases: unescaped special filenam
 - Duplicate result aliases raise a clear `SqlSourceError` requiring unique aliases, even for an empty result. Distinct aliases, including names differing only by case, retain their positional values.
 - The original parameter binding and SQLite authorizer remain. An execution test proves a write attempted inside a SELECT callback is denied and leaves the fixture unchanged.
 
-Actual regression baseline, commands, results, limits and AI attribution are recorded in [the issue #54 verification](testing/issue-54-sql-results.md). Independent student review and integration into PR #52 remain pending; the original contributor's personal claims are not supplied by this follow-up.
+Actual regression baseline, commands, results, limits and AI attribution are recorded in [the issue #54 verification](testing/issue-54-sql-results.md). Independent teammate review and integration into PR #52 are tracked in PR #55. The original contributor's attribution is preserved.
 

@@ -35,4 +35,4 @@ Docker is unavailable on this host. Hosted clean installs and real Compose CI mu
 
 ## AI assistance
 
-Codex reproduced the defects, implemented these corrections, wrote/ran tests and prepared this evidence at Al-Yousef's request. Al-Yousef's personal understanding, independent verification and teammate review remain pending. Adam's original spike implementation and disclosure are preserved. This record does not create a personal learning reflection or stakeholder signoff.
+Codex reproduced the defects, implemented these corrections, wrote/ran tests and prepared this evidence at Al-Yousef's direction. Independent teammate review is tracked in PR #55. Adam's original spike implementation and disclosure are preserved.
