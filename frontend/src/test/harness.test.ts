@@ -55,7 +55,8 @@ afterEach(() => {
 });
 
 describe("harness failure propagation", () => {
-  it("ESLint fails on a lint violation", () => {
+  // Each test launches a passing and broken subprocess (up to 60s each).
+  it("ESLint fails on a lint violation", { timeout: 120000 }, () => {
     const args = ["--stdin", "--stdin-filename", "src/harness-fixture.ts"];
 
     const control = run("eslint", "eslint", args, "export const value = 1;\n");
@@ -66,7 +67,7 @@ describe("harness failure propagation", () => {
     expect(broken.output).toContain("no-unused-vars");
   });
 
-  it("Prettier check fails on unformatted source", () => {
+  it("Prettier check fails on unformatted source", { timeout: 120000 }, () => {
     const args = ["--check", "--stdin-filepath", "src/harness-fixture.ts"];
 
     const control = run("prettier", "prettier", args, "const value = 1;\n");
@@ -76,7 +77,7 @@ describe("harness failure propagation", () => {
     expect(broken.status, broken.output).toBe(1);
   });
 
-  it("TypeScript fails on a type error", () => {
+  it("TypeScript fails on a type error", { timeout: 120000 }, () => {
     const directory = fixtureDirectory({
       "typed.ts": "export const value: number = 1;\n",
       "mistyped.ts": 'export const value: number = "not a number";\n',
