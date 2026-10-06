@@ -11,6 +11,9 @@
       "volumes": [
         "metadata:/var/lib/lps"
       ],
+      "environment": {
+        "LPS_METADATA_PATH": "/var/lib/lps/metadata.sqlite3"
+      },
       "healthcheck": {
         "test": [
           "CMD",

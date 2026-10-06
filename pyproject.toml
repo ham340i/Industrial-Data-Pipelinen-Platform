@@ -6,19 +6,14 @@
 target-version = "py312"
 # Application source and its tests. scripts/ is standard-library repository
 # tooling with its own checks (scripts/check_repository.py).
-include = ["app/**/*.py", "tests/**/*.py"]
+include = ["app/**/*.py", "tests/**/*.py", "migrations/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "UP"]
 
-[tool.ruff.lint.per-file-ignores]
-# Two unused imports predate this configuration. Issue #11 adds checks without
-# editing application source; remove this entry when app/main.py is next changed.
-"app/main.py" = ["F401"]
-
 [tool.mypy]
 python_version = "3.12"
-files = ["app", "tests"]
+files = ["app", "tests", "migrations"]
 strict = true
 
 [[tool.mypy.overrides]]

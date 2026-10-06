@@ -4,5 +4,10 @@
 !app/**
 !docker/
 !docker/api.Dockerfile
+!alembic.ini
+!migrations/
+!migrations/**
+migrations/**/__pycache__/
+migrations/**/*.pyc
 app/**/__pycache__/
 app/**/*.pyc
