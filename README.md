@@ -67,11 +67,24 @@ For the frontend, use Node.js 24 and npm 11, then run `npm ci --ignore-scripts` 
 
 ## Configuration
 
-Repository checks require no configuration. Root `.env.example` documents safe Compose port defaults. The containerized frontend uses `/api/v1` through its same-origin proxy. Standalone frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
+Repository checks require no configuration. Root `.env.example` documents safe Compose port defaults. The containerized frontend uses `/api/v1` through its same-origin proxy. Standalone frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000/api/v1`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
 
 ## API Development
 
 The API uses Python 3.12, FastAPI and Pydantic v2.
+
+On Windows PowerShell, use the virtual environment's interpreter directly:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install --only-binary :all: --require-hashes -r requirements.lock
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+This requires Python 3.12 and works without changing PowerShell's execution policy. In a second terminal, run `npm ci --ignore-scripts` and `npm run dev` from `frontend/`, then open http://127.0.0.1:3000. The frontend uses `/api/v1`; port 3000 matches the API's allowed browser origins. An occupied port fails visibly rather than silently selecting an origin the API rejects.
+
+On macOS/Linux:
 
 Create and activate the virtual environment:
 

@@ -1,6 +1,7 @@
 """Contract tests for the API shell: versioned routes, error envelope and CORS."""
 
 from collections.abc import Iterator
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -96,10 +97,36 @@ def test_error_envelope_and_header_share_supplied_correlation_id(client: TestCli
 
     envelope = ErrorEnvelope.model_validate(response.json())
     assert envelope.error.correlation_id == "contract-test-001"
-    # The header is currently emitted by both the middleware and the error
-    # response, so compare the set of values rather than a single value.
-    header_values = response.headers.get_list("x-correlation-id")
-    assert set(header_values) == {"contract-test-001"}
+    assert response.headers.get_list("x-correlation-id") == ["contract-test-001"]
+
+
+@pytest.mark.parametrize("supplied_id", [None, "contract-test-002", "invalid id"])
+@pytest.mark.parametrize("response_kind", ["health", "validation", "unhandled"])
+def test_responses_have_one_authoritative_correlation_id(
+    client: TestClient,
+    failing_route: str,
+    supplied_id: str | None,
+    response_kind: str,
+):
+    headers = {} if supplied_id is None else {"X-Correlation-ID": supplied_id}
+    if response_kind == "validation":
+        response = client.post("/api/v1/example", json={}, headers=headers)
+        assert response.status_code == 422
+    else:
+        path = "/api/v1/health" if response_kind == "health" else failing_route
+        response = client.get(path, headers=headers)
+        assert response.status_code == (200 if response_kind == "health" else 500)
+
+    correlation_ids = response.headers.get_list("x-correlation-id")
+    assert len(correlation_ids) == 1
+    correlation_id = correlation_ids[0]
+    if supplied_id == "contract-test-002":
+        assert correlation_id == supplied_id
+    else:
+        assert str(UUID(correlation_id)) == correlation_id
+    if response_kind != "health":
+        envelope = ErrorEnvelope.model_validate(response.json())
+        assert envelope.error.correlation_id == correlation_id
 
 
 def test_unhandled_error_returns_envelope_without_internal_detail(
