@@ -1,6 +1,6 @@
 # System architecture
 
-Status: **proposed; all application components planned**. Validate boundaries with the team and stakeholder before treating this as a design commitment.
+Status: **target workflow proposed; React/FastAPI shells implemented**. Issue #7 adds metadata persistence, pending independent review. Validate the remaining engine/connector boundaries with the team and stakeholder before treating them as commitments.
 
 ```mermaid
 flowchart TD
@@ -35,12 +35,12 @@ Separate portable pipeline configuration from machine-specific paths and secret 
 
 ## Persistence and versioning
 
-No database exists. Decide how to persist pipeline versions, run state, metadata and artifacts in an ADR. A run should eventually link a pipeline revision, block/dependency versions, input identity and validation results; reproducibility cannot be promised for mutable inputs without an input versioning policy.
+Issue #7 introduces SQLite/SQLAlchemy metadata and Alembic migrations: [ADR-0002](decisions/ADR-0002-sqlite-metadata.md). Runs reference immutable pipeline revisions; graph JSON is the sole authoritative definition and private workspace bindings are separate. Input identity/versioning, validation results, telemetry and artifact publication remain later stories; reproducibility cannot be promised for mutable inputs without an input versioning policy.
 
 ## APIs and extension points
 
-No endpoints or extension SDK exist. The supplied Release 1 target now requires local FastAPI validation, execution, preview, run and output capabilities. Connector/block interfaces need explicit schemas, error handling, compatibility and trust boundaries before plugins are accepted. Existing manufacturing models remain authoritative; model mapping needs stakeholder approval.
+The FastAPI health/example endpoints exist. The supplied Release 1 target requires additional validation, execution, preview, run and output capabilities. Connector/block interfaces need explicit schemas, error handling, compatibility and trust boundaries before plugins are accepted. Existing manufacturing models remain authoritative; model mapping needs stakeholder approval.
 
 ## Release 1 scope update
 
-The subsequent team brief specifies the [Release 1 target stack and boundaries](release-1-target.md) and [Block SDK](block-sdk-release-1.md). It resolves the earlier stack direction to React/TypeScript, FastAPI/Python 3.12, Polars/PyArrow, Parquet/DuckDB and SQLite/SQLAlchemy/Alembic, while leaving implementation and interface decisions open. All product components are still planned. No undocumented existing implementation is overridden.
+The subsequent team brief specifies the [Release 1 target stack and boundaries](release-1-target.md) and [Block SDK](block-sdk-release-1.md). It resolves the earlier stack direction to React/TypeScript, FastAPI/Python 3.12, Polars/PyArrow, Parquet/DuckDB and SQLite/SQLAlchemy/Alembic. Shells and metadata now have implementation evidence; full processing and interface decisions remain open.

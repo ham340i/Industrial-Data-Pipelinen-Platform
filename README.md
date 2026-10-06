@@ -10,7 +10,7 @@ The team has supplied the **Industrial Data Pipeline Engineering Platform** Rele
 
 ## Project Status
 
- **Foundation in progress: the React workbench, FastAPI shell and their respective tests are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI.
+ **Foundation in progress: the React workbench, FastAPI shell and SQLite metadata/migrations are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI. Metadata issue #7 is pending independent review and merge.
 
 ## Problem
 
@@ -49,7 +49,7 @@ This is a proposed logical architecture. See [component status and boundaries](d
 
 ## Getting Started
 
-Follow the [developer guide](docs/getting-started.md) and [frontend workbench guide](docs/frontend/workbench.md). The React and FastAPI shells run together through Compose. Project storage and graph execution remain planned.
+Follow the [developer guide](docs/getting-started.md), [frontend workbench guide](docs/frontend/workbench.md) and [SQLite metadata guide](docs/metadata.md). The React and FastAPI shells run together through Compose, with metadata migrated at API startup. Project HTTP CRUD and graph execution remain planned.
 
 ## Prerequisites
 
@@ -123,7 +123,7 @@ python -m mypy
 python -m pytest
 ```
 
-The API shell currently provides versioned contracts, request validation, structured error responses and correlation IDs. Pipeline-engine execution logic is outside the scope of this initial API implementation.
+The API shell currently provides versioned contracts, request validation, structured error responses and correlation IDs. Startup also initializes the configured SQLite metadata database; see [models, configuration and migrations](docs/metadata.md). Pipeline-engine execution logic remains future scope.
 
 To stop the local server, press `Ctrl+C` in the terminal running Uvicorn.
 

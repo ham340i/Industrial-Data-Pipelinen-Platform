@@ -9,6 +9,8 @@ RUN python -m pip install --no-cache-dir --only-binary :all: --require-hashes -r
     && mkdir -p /var/lib/lps \
     && chown lps:lps /var/lib/lps
 COPY app/ ./app/
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
 USER 10001:10001
 EXPOSE 8000
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
