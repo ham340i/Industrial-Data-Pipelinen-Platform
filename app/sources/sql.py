@@ -43,6 +43,31 @@ _UNSAFE_SQL_WORDS = {
     "VACUUM",
 }
 
+# Inspect SQL syntax without treating quoted contents as comments/operators.
+# The original query is always passed to SQLite, which remains the parser.
+_SQL_NON_CODE = re.compile(
+    r"'(?:''|[^'])*'|\"(?:\"\"|[^\"])*\"|`(?:``|[^`])*`|\[[^\]]*\]"
+    r"|--[^\r\n]*|/\*.*?(?:\*/|\Z)",
+    flags=re.DOTALL,
+)
+
+
+def _validate_read_query(value: str) -> str:
+    query = value.strip()
+    code = _SQL_NON_CODE.sub(" ", query).strip()
+
+    if not code:
+        raise ValueError("query must not be empty")
+    if re.match(r"^(SELECT|WITH)\b", code, flags=re.IGNORECASE) is None:
+        raise ValueError("only SELECT or WITH queries are allowed")
+    if ";" in code:
+        raise ValueError("multiple SQL statements are not allowed")
+    for word in _UNSAFE_SQL_WORDS:
+        if re.search(rf"\b{word}\b", code, flags=re.IGNORECASE):
+            raise ValueError(f"unsafe SQL operation is not allowed: {word}")
+
+    return query
+
 
 class SqlSourceConfig(BaseModel):
     """Credential-free configuration for the local SQL source proof."""
@@ -71,22 +96,7 @@ class SqlSourceConfig(BaseModel):
     @field_validator("query")
     @classmethod
     def validate_query(cls, value: str) -> str:
-        query = _remove_sql_comments(value).strip()
-
-        if not query:
-            raise ValueError("query must not be empty")
-
-        if re.match(r"^(SELECT|WITH)\b", query, flags=re.IGNORECASE) is None:
-            raise ValueError("only SELECT or WITH queries are allowed")
-
-        if ";" in query:
-            raise ValueError("multiple SQL statements are not allowed")
-
-        for word in _UNSAFE_SQL_WORDS:
-            if re.search(rf"\b{word}\b", query, flags=re.IGNORECASE):
-                raise ValueError(f"unsafe SQL operation is not allowed: {word}")
-
-        return query
+        return _validate_read_query(value)
 
     @model_validator(mode="after")
     def reject_credential_parameters(self) -> SqlSourceConfig:
@@ -97,22 +107,6 @@ class SqlSourceConfig(BaseModel):
                 )
 
         return self
-
-
-def _remove_sql_comments(query: str) -> str:
-    without_line_comments = re.sub(
-        r"--.*?$",
-        "",
-        query,
-        flags=re.MULTILINE,
-    )
-
-    return re.sub(
-        r"/\*.*?\*/",
-        "",
-        without_line_comments,
-        flags=re.DOTALL,
-    )
 
 
 class SqlSourceError(RuntimeError):
@@ -154,38 +148,24 @@ def execute_read_only_sqlite(
     parameters: dict[str, Any] | None = None,
 ) -> SqlQueryResult:
     """Execute a constrained read query using SQLite-bound parameters."""
-    cleaned_query = _remove_sql_comments(query).strip()
-
-    if (
-        re.match(
-            r"^(SELECT|WITH)\b",
-            cleaned_query,
-            flags=re.IGNORECASE,
-        )
-        is None
-    ):
-        raise SqlSourceError("only SELECT or WITH queries are allowed")
-
-    if ";" in cleaned_query:
-        raise SqlSourceError("multiple SQL statements are not allowed")
-
-    for word in _UNSAFE_SQL_WORDS:
-        if re.search(
-            rf"\b{word}\b",
-            cleaned_query,
-            flags=re.IGNORECASE,
-        ):
-            raise SqlSourceError(f"unsafe SQL operation is not allowed: {word}")
+    try:
+        original_query = _validate_read_query(query)
+    except ValueError as exc:
+        raise SqlSourceError(str(exc)) from exc
 
     connection.set_authorizer(_sqlite_authorizer)
 
     try:
         cursor = connection.execute(
-            cleaned_query,
+            original_query,
             parameters or {},
         )
         columns = [description[0] for description in (cursor.description or [])]
-        rows = [dict(row) for row in cursor.fetchall()]
+        if len(columns) != len(set(columns)):
+            raise SqlSourceError(
+                "SQL result column names must be unique; use explicit aliases"
+            )
+        rows = [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
 
         return SqlQueryResult(
             columns=columns,
@@ -204,7 +184,7 @@ def read_sqlite_source(config: SqlSourceConfig) -> SqlQueryResult:
     if not database_path.is_file():
         raise SqlSourceError(f"SQLite database does not exist: {database_path}")
 
-    connection_uri = f"file:{database_path.resolve()}?mode=ro"
+    connection_uri = database_path.resolve().as_uri() + "?mode=ro"
 
     connection = sqlite3.connect(
         connection_uri,
