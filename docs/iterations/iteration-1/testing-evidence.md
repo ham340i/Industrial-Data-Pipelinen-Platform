@@ -44,3 +44,7 @@ The [organization audit](../../testing/iteration-structure-validation.md) record
 ## Workspace issue #4
 
 See the [workspace verification](../../testing/issue-4-local-workspace.md) for real-service smoke results, acceptance mapping and remaining review requirements. Full iteration acceptance is not inferred.
+
+## Metadata issue #7
+
+The [metadata verification record](../../testing/issue-7-sqlite-metadata.md) records 72 passing backend tests on Windows/Python 3.12, including 48 new metadata cases, migration failure rollback and restart persistence. Ruff and mypy pass. Docker is unavailable locally; the PR's Compose CI run supplies actual container evidence. Independent student review, merge and iteration demonstration remain pending.

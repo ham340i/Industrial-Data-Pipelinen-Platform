@@ -10,7 +10,7 @@ The team has supplied the **Industrial Data Pipeline Engineering Platform** Rele
 
 ## Project Status
 
- **Foundation in progress: the React workbench, FastAPI shell and their respective tests are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI.
+ **Foundation in progress: the React workbench, FastAPI shell and SQLite metadata/migrations are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI. Metadata issue #7 is pending independent review and merge.
 
 ## Problem
 
@@ -49,7 +49,7 @@ This is a proposed logical architecture. See [component status and boundaries](d
 
 ## Getting Started
 
-Follow the [developer guide](docs/getting-started.md) and [frontend workbench guide](docs/frontend/workbench.md). The React and FastAPI shells run together through Compose. Project storage and graph execution remain planned.
+Follow the [developer guide](docs/getting-started.md), [frontend workbench guide](docs/frontend/workbench.md) and [SQLite metadata guide](docs/metadata.md). The React and FastAPI shells run together through Compose, with metadata migrated at API startup. Project HTTP CRUD and graph execution remain planned.
 
 ## Prerequisites
 
@@ -67,11 +67,24 @@ For the frontend, use Node.js 24 and npm 11, then run `npm ci --ignore-scripts` 
 
 ## Configuration
 
-Repository checks require no configuration. Root `.env.example` documents safe Compose port defaults. The containerized frontend uses `/api/v1` through its same-origin proxy. Standalone frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
+Repository checks require no configuration. Root `.env.example` documents safe Compose port defaults. The containerized frontend uses `/api/v1` through its same-origin proxy. Standalone frontend public configuration is in `frontend/.env.example`: `VITE_API_BASE_URL` defaults to `http://127.0.0.1:8000/api/v1`. Never put credentials in frontend environment variables. See the [frontend guide](docs/frontend/workbench.md).
 
 ## API Development
 
 The API uses Python 3.12, FastAPI and Pydantic v2.
+
+On Windows PowerShell, use the virtual environment's interpreter directly:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install --only-binary :all: --require-hashes -r requirements.lock
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+This requires Python 3.12 and works without changing PowerShell's execution policy. In a second terminal, run `npm ci --ignore-scripts` and `npm run dev` from `frontend/`, then open http://127.0.0.1:3000. The frontend uses `/api/v1`; port 3000 matches the API's allowed browser origins. An occupied port fails visibly rather than silently selecting an origin the API rejects.
+
+On macOS/Linux:
 
 Create and activate the virtual environment:
 
@@ -110,7 +123,7 @@ python -m mypy
 python -m pytest
 ```
 
-The API shell currently provides versioned contracts, request validation, structured error responses and correlation IDs. Pipeline-engine execution logic is outside the scope of this initial API implementation.
+The API shell currently provides versioned contracts, request validation, structured error responses and correlation IDs. Startup also initializes the configured SQLite metadata database; see [models, configuration and migrations](docs/metadata.md). Pipeline-engine execution logic remains future scope.
 
 To stop the local server, press `Ctrl+C` in the terminal running Uvicorn.
 

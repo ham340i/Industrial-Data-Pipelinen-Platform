@@ -43,7 +43,7 @@ Not Yet Demonstrated. Complete the [demo record](demo.md) from observed behavior
 
 ## Architecture Changes
 
-Not recorded for the iteration review. Link actual design decisions and changes; the [target architecture](../../architecture/release-1-target.md) remains a plan.
+Issue #7 adds [SQLite metadata and portable revision boundaries](../../architecture/decisions/ADR-0002-sqlite-metadata.md), pending independent review. The [target architecture](../../architecture/release-1-target.md) remains the broader plan; no iteration review or demonstration is implied.
 
 ## Testing Summary
 
@@ -71,6 +71,8 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 ## Individual Contributions
 
 Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Existing AI-assisted foundation records: [ham340i](../../individual-contributions/ham340i-iteration-1.md), [aboudka2003](../../individual-contributions/aboudka2003-iteration-1.md) and [menaboulus](../../individual-contributions/menaboulus-iteration-1.md). PR #48 includes Al-Yousef's metadata record; adamoug's API record is absent from this main snapshot. Independent PR approvals are linked separately from implementation, test, demonstration and contribution records.
+
+Metadata implementation evidence: [Yousef (Al-Yousef)](../../individual-contributions/Al-Yousef-iteration-1.md), linking the design, implementation, tests, CI and independent review status.
 
 ## Retrospective
 

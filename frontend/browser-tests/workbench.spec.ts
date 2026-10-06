@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("production shell supports keyboard navigation, drafts and direct links", async ({
   page,
 }) => {
-  await page.route("http://127.0.0.1:8000/health", (route) =>
+  await page.route("http://127.0.0.1:8000/api/v1/health", (route) =>
     route.fulfill({ json: { status: "ok" } }),
   );
   await page.goto("/");
@@ -34,13 +34,15 @@ test("offline health recovers and mobile shell does not overflow", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route("http://127.0.0.1:8000/health", (route) => route.abort());
+  await page.route("http://127.0.0.1:8000/api/v1/health", (route) =>
+    route.abort(),
+  );
   await page.goto("/");
   await expect(page.getByRole("alert")).toContainText(
     "Cannot reach the local API",
   );
-  await page.unroute("http://127.0.0.1:8000/health");
-  await page.route("http://127.0.0.1:8000/health", (route) =>
+  await page.unroute("http://127.0.0.1:8000/api/v1/health");
+  await page.route("http://127.0.0.1:8000/api/v1/health", (route) =>
     route.fulfill({ json: { status: "ok" } }),
   );
   await page.getByRole("button", { name: "Retry" }).click();
@@ -62,7 +64,7 @@ test("offline health recovers and mobile shell does not overflow", async ({
 });
 
 test("real browser enforces the transport timeout", async ({ page }) => {
-  await page.route("http://127.0.0.1:8000/health", () => {
+  await page.route("http://127.0.0.1:8000/api/v1/health", () => {
     /* Deliberately leave the synthetic request pending. */
   });
   await page.goto("/");
