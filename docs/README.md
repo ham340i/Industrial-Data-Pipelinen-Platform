@@ -41,6 +41,7 @@ Start with the [project setup summary](project-setup-summary.md), [current compl
 - [Target architecture](architecture/release-1-target.md) and [Block SDK](architecture/block-sdk-release-1.md)
 - [Workload](release-1-workload.md), [review rotation](code-review-plan.md), [dependencies](release-1-dependencies.md), [traceability](release-1-traceability.md)
 - Planned iteration records: [1](releases/iteration-1.md), [2](releases/iteration-2.md), [3](releases/iteration-3.md), [4 / Release 1](releases/iteration-4-release-1.md)
+- [Issue #12 SQL connectivity spike](sql-spike.md)
 
 ## Frontend implementation
 
