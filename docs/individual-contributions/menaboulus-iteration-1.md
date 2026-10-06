@@ -1,5 +1,9 @@
 # menaboulus — Iteration 1 issue #11 evidence
 
+## October 4 delivery update
+
+PR #46 is merged with actual approval from `adamoug` and successful final hosted CI. See the [verification update](../testing/issue-11-test-harnesses-ci.md#october-4-2026-delivery-update). The planned `ham340i` review substitution reason and deliberate hosted red/green demonstration remain unrecorded. Preparation statements below are historical; this update records the linked merge, review and CI events.
+
 ## Scope and attribution
 
 Assigned issue: [#11](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/11). Branch: `feature/11-test-harnesses-ci`. Planned estimate remains 8 SP / 16 engineering hours; actual human hours are not recorded.
