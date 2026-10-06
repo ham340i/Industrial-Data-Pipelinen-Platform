@@ -12,7 +12,7 @@ npm ci --ignore-scripts
 npm run dev
 ```
 
-Open the local URL printed by Vite (normally http://127.0.0.1:5173). The server binds to loopback. No backend or credentials are required to navigate the shell. An offline API warning is expected until the backend exists.
+Open http://127.0.0.1:3000. The server binds to loopback and uses strict port selection so it cannot silently move to an origin rejected by the API. No backend or credentials are required to navigate the shell. To connect the real backend, follow the [developer guide](../getting-started.md#backend-validation).
 
 ```sh
 npm run check
@@ -21,7 +21,7 @@ npm run build
 npm run preview
 ```
 
-`check` runs ESLint, Prettier validation, strict TypeScript, Vitest and the production build. Build output is in `frontend/dist/`; preview serves it locally, normally on port 4173. Preview is a verification server, not a production deployment. Commit package.json and package-lock.json together; use `npm ci --ignore-scripts` in clean environments.
+`check` runs ESLint, Prettier validation, strict TypeScript, Vitest and the production build. Build output is in `frontend/dist/`; preview serves it locally on port 3000, matching the backend's allowed origins. Preview is a verification server, not a production deployment. Commit package.json and package-lock.json together; use `npm ci --ignore-scripts` in clean environments. `npm run test:standalone` starts real API/Vite services and checks browser connectivity; see the [standalone smoke guide](../getting-started.md#real-standalone-connection-smoke).
 
 ## Use the workbench
 
@@ -34,9 +34,9 @@ Hash URLs such as `/#/builder` support direct entry, refresh and browser history
 
 ## Configuration and provisional API contract
 
-Optional: copy `frontend/.env.example` to `frontend/.env.local` and set `VITE_API_BASE_URL`. Default: `http://127.0.0.1:8000`. Restart Vite after changing it; production values are embedded at build time. Use an absolute HTTP(S) URL, optionally including an API path prefix. Credentials, query strings and fragments are rejected. Every `VITE_*` value is public: never add passwords or tokens.
+Optional: copy `frontend/.env.example` to `frontend/.env.local` and set `VITE_API_BASE_URL`. Default: `http://127.0.0.1:8000/api/v1`. A bare HTTP(S) host also receives the `/api/v1` prefix; an explicit path prefix is preserved. Restart Vite after changing it; production values are embedded at build time. Credentials, query strings and fragments are rejected. Every `VITE_*` value is public: never add passwords or tokens.
 
-The frontend proposes `GET <base URL>/health` with HTTP 200 and JSON `{"status":"ok"}`. Additional fields are ignored. Other shapes produce an API compatibility warning. The implemented API in issue #6 exposes `/api/v1/health`: use `http://127.0.0.1:8000/api/v1` for standalone development on port 3000. Compose sets the supported same-origin base `/api/v1` and proxies requests to the API; see the [workspace guide](../local-workspace.md). The backend must allow the actual frontend origin via CORS (127.0.0.1 and localhost are different origins). The client does not send cross-origin cookies.
+The frontend requests `GET <base URL>/health` with HTTP 200 and JSON `{"status":"ok"}`. Additional fields are ignored. Other shapes produce an API compatibility warning. Its default now matches the `/api/v1/health` route implemented in issue #6; run standalone Vite on port 3000. Compose sets the supported same-origin base `/api/v1` and proxies requests to the API; see the [workspace guide](../local-workspace.md). The backend must allow the actual frontend origin via CORS (127.0.0.1 and localhost are different origins). The client does not send cross-origin cookies.
 
 Requests time out after 10 seconds. Errors are classified as network, timeout, HTTP, invalid-response or unknown; raw response bodies, server stack traces and request configuration are not shown. Cancellation stays recognizable to TanStack Query. Health results are fresh for 30 seconds; automatic retries and focus refetch are disabled to avoid noisy offline traffic. The cache is in memory.
 
@@ -74,7 +74,7 @@ Tests use MSW at the HTTP boundary and isolated query clients. They cover pendin
 | Unsupported health response | Reconcile the backend schema with the provisional contract |
 | Blank page after configuration change | Inspect the browser console for configuration errors; use the safe example URL and restart Vite |
 | npm engine error | Use Node 24 and reinstall with npm ci --ignore-scripts |
-| Port already occupied | Use the URL Vite prints or run npm run dev -- --port 5174; update backend CORS accordingly |
+| Port already occupied | Stop the service occupying port 3000, or explicitly choose another port and update backend CORS for that origin. Vite will not silently select a different port. |
 | Draft disappeared on refresh | Expected: this iteration has no persistence |
 
 ## Security, performance and review limits

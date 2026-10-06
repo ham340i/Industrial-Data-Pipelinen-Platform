@@ -56,7 +56,7 @@ describe("API boundary", () => {
   });
   it("validates public API configuration", () => {
     expect(resolveApiBaseUrl("/api/v1")).toBe("/api/v1");
-    expect(resolveApiBaseUrl(undefined)).toBe("http://127.0.0.1:8000");
+    expect(resolveApiBaseUrl(undefined)).toBe("http://127.0.0.1:8000/api/v1");
     expect(resolveApiBaseUrl("https://example.test/api/")).toBe(
       "https://example.test/api",
     );
@@ -69,5 +69,15 @@ describe("API boundary", () => {
     ]) {
       expect(() => resolveApiBaseUrl(value)).toThrow();
     }
+  });
+  it.each([
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8000/",
+    " https://example.test ",
+  ])("adds the versioned API prefix to a bare host %s", (value) => {
+    const expected = value.trim().startsWith("https:")
+      ? "https://example.test/api/v1"
+      : "http://127.0.0.1:8000/api/v1";
+    expect(resolveApiBaseUrl(value)).toBe(expected);
   });
 });
