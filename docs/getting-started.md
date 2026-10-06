@@ -37,6 +37,23 @@ npm run preview
 
 Use Python 3.12. From the repository root:
 
+On Windows PowerShell, call the virtual environment directly; activation is optional:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install --only-binary :all: --require-hashes -r requirements.lock
+.\.venv\Scripts\python.exe -m ruff check
+.\.venv\Scripts\python.exe -m ruff format --check
+.\.venv\Scripts\python.exe -m mypy
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+In a second terminal, run the frontend commands above and open http://127.0.0.1:3000. Vite development and preview use port 3000 with strict port selection; this matches the API's CORS allowlist. Changing the frontend port also requires an explicit backend origin change.
+
+On macOS/Linux:
+
 ```sh
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -56,6 +73,14 @@ uv pip compile --universal --generate-hashes --python-version 3.12 requirements-
 ```
 
 Shared API test fixtures live in `tests/conftest.py`. Feature owners add their own tests beside their feature; see the [issue #11 verification record](testing/issue-11-test-harnesses-ci.md).
+
+## Real standalone connection smoke
+
+After installing both dependency locks and the Playwright browser (`npm run browser:install --prefix frontend`), run `npm run test:standalone --prefix frontend`. It starts the real API and default Vite server, checks the versioned health response and browser CORS access, navigates to Builder, then stops both services. Keep ports 8000 and 3000 free; the test refuses to reuse existing servers. No HTTP mocks or Docker are used.
+
+On Windows, the test defaults to `python` from PATH. To select the virtual environment explicitly, set `$env:LPS_PYTHON = (Resolve-Path '.\.venv\Scripts\python.exe').Path` before running it. On macOS/Linux, activate `.venv` first. CI runs the smoke on Windows and Linux with Python 3.12.
+
+To check the production preview too, build the frontend, set `LPS_STANDALONE_MODE=preview` in the test environment, then run the same smoke command. Both modes use the real API and default port 3000. CI checks both modes.
 
 ## Tests
 
@@ -84,6 +109,7 @@ A frontend static build is available via `npm run build` in `frontend/`; the ful
 | Symptom | Resolution |
 |---|---|
 | `pip` reports a hash mismatch or an unpinned requirement | Regenerate `requirements.lock` with the command under Backend validation; do not drop `--require-hashes` |
+| No matching distribution for `ast-serialize==0.12.1` | Confirm the active interpreter is Python 3.12, upgrade that interpreter's pip, and install through the virtual-environment command above. The lock installs on Windows x64/Python 3.12; retain the exact pin and hash checks. If it persists, capture interpreter version, architecture and pip version for diagnosis. |
 | Python command unavailable or older than 3.11 | Install an approved Python 3.11+ interpreter and confirm `python3 --version` |
 | Script cannot find Git files | Use a Git clone; run the commands from its root |
 | Broken document link/heading | Correct the relative target or heading; rerun `check_docs.py` |
