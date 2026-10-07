@@ -1,0 +1,8 @@
+{
+  "cases": [
+    {"name": "wrong_type", "config": {"amount": "3"}, "field": "amount"},
+    {"name": "out_of_range", "config": {"amount": -1001}, "field": "amount"},
+    {"name": "unknown_field", "config": {"unknown": true}, "field": "unknown"},
+    {"name": "credential_alias", "config": {"API-Key": "synthetic-secret"}, "field": "API-Key"}
+  ]
+}
