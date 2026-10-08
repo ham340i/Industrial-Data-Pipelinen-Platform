@@ -1,6 +1,8 @@
 # ham340i — Iteration 1 workspace evidence
 
-Issue: [#4](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/4). Branch: `feature/4-local-workspace`. Planned reviewer: aboudka2003; independent review pending.
+October 4 delivery update: PR #47 merged after `menaboulus` approved; hosted CI passed. The [verification update](../testing/issue-4-local-workspace.md#october-4-delivery-update) records exact links and timestamps. Planned reviewer aboudka2003 differs; substitution reason remains unrecorded. Earlier preparation statements below are historical; this update records the linked merge, review and CI events.
+
+Issue: [#4](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/4). Branch: `feature/4-local-workspace`. Planned reviewer: aboudka2003; actual approver menaboulus.
 
 The owner requested implementation of the assigned workspace task. Codex implemented Compose packaging around the existing frontend and API, integrated the API base path, added persistent metadata storage, documented lifecycle/configuration and added isolated real-service/browser smoke tests. Existing teammate application code retains its authorship. This is AI-assisted implementation, not a claim that the student manually authored generated code or performed the recorded automated checks.
 
