@@ -66,19 +66,38 @@ def main():
         marker = uuid4().hex
         compose('exec', '-T', 'api', 'python', '-c',
                 "import os\nfrom pathlib import Path\n"
+                "from app.config import settings\n"
+                "from app.metadata.database import Database\n"
+                "from app.metadata.models import Project\n"
                 "if os.getuid() == 0:\n    raise RuntimeError('API must be non-root')\n"
-                f"Path('/var/lib/lps/smoke.txt').write_text('{marker}')")
+                "if settings.metadata_path != Path('/var/lib/lps/metadata.sqlite3'):\n"
+                "    raise RuntimeError('API metadata path does not use the volume')\n"
+                "database = Database(settings.metadata_path)\n"
+                "try:\n"
+                "    with database.transaction() as session:\n"
+                f"        session.add(Project(id='{marker}', name='Synthetic smoke'))\n"
+                "finally:\n    database.close()")
         if args.browser:
             subprocess.run(['npm', 'exec', '--', 'playwright', 'test', '--config', 'playwright.compose.config.ts'],
                            cwd=ROOT / 'frontend', env=dict(env, COMPOSE_BASE_URL=frontend), check=True)
         compose('down', '--timeout', '10')
         compose('up', '--detach', '--wait', '--wait-timeout', '120')
         saved = compose('exec', '-T', 'api', 'python', '-c',
-                        "from pathlib import Path; print(Path('/var/lib/lps/smoke.txt').read_text())")
+                        "from app.config import settings\n"
+                        "from app.metadata.database import Database\n"
+                        "from app.metadata.models import Project\n"
+                        "database = Database(settings.metadata_path)\n"
+                        "try:\n"
+                        "    with database.transaction() as session:\n"
+                        f"        project = session.get(Project, '{marker}')\n"
+                        "        if project is None or project.name != 'Synthetic smoke':\n"
+                        "            raise RuntimeError('Persisted project is missing')\n"
+                        "        print(project.id)\n"
+                        "finally:\n    database.close()")
         if saved.strip() != marker:
             raise RuntimeError('Metadata did not survive container recreation')
         verify_health(address('frontend', 8080) + HEALTH_PATH)
-        print('PASS: real API, frontend assets, SPA routes, proxy, non-root metadata writes and persistence.')
+        print('PASS: real API, frontend assets, SPA routes, proxy, non-root SQLite writes and project persistence.')
     finally:
         compose('down', '--volumes', '--remove-orphans', '--timeout', '10')
         if compose('ps', '--all', '--quiet').strip():

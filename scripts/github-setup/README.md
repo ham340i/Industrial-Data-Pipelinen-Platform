@@ -1,6 +1,6 @@
 # GitHub setup helpers
 
-GitHub CLI remains unavailable locally. An authorized API follow-up created the active labels and all 13 milestones and protected main; see the [current audit](../../docs/SOEN490_COMPLIANCE_AUDIT.md). These CLI helpers remain available for later reconciliation. Install [GitHub CLI](https://cli.github.com/), authenticate with repository administration rights, then inspect the intended repository:
+An authorized follow-up created the active labels and all 13 milestones and protected main; see the [historical audit](../../docs/SOEN490_COMPLIANCE_AUDIT.md) and [current team status/access limits](../../docs/team-readiness-2026-10-04.md). These CLI helpers support later reconciliation. Install [GitHub CLI](https://cli.github.com/) if it is unavailable on your machine, authenticate with the access needed for the intended operation, then inspect the intended repository:
 
 ```sh
 gh auth login
