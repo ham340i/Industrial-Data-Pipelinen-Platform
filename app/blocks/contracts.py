@@ -158,7 +158,7 @@ class BlockConfig(Contract):
             if any(error["type"] != "missing" for error in errors):
                 raise
             if definition.validate_default is False:
-                raise ValueError("Configuration defaults must remain validated")
+                raise ValueError("Configuration defaults must remain validated") from exc
         return schema
 
 
