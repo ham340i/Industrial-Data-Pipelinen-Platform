@@ -1,0 +1,5 @@
+{
+  "config": {"amount": 3},
+  "input_rows": [{"value": 2}, {"value": -1}, {"value": 0}],
+  "expected_rows": [{"value": 5}, {"value": 2}, {"value": 3}]
+}
