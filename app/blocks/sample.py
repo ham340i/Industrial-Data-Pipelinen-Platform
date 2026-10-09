@@ -25,7 +25,7 @@ class AddConstantConfig(BlockConfig):
 
 
 class AddConstantBlock(Block[AddConstantConfig]):
-    config_model = AddConstantConfig
+    config_model: type[AddConstantConfig] = AddConstantConfig
     descriptor = BlockDescriptor(
         block_id="synthetic.add_constant",
         version="1.0.0",

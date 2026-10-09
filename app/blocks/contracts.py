@@ -152,9 +152,6 @@ class BlockConfig(Contract):
             cls.model_validate({})
         except ValidationError as exc:
             errors = exc.errors(include_input=False, include_context=False)
-
-            # Required configuration is unavailable during registration.
-            # Any other error means the declaration/defaults failed validation.
             if any(error["type"] != "missing" for error in errors):
                 raise
             if definition.validate_default is False:
@@ -303,13 +300,12 @@ def schemas_compatible(produced: DataSchema, expected: DataSchema) -> bool:
         for name, column in required.items()
     )
 
-
-def ports_compatible(output: Port, input_port: Port) -> bool:
-    if output.kind != input_port.kind:
+def ports_compatible(output: Port, input: Port) -> bool:
+    if output.kind != input.kind:
         return False
     if output.kind == "control":
         return True
-    assert output.data_schema is not None and input_port.data_schema is not None
-    if output.data_schema.allow_extra_columns and not input_port.data_schema.allow_extra_columns:
+    assert output.data_schema != None and input.data_schema != None
+    if output.data_schema.allow_extra_columns and not input.data_schema.allow_extra_columns:
         return False
-    return schemas_compatible(output.data_schema, input_port.data_schema)
+    return schemas_compatible(output.data_schema, input.data_schema)
