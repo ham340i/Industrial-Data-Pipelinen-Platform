@@ -165,7 +165,8 @@ def test_extra_column_and_type_compatibility_rules():
         Port(name="out", data_schema=number), Port(name="in", data_schema=VALUE_SCHEMA)
     )
     assert not ports_compatible(
-            Port(name="out", data_schema=DataSchema(columns=VALUE_SCHEMA.columns, allow_extra_columns=True)), Port(name="in", data_schema=VALUE_SCHEMA))
+            Port(name="out", data_schema=DataSchema(columns=VALUE_SCHEMA.columns, 
+                allow_extra_columns=True)), Port(name="in", data_schema=VALUE_SCHEMA))
 
 def test_custom_default_validator_with_required_field():
     class BadDefault(AddConstantConfig):

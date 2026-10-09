@@ -155,7 +155,7 @@ class BlockConfig(Contract):
             if any(error["type"] != "missing" for error in errors):
                 raise
             if definition.validate_default is False:
-                raise ValueError("Configuration defaults must remain validated") from exc
+                raise ValueError("Configuration defaults must stay validated") from exc
         return schema
 
 
@@ -305,7 +305,7 @@ def ports_compatible(output: Port, input: Port) -> bool:
         return False
     if output.kind == "control":
         return True
-    assert output.data_schema != None and input.data_schema != None
+    assert output.data_schema is not None and input.data_schema is not None
     if output.data_schema.allow_extra_columns and not input.data_schema.allow_extra_columns:
         return False
     return schemas_compatible(output.data_schema, input.data_schema)
