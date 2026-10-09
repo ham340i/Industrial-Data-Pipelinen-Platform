@@ -46,3 +46,7 @@ Schema Validation is one implementation used wherever schema validation is reque
 ## Contract tests required
 
 Verify public metadata/config JSON round-trips; typed-port compatibility; valid/invalid config; deterministic output; input/output schema behavior; optional preview limits; structured failures; redacted logging; and missing/incompatible block-version behavior. Each block owner adds golden and negative fixtures in addition to shared SDK tests.
+
+## Limitations
+
+Registration probes an empty configuration. Validators requiring actual required-field values, particularly after-model validators, cannot be fully checked until a complete configuration is supplied.

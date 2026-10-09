@@ -78,4 +78,5 @@ production blocks and API/frontend integration remain separate work.
 - Recorded local verification used Python 3.13.1. Verification on the project's
   Python 3.12 target and remote CI remains pending.
 
-  Joseph led and delivered this metadata design and implementation, with AI assistance. Independent design review is tracked in PR #57.
+  Joseph led and delivered this metadata design and implementation, with AI assistance. Independent design review is tracked in PR #59.
+  

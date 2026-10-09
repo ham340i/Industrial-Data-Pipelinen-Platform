@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from pydantic import ConfigDict, Field, ValidationError
+from pydantic import ConfigDict, Field, ValidationError, field_validator
 
 from app.blocks import (
     Block,
@@ -164,7 +164,25 @@ def test_extra_column_and_type_compatibility_rules():
     assert not ports_compatible(
         Port(name="out", data_schema=number), Port(name="in", data_schema=VALUE_SCHEMA)
     )
+    assert not ports_compatible(
+            Port(name="out", data_schema=DataSchema(columns=VALUE_SCHEMA.columns, allow_extra_columns=True)), Port(name="in", data_schema=VALUE_SCHEMA))
 
+def test_custom_default_validator_with_required_field():
+    class BadDefault(AddConstantConfig):
+        resource_id: str
+        amount: int = 0
+
+        @field_validator("amount")
+        @classmethod
+        def positive_amount(cls, value: int) -> int:
+            if value <= 0:
+                raise ValueError("Amount must be positive")
+            return value
+
+    class BadBlock(AddConstantBlock):
+        config_model = BadDefault
+
+    assert_invalid_registration(BadBlock())
 
 @pytest.mark.parametrize("value", [True, "1", None, 1.5])
 def test_table_checks_actual_row_types(value: Any):

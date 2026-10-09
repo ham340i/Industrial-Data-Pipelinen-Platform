@@ -13,6 +13,7 @@ from pydantic import (
     ConfigDict,
     Field,
     TypeAdapter,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -147,8 +148,17 @@ class BlockConfig(Contract):
             )
             require_public_json(checked)
             defaults[name] = checked
-        if len(defaults) == len(cls.model_fields):
+        try:
             cls.model_validate({})
+        except ValidationError as exc:
+            errors = exc.errors(include_input=False, include_context=False)
+
+            # Required configuration is unavailable during registration.
+            # Any other error means the declaration/defaults failed validation.
+            if any(error["type"] != "missing" for error in errors):
+                raise
+            if definition.validate_default is False:
+                raise ValueError("Configuration defaults must remain validated")
         return schema
 
 
@@ -300,4 +310,6 @@ def ports_compatible(output: Port, input_port: Port) -> bool:
     if output.kind == "control":
         return True
     assert output.data_schema is not None and input_port.data_schema is not None
+    if output.data_schema.allow_extra_columns and not input_port.data_schema.allow_extra_columns:
+        return False
     return schemas_compatible(output.data_schema, input_port.data_schema)
