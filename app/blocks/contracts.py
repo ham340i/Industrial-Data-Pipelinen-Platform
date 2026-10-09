@@ -300,12 +300,12 @@ def schemas_compatible(produced: DataSchema, expected: DataSchema) -> bool:
         for name, column in required.items()
     )
 
-def ports_compatible(output: Port, input: Port) -> bool:
-    if output.kind != input.kind:
+def ports_compatible(out: Port, inp: Port) -> bool:
+    if out.kind != inp.kind:
         return False
-    if output.kind == "control":
+    if out.kind == "control":
         return True
-    assert output.data_schema is not None and input.data_schema is not None
-    if output.data_schema.allow_extra_columns and not input.data_schema.allow_extra_columns:
+    assert out.data_schema is not None and inp.data_schema is not None
+    if out.data_schema.allow_extra_columns and not inp.data_schema.allow_extra_columns:
         return False
-    return schemas_compatible(output.data_schema, input.data_schema)
+    return schemas_compatible(out.data_schema, inp.data_schema)
