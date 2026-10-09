@@ -1,6 +1,11 @@
 # Release 1 Block SDK contract plan
 
-Status: the issue #8 SDK scope is implemented in `app/blocks/`, following the user-approved interface plan, with a synthetic block and contract fixtures. See the [SDK guide](../block-sdk-draft.md) and [verification record](../testing/issue-8-block-sdk.md). Independent designated-reviewer approval, PR/CI evidence and later integrated acceptance are not claimed here.
+Status: the issue #8 SDK scope is implemented in `app/blocks/`, following the
+user-approved interface plan, with a synthetic block and contract fixtures.
+See the [synthetic extension example](../../app/blocks/sample.py) and
+[verification record](../testing/issue-8-block-sdk.md). Independent
+designated-reviewer approval, PR/CI evidence and later integrated acceptance
+are not claimed here.
 
 | Contract area | Required behavior |
 |---|---|
@@ -49,4 +54,6 @@ Verify public metadata/config JSON round-trips; typed-port compatibility; valid/
 
 ## Limitations
 
-Registration probes an empty configuration. Validators requiring actual required-field values, particularly after-model validators, cannot be fully checked until a complete configuration is supplied.
+Registration probes an empty configuration. Validators requiring actual
+required-field values, particularly after-model validators, cannot be fully
+checked until a complete configuration is supplied.
