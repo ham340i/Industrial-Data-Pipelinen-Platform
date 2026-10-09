@@ -300,6 +300,7 @@ def schemas_compatible(produced: DataSchema, expected: DataSchema) -> bool:
         for name, column in required.items()
     )
 
+
 def ports_compatible(out: Port, inp: Port) -> bool:
     if out.kind != inp.kind:
         return False
