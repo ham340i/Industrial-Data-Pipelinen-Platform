@@ -14,7 +14,7 @@ from check_docs import ROOT, repository_files
 PATTERNS = [
     re.compile(rb'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
     re.compile(rb'\bgh[pousr]_[A-Za-z0-9]{36,}\b'),
-    re.compile(rb'\bgithub_pat_[A-Za-z0-9_]{60,}\b'),
+    re.compile(rb'\bgithub_pat_\w{60,}\b'),
     re.compile(rb'\bAKIA[A-Z0-9]{16}\b'),
     re.compile(rb'\bxox[baprs]-[A-Za-z0-9-]{20,}\b'),
 ]

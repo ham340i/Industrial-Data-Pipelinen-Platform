@@ -28,7 +28,7 @@ _RUNTIME_KEYS = {
     "connectionstring",
     "dsn",
 }
-_ABSOLUTE_PATH = re.compile(r"^(?:[/\\]|[A-Za-z]:|file:)", re.IGNORECASE)
+_ABSOLUTE_PATH = re.compile(r"^(?:[/\\]|[A-Z]:|file:)", re.IGNORECASE)
 
 
 def portable_definition(value: dict[str, Any]) -> dict[str, Any]:

@@ -92,13 +92,15 @@ def test_complete_metadata_survives_reopening(seeded: Database):
         with reopened.transaction() as session:
             run = session.get(Run, "run")
             assert run is not None
-            assert run.state == "queued" and run.row_count is None
+            assert run.state == "queued" 
+            assert run.row_count is None
             revision = run.pipeline_revision
             assert revision.pipeline.project.name == "Example"
             assert revision.definition == GRAPH
             assert revision.created_at.tzinfo is None
             exported = json.dumps(revision.definition)
-            assert "private" not in exported and "os-keyring" not in exported
+            assert "private" not in exported 
+            assert "os-keyring" not in exported
             assert run.outputs[0].row_count == 0
             assert revision.pipeline.project.bindings[0].secret_reference is not None
             assert session.get(BlockRegistryEntry, ("csv.read", "1")) is not None
