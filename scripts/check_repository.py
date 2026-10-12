@@ -76,7 +76,8 @@ def main():
         try:
             if path.suffix in {'.py', '.sh', '.json', '.yml', '.yaml', '.md'}:
                 text = content.decode('utf-8')
-                assert text.endswith('\n') and all(line == line.rstrip() for line in text.splitlines())
+                if not text.endswith('\n') and all(line == line.rstrip() for line in text.splitlines()):
+                    raise ValueError
             if path.suffix == '.py':
                 ast.parse(text, filename=str(relative))
             elif path.suffix == '.sh':
@@ -84,7 +85,7 @@ def main():
             elif path.suffix in {'.json', '.yml', '.yaml'}:
                 # JSON is a YAML subset. Keep config in this serialization for stdlib validation.
                 validate_configuration(path, json.loads(text))
-        except (ValueError, AssertionError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError):
+        except (ValueError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError):
             failures.append(f'{relative}: invalid syntax, configuration or whitespace (details withheld)')
     if failures:
         print('\n'.join(failures))

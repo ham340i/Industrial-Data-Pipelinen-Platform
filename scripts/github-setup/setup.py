@@ -62,6 +62,12 @@ def reconcile(repo, kind, desired, existing, apply=False):
     return 2 if drift else 0
 
 
+def kind_validator (a: list[str]):
+    if not a[0]=='labels' and a[1]=='milestones':
+        return False
+    else:
+        return True
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('kind', choices=['labels', 'milestones'])
@@ -70,6 +76,8 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', args.repo):
         parser.error('--repo must be OWNER/REPO')
+    if not kind_validator(args.kind.choices):
+        parser.error('Unknown error')
     try:
         desired = json.loads((CATALOG / f'{args.kind}.json').read_text())
         return reconcile(args.repo, args.kind, desired, existing_records(args.repo, args.kind), args.apply)

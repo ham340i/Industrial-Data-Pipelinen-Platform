@@ -23,13 +23,13 @@ def repository_files(root=ROOT):
 
 
 def prose(text):
-    return re.sub(r'^\s*(`{3,}|~{3,}).*?^\s*\1\s*$', '', text, flags=re.M | re.S)
+    return re.sub(r'^\s*?(`{3,}|~{3,}).*?^\s*?\1\s*?$', '', text, flags=re.M | re.S)
 
 
 def heading_anchors(text):
     counts = {}
     anchors = set()
-    for title in re.findall(r'^#{1,6}\s+(.+?)\s*#*$', prose(text), re.M):
+    for title in re.findall(r'^#{1,6}\s+?(.+?)\s*?#*?$', prose(text), re.M):
         slug = re.sub(r'[^\w\- ]', '', title.lower()).replace(' ', '-')
         count = counts.get(slug, 0)
         counts[slug] = count + 1
