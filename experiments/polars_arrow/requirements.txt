@@ -1,0 +1,3 @@
+# Experiment-only dependencies; not added to the production API.
+polars==1.44.2
+pyarrow==25.0.1
