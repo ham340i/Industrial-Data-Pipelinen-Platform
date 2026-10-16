@@ -30,6 +30,23 @@ _RUNTIME_KEYS = {
 }
 _ABSOLUTE_PATH = re.compile(r"^(?:[/\\]|[A-Z]:|file:)", re.IGNORECASE)
 
+def visit(item: object) -> None:
+    if isinstance(item, dict):
+        for key, child in item.items():
+            if not isinstance(key, str):
+                raise ValueError("JSON object keys must be strings")
+            normalized = re.sub(r"[^a-z0-9]", "", key.lower())
+            if normalized in _RUNTIME_KEYS:
+                raise ValueError("Runtime bindings do not belong in definitions")
+            visit(child)
+    elif isinstance(item, list):
+        for child in item:
+            visit(child)
+    elif isinstance(item, str):
+        if _ABSOLUTE_PATH.match(item):
+            raise ValueError("Absolute paths do not belong in definitions")
+    elif item is not None and not isinstance(item, (bool, int, float)):
+        raise ValueError("Definitions accept only JSON values")
 
 def portable_definition(value: dict[str, Any]) -> dict[str, Any]:
     """Return detached JSON; reject known runtime fields and absolute paths.
@@ -40,23 +57,7 @@ def portable_definition(value: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("A portable definition must be a JSON object")
 
-    def visit(item: object) -> None:
-        if isinstance(item, dict):
-            for key, child in item.items():
-                if not isinstance(key, str):
-                    raise ValueError("JSON object keys must be strings")
-                normalized = re.sub(r"[^a-z0-9]", "", key.lower())
-                if normalized in _RUNTIME_KEYS:
-                    raise ValueError("Runtime bindings do not belong in definitions")
-                visit(child)
-        elif isinstance(item, list):
-            for child in item:
-                visit(child)
-        elif isinstance(item, str):
-            if _ABSOLUTE_PATH.match(item):
-                raise ValueError("Absolute paths do not belong in definitions")
-        elif item is not None and not isinstance(item, (bool, int, float)):
-            raise ValueError("Definitions accept only JSON values")
+
 
     # Serialize first to reject cycles and non-finite numbers. Visit the original
     # too: json.dumps otherwise silently converts tuples and integer keys.
