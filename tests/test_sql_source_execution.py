@@ -80,9 +80,10 @@ def test_special_filename_keeps_real_connection_read_only(
         return SqlQueryResult(columns=[], rows=[])
 
     # Bypass query policy entirely: mode=ro must still protect the actual file.
+    config = make_config(target, "SELECT asset_id FROM measurements")
     monkeypatch.setattr("app.sources.sql.execute_read_only_sqlite", unchecked_write)
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
-        read_sqlite_source(make_config(target, "SELECT asset_id FROM measurements"))
+        read_sqlite_source(config)
 
 
 @pytest.mark.parametrize(
@@ -139,8 +140,9 @@ def test_duplicate_result_names_are_rejected(
     query = "SELECT asset_id AS value, measurement_value AS value FROM measurements"
     if empty:
         query += " WHERE 0"
+    config= make_config(synthetic_sqlite_db, query)
     with pytest.raises(SqlSourceError, match="unique.*aliases"):
-        read_sqlite_source(make_config(synthetic_sqlite_db, query))
+        read_sqlite_source(config)
 
 
 def test_distinct_case_aliases_keep_their_positional_values(
