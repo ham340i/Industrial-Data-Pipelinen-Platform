@@ -2,7 +2,7 @@
 
 ## Current capability
 
-The React workbench shell is implemented under issue #5, alongside repository validation tools. The FastAPI shell is also implemented; project persistence, the graph editor and ETL execution remain future work. To start both shells together, follow the [Compose workspace guide](local-workspace.md). See the [frontend guide](frontend/workbench.md) for configuration, architecture, usage and troubleshooting.
+The React workbench, FastAPI and SQLite metadata are implemented. Issue #19 adds [project create/list/open and selection restoration](projects.md). The graph editor and ETL execution remain separate work. To start both services, follow the [Compose workspace guide](local-workspace.md). See the [frontend guide](frontend/workbench.md) for configuration, architecture, usage and troubleshooting.
 
 ## Compose startup
 
@@ -20,7 +20,7 @@ npm ci --ignore-scripts
 npm run dev
 ```
 
-The frontend runs on the loopback URL printed by Vite. Its API base defaults to http://127.0.0.1:8000/api/v1; an offline warning is expected without a backend. Optional public configuration is documented in [the frontend guide](frontend/workbench.md) and `frontend/.env.example`. Database setup is not available yet.
+The frontend runs on the loopback URL printed by Vite. Its API base defaults to http://127.0.0.1:8000/api/v1; an offline warning is expected without a backend. Optional public configuration is documented in [the frontend guide](frontend/workbench.md) and `frontend/.env.example`. API startup initializes the configured SQLite metadata; see [the metadata guide](metadata.md).
 
 ## Frontend validation and build
 

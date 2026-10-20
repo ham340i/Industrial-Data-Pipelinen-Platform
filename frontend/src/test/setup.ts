@@ -9,5 +9,6 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   useEditorStore.getState().reset();
+  if (typeof localStorage !== "undefined") localStorage.clear();
 });
 afterAll(() => server.close());

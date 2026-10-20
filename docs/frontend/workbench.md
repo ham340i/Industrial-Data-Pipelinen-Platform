@@ -1,6 +1,6 @@
 # Frontend workbench guide
 
-Implements the bounded frontend scope of [issue #5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5). The backend, project persistence, graph editor and execution engine remain separate work. No production or stakeholder acceptance is claimed.
+Implements the workbench foundation from [issue #5](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/5) and [local project workflows](../projects.md) from issue #19. The graph editor and execution engine remain separate work. No production or stakeholder acceptance is claimed.
 
 ## Install and run
 
@@ -26,8 +26,8 @@ npm run preview
 ## Use the workbench
 
 - Overview explains the foundation and checks the local API. Retry performs another request after a failure.
-- Projects shows an explicit placeholder because project storage is not implemented. It does not claim that an unqueried database contains zero projects.
-- Builder reserves the editor route. Its draft name remains while navigating within this tab; Clear draft resets it. Refresh loses the draft. Graph operations and saving are unavailable.
+- Projects creates, lists and opens saved projects, with loading/empty/error states and pagination. See the [project guide](../projects.md).
+- Builder restores the last selected project or opens a generic workspace when none is selected. Drafts remain through navigation within the same project; Clear draft resets the draft. Refresh or switching projects loses it. Graph operations and saving are unavailable.
 - Tab reaches the skip link and navigation. Enter activates links. Route changes move focus to the main content and update the document title. Unknown routes offer a link home.
 
 Hash URLs such as `/#/builder` support direct entry, refresh and browser history without server rewrites.

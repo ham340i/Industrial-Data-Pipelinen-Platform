@@ -14,6 +14,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.config import settings
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
+from app.projects import ProjectNotFound, router as projects_router
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
@@ -99,6 +100,8 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Correlation-ID"],
 )
 
+app.include_router(projects_router)
+
 
 def error_response(
     *,
@@ -136,6 +139,18 @@ async def validation_exception_handler(
         code="validation_error",
         message="The request body or parameters are invalid.",
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+
+
+@app.exception_handler(ProjectNotFound)
+async def project_not_found_handler(
+    request: Request, exc: ProjectNotFound
+) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="project_not_found",
+        message="Project was not found.",
+        status_code=404,
     )
 
 
