@@ -139,7 +139,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker", choices=CASES)
     parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if platform.system() != "Linux":
         parser.error("Run in Linux for comparable /proc and ru_maxrss units")
@@ -205,10 +204,8 @@ def main() -> None:
         "summary": summary,
     }
     serialized = json.dumps(report, indent=2) + "\n"
-    if args.output:
-        args.output.write_text(serialized, encoding="utf-8")
-    else:
-        print(serialized)
+    # File destinations belong to the invoking shell, not untrusted CLI paths.
+    sys.stdout.write(serialized)
 
 
 if __name__ == "__main__":

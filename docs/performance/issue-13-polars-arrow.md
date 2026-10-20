@@ -90,6 +90,15 @@ the preview design, not a production operating envelope or optimal threshold.
 
 ## Scope, references and review
 
+Review follow-up (2026-10-19): removed the CLI `--output` argument after
+SonarCloud identified an arbitrary file-write path. The report is always emitted
+on stdout; callers choose any destination through their shell. All six unittest
+methods pass, including rejection of absolute and relative output arguments
+without changing existing files. Ruff checks pass. A fresh three-repeat run
+passed all nine correctness checks; its report and current source hashes are in
+[review measurements](issue-13-results-review.json). The earlier measurements
+above remain historical evidence. Codex implemented and verified this follow-up.
+
 No datasets are persisted in the repository; only sanitized measured JSON is
 recorded. Temporary Parquet files are deleted. Production connectors, engine,
 SDK adapters and UI acceptance are separate work. #8 remains the agreed

@@ -1,16 +1,65 @@
 """Experiment correctness tests; no production dependency changes."""
 
 from pathlib import Path
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 
 import polars as pl
 from polars.testing import assert_frame_equal
 
+import spike
 from spike import fixture, preview, verify_roundtrip
 
 
 class InterchangeTests(unittest.TestCase):
+    def test_cli_emits_complete_report_on_stdout(self):
+        completed = subprocess.run(
+            [sys.executable, str(Path(spike.__file__).resolve()), "--repeats", "1"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["repeats"], 1)
+        self.assertEqual(len(report["runs"]), 3)
+        self.assertEqual(set(report["summary"]), {"small", "wide", "nulls"})
+        self.assertTrue(all(run["correctness"] == "passed" for run in report["runs"]))
+
+    def test_cli_rejects_output_paths_without_changing_existing_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            working = root / "working"
+            working.mkdir()
+            target = root / "existing.json"
+            target.write_text("keep-existing-content", encoding="utf-8")
+            for arguments in [
+                ["--output", str(target)],
+                ["--output", "../existing.json"],
+                [f"--output={target}"],
+            ]:
+                with self.subTest(arguments=arguments):
+                    completed = subprocess.run(
+                        [
+                            sys.executable,
+                            str(Path(spike.__file__).resolve()),
+                            *arguments,
+                        ],
+                        cwd=working,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                        check=False,
+                    )
+                    self.assertEqual(completed.returncode, 2, completed.stderr)
+                    self.assertIn("unrecognized arguments", completed.stderr)
+                    self.assertEqual(
+                        target.read_text(encoding="utf-8"), "keep-existing-content"
+                    )
+
     def test_deterministic_and_empty_fixtures(self):
         for rows, width in [(0, 10), (1, 10), (32, 128)]:
             with self.subTest(rows=rows, width=width):

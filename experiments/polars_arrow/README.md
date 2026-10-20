@@ -26,8 +26,14 @@ timeout makes the command fail. The Linux-only RSS method is intentional; host
 Windows Python is not used for comparable memory measurements. Docker Desktop
 overhead and the host's other work can affect timing.
 
-The four unittest methods additionally cover empty/single-row/wide fixtures,
-reference values, determinism, preview bounds and corruption detection.
+The six unittest methods additionally cover empty/single-row/wide fixtures,
+reference values, determinism, preview bounds, corruption detection, stdout
+report generation and rejection of absolute/relative output-path arguments.
+
+Reports are emitted only on stdout. The script does not accept `--output` or
+write to caller-supplied filenames; the invoking shell owns any explicit output
+redirection. The regression test confirms rejected output arguments cannot
+overwrite an existing file, including a relative traversal target.
 
 Fixture sizes are fixed in `CASES`, not user-supplied unbounded workloads. Repeat
 counts are restricted to 1–10. Temporary storage is inside the disposable
