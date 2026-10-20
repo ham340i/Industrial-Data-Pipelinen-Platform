@@ -102,7 +102,9 @@ round-trips. The guards are bounded policies, not general secret detection.
 Review public strings and never export real credentials under arbitrary keys.
 
 Models freeze field assignment, but nested dictionaries remain mutable.
-Export and registry validation revalidate them, and returned dictionaries are
+Export and registry validation check original layout key types before JSON can
+coerce them (e.g. integer `1` into node ID `"1"`). These checks also apply when
+layout is omitted from semantic output. They revalidate config, and returned dictionaries are
 detached. Do not treat `model_construct()` or `model_copy(update=...)` as trusted
 validation paths. Use normal model construction or JSON loading at boundaries.
 

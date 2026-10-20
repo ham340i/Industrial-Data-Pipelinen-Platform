@@ -123,6 +123,10 @@ class PipelineDefinition(Contract):
         for node in self.nodes:
             require_public_json(node.config)
             portable_definition(node.config)
+        if self.layout is not None:
+            # Frozen models still contain mutable dictionaries. Validate the
+            # original keys before JSON can turn e.g. integer 1 into string "1".
+            Layout(positions=self.layout.positions)
         checked = type(self).model_validate_json(self.model_dump_json())
         result = checked.model_dump(mode="json", exclude_none=True)
         if not include_layout:

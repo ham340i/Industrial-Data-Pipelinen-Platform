@@ -65,6 +65,13 @@ python scripts/check_docs.py
 
 ## Limits and attribution
 
+Review follow-up (2026-10-19): export now validates original layout keys before
+JSON serialization can coerce integer or boolean keys into valid node IDs.
+Regression coverage checks dictionary, JSON, semantic and registry validation,
+including layout omitted from output, and preserves valid mutable positions.
+The full backend suite passes (284 tests), Ruff checks pass, and mypy reports
+no issues in 35 source files. Codex implemented and verified this follow-up.
+
 No blocks are executed by graph validation. UI and full ETL end-to-end tests do
 not apply to this headless contract; integrated acceptance remains future work.
 Performance/resource guarantees are not measured by this change. The SDK retains

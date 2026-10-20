@@ -381,3 +381,37 @@ def test_headless_import_does_not_initialize_database(tmp_path: Path):
     )
     assert result.returncode == 0, result.stderr
     assert not path.parent.exists()
+
+
+@pytest.mark.parametrize("key", [1, True, None, 1.0])
+@pytest.mark.parametrize("operation", ["dict", "json", "semantic", "registry"])
+def test_mutated_layout_keys_are_checked_before_json_coercion(key: Any, operation: str):
+    graph = PipelineDefinition(
+        nodes=tuple(
+            node(identity, source=True) for identity in ("1", "true", "null", "1.0")
+        ),
+        layout=Layout(positions={"1": Position(x=0, y=0)}),
+    )
+    assert graph.layout is not None
+    graph.layout.positions.clear()
+    graph.layout.positions[key] = Position(x=0, y=0)
+    with pytest.raises(ValidationError):
+        if operation == "dict":
+            graph.to_dict()
+        elif operation == "json":
+            graph.to_json()
+        elif operation == "semantic":
+            graph.to_json(include_layout=False)
+        else:
+            graph.validate_registry(registry())
+
+
+def test_mutated_valid_layout_positions_still_roundtrip():
+    graph = PipelineDefinition(
+        nodes=(node("1", source=True),),
+        layout=Layout(positions={"1": Position(x=0, y=0)}),
+    )
+    assert graph.layout is not None
+    graph.layout.positions["1"] = Position(x=40, y=60)
+    assert PipelineDefinition.from_json(graph.to_json()) == graph
+    assert graph.validate_registry(registry()) == ("1",)
