@@ -1,8 +1,23 @@
 # Issue #19 local project verification
 
-Status: local implementation on `feature/19-local-projects`, based on main after
-SDK PR #59. No #9/#13 code is included. Independent review, hosted CI, PR and
-merge remain pending. Planned reviewer: `menaboulus`.
+Status: implementation on `feature/19-local-projects`, rebased onto main after
+PRs #59, #61 and #62. The PR diff contains only #19 work. Independent review,
+hosted CI and merge remain pending. Planned reviewer: `menaboulus`.
+
+## Pre-publication checks — October 20, 2026
+
+Implementation revision `ea732aa`, based on `f513aa0`: all 303 backend tests
+passed (25 deprecation warnings), with repository-locked dependencies on
+Python 3.12. Ruff lint/format and mypy passed (38 source files). Documentation
+checks passed across 134 Markdown files, release-plan validation passed and all
+16 repository-tool tests passed. The isolated Compose smoke passed real API,
+assets, proxy, non-root writes and project persistence across container
+recreation; its synthetic containers/network/volume were removed afterward.
+Node 24 with locked frontend dependencies passed lint, formatting, TypeScript,
+all 44 Vitest tests, the production build and all three production-shell browser
+tests. The test container's inherited Compose API URL initially mismatched the
+standalone test mocks; rerunning with the expected standalone URL passed without
+application changes. Hosted CI and independent reviewer approval remain pending.
 
 ## Observed local checks — October 14, 2026
 

@@ -1,6 +1,7 @@
 # karimikhaeil — Iteration 2 issue #19
 
-Status: implemented locally on October 14, 2026; independent review pending.
+Status: implemented locally on October 14, 2026; rebased and prepared for
+publication on October 20, 2026. Independent review remains pending.
 
 Karim requested the assigned project create/list/open story. Codex implemented
 the API and UI, runtime response validation, browser selection restoration,
@@ -18,4 +19,4 @@ AI Assistance: Karim supplied direction and authorized implementation. Codex
 generated and verified the changes. No separate manual implementation or checks
 by Karim, hosted CI, completed independent approval, merge or stakeholder
 acceptance is claimed. Actual refinement/review contributions can be added when
-they occur. Iteration 1 carryover #9/#13 remains in separate PRs.
+they occur. Iteration 1 carryover #9/#13 merged separately in PRs #61/#62.
