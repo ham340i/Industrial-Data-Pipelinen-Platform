@@ -4,17 +4,16 @@ from __future__ import annotations
 
 import heapq
 import json
+from collections.abc import Iterable
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.blocks.contracts import (
     Contract,
     NonBlank,
-    ports_compatible,
     require_public_json,
 )
-from app.blocks.errors import BlockError
 from app.blocks.registry import BlockRegistry
 from app.metadata.portable import portable_definition
 
@@ -67,7 +66,41 @@ class Layout(Contract):
     positions: dict[Identifier, Position] = Field(default_factory=dict)
 
 
-class PipelineDefinition(Contract):
+def kahn_order(
+    node_ids: Iterable[str], connections: Iterable[tuple[str, str]]
+) -> tuple[tuple[str, ...], frozenset[str]]:
+    """Kahn's algorithm, choosing the lexicographically smallest ready ID.
+
+    Returns the ordered nodes and the nodes that could not be ordered because
+    they lie on, or downstream of, a cycle. Callers must drop dangling pairs.
+    """
+    outgoing: dict[str, set[str]] = {node: set() for node in node_ids}
+    indegree = dict.fromkeys(outgoing, 0)
+    for source, target in connections:
+        if target not in outgoing[source]:
+            outgoing[source].add(target)
+            indegree[target] += 1
+    ready = [node for node, degree in indegree.items() if degree == 0]
+    heapq.heapify(ready)
+    ordered: list[str] = []
+    while ready:
+        node = heapq.heappop(ready)
+        ordered.append(node)
+        for target in sorted(outgoing[node]):
+            indegree[target] -= 1
+            if indegree[target] == 0:
+                heapq.heappush(ready, target)
+    return tuple(ordered), frozenset(outgoing.keys() - set(ordered))
+
+
+class GraphDraft(Contract):
+    """Version-1 graph shape without structural checks, for diagnostics.
+
+    Field-level rules (identifiers, portable configuration, finite layout)
+    still apply; duplicates, dangling references and cycles are reported by
+    ``app.pipelines.validation`` instead of rejecting the whole request.
+    """
+
     schema_version: Literal[1] = 1
     nodes: tuple[Node, ...] = ()
     edges: tuple[Edge, ...] = ()
@@ -80,6 +113,8 @@ class PipelineDefinition(Contract):
             raise ValueError("Only integer schema_version 1 is supported.")
         return value
 
+
+class PipelineDefinition(GraphDraft):
     @model_validator(mode="after")
     def check_structure(self) -> PipelineDefinition:
         node_ids = [node.id for node in self.nodes]
@@ -142,83 +177,52 @@ class PipelineDefinition(Contract):
         )
 
     def topological_order(self) -> tuple[str, ...]:
-        """Kahn's algorithm, choosing the lexicographically smallest ready ID.
+        """Deterministic Kahn order; see ``kahn_order``.
 
         Multiple port edges between the same nodes form one scheduling dependency.
         Empty and disconnected DAGs are valid; this does not execute any blocks.
         """
-        outgoing: dict[str, set[str]] = {node.id: set() for node in self.nodes}
-        indegree = dict.fromkeys(outgoing, 0)
-        for edge in self.edges:
-            source, target = edge.source.node_id, edge.target.node_id
-            if source not in outgoing or target not in outgoing:
-                raise GraphError("dangling_node", "An edge references an unknown node.")
-            if target not in outgoing[source]:
-                outgoing[source].add(target)
-                indegree[target] += 1
-        ready = [node for node, degree in indegree.items() if degree == 0]
-        heapq.heapify(ready)
-        ordered: list[str] = []
-        while ready:
-            node = heapq.heappop(ready)
-            ordered.append(node)
-            for target in sorted(outgoing[node]):
-                indegree[target] -= 1
-                if indegree[target] == 0:
-                    heapq.heappush(ready, target)
-        if len(ordered) != len(outgoing):
+        known = {node.id for node in self.nodes}
+        pairs = [(edge.source.node_id, edge.target.node_id) for edge in self.edges]
+        if any(source not in known or target not in known for source, target in pairs):
+            raise GraphError("dangling_node", "An edge references an unknown node.")
+        ordered, blocked = kahn_order((node.id for node in self.nodes), pairs)
+        if blocked:
             raise GraphError("cycle", "Pipeline graph contains a cycle.")
-        return tuple(ordered)
+        return ordered
 
     def validate_registry(self, registry: BlockRegistry) -> tuple[str, ...]:
         """Validate a complete graph against exact SDK versions, without running.
 
         Authoring models can load before a registry is available. Call this
         additional check before handing a complete definition to an executor.
+        It raises the first diagnostic of ``diagnose``, the single rule set (#21).
         """
+        # Imported here: the validation module depends on these models.
+        from app.pipelines.validation import diagnose
+
         graph = type(self).from_json(self.to_json())
-        blocks = {}
-        for node in graph.nodes:
-            try:
-                block = registry.resolve(node.block_id, node.block_version)
-                block.config_model.model_validate(node.config)
-            except (BlockError, ValidationError, ValueError, TypeError):
-                raise GraphError(
-                    "invalid_block_config",
-                    "Block version or configuration is invalid.",
-                    node_id=node.id,
-                ) from None
-            blocks[node.id] = block
-        incoming: dict[tuple[str, str], int] = {}
-        for edge in graph.edges:
-            outputs = {
-                port.name: port
-                for port in blocks[edge.source.node_id].descriptor.outputs
-            }
-            inputs = {
-                port.name: port
-                for port in blocks[edge.target.node_id].descriptor.inputs
-            }
-            out = outputs.get(edge.source.port)
-            inp = inputs.get(edge.target.port)
-            if out is None or inp is None:
-                raise GraphError("unknown_port", "An edge references an unknown port.")
-            if not ports_compatible(out, inp) or (out.many and not inp.many):
-                raise GraphError(
-                    "incompatible_ports", "Connected port contracts differ."
-                )
-            key = (edge.target.node_id, edge.target.port)
-            incoming[key] = incoming.get(key, 0) + 1
-            if incoming[key] > 1 and not inp.many:
-                raise GraphError(
-                    "input_cardinality", "An input has too many connections."
-                )
-        for node in graph.nodes:
-            for port in blocks[node.id].descriptor.inputs:
-                if port.required and (node.id, port.name) not in incoming:
-                    raise GraphError(
-                        "missing_input",
-                        "A required input is unconnected.",
-                        node_id=node.id,
-                    )
+        diagnostics = diagnose(graph, registry)
+        if diagnostics:
+            first = diagnostics[0]
+            raise GraphError(
+                _LEGACY_CODES.get(first.code, first.code),
+                first.message,
+                node_id=first.node_id,
+            )
         return graph.topological_order()
+
+
+# validate_registry predates per-field diagnostics and reports block resolution
+# and configuration failures under one code.
+_LEGACY_CODES = {
+    code: "invalid_block_config"
+    for code in (
+        "block_unavailable",
+        "version_unavailable",
+        "invalid_block",
+        "missing_config",
+        "invalid_config",
+        "unknown_config",
+    )
+}

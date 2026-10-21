@@ -1,6 +1,6 @@
 # Pipeline authoring — issues #14 and #15
 
-The React Flow canvas edits the existing schema-version-1 pipeline contract. Stable UUIDs identify nodes and edges; layout positions are separate from block configuration. Zustand owns the unsaved graph, while TanStack Query owns registry and saved pipeline lists. The registry endpoint exposes SDK public metadata only. Client connection checks mirror typed port compatibility, cardinality and DAG constraints; backend authoring validation remains authoritative. Saving incomplete block configuration is permitted; execution validation belongs to #21.
+The React Flow canvas edits the existing schema-version-1 pipeline contract. Stable UUIDs identify nodes and edges; layout positions are separate from block configuration. Zustand owns the unsaved graph, while TanStack Query owns registry and saved pipeline lists. The registry endpoint exposes SDK public metadata only. Client connection checks mirror typed port compatibility, cardinality and DAG constraints; backend authoring validation remains authoritative. Saving incomplete block configuration is permitted; execution readiness is checked separately by [graph validation (#21)](graph-validation.md).
 
 ## Persistence (#14)
 
@@ -10,6 +10,6 @@ Project-scoped endpoints use SQLite Pipeline and immutable PipelineRevision enti
 
 The editor disables mutations while requests are pending. Generation checks discard late responses after a project switch or draft reset. Opening a saved pipeline asks before discarding unsaved edits. API failures retain the draft. Save a copy allows conflict recovery under another name. Export JSON is enabled only after saving the current draft and exports the validated portable graph, without UI selection/measurements.
 
-Saving validates structural version-1 graph rules and the existing credential/path portability boundary. It deliberately allows incomplete block configuration and disconnected inputs; execution readiness belongs to #21. The portability policy detects known credential keys and machine paths, not arbitrary secret strings under otherwise public fields.
+Saving validates structural version-1 graph rules and the existing credential/path portability boundary. It deliberately allows incomplete block configuration and disconnected inputs; execution readiness is reported by `POST /api/v1/pipelines/validate` ([#21](graph-validation.md)). The portability policy detects known credential keys and machine paths, not arbitrary secret strings under otherwise public fields.
 
 AI assistance: Codex designed, implemented and tested this change at the user's request. Independent review, CI, manual stakeholder demonstration and acceptance remain pending.

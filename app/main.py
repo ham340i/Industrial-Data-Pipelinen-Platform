@@ -15,7 +15,11 @@ from app.blocks.catalog import router as blocks_router
 from app.config import settings
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
-from app.pipelines.api import PipelineError, router as pipelines_router
+from app.pipelines.api import (
+    PipelineError,
+    router as pipelines_router,
+    validation_router,
+)
 from app.projects import ProjectNotFound, router as projects_router
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
@@ -105,6 +109,7 @@ app.add_middleware(
 app.include_router(projects_router)
 app.include_router(blocks_router)
 app.include_router(pipelines_router)
+app.include_router(validation_router)
 
 
 def error_response(
@@ -142,7 +147,11 @@ async def validation_exception_handler(
         request=request,
         code="validation_error",
         message=(
-            "Invalid pipeline request. Use schema_version 1, "
+            "Invalid validation request. Send a definition object with "
+            "schema_version 1 and well-formed nodes and edges. Remove "
+            "credentials and machine paths from configuration."
+            if request.url.path.endswith("/pipelines/validate")
+            else "Invalid pipeline request. Use schema_version 1, "
             "a name of 1–128 characters, "
             "unique node/edge IDs, an acyclic graph and finite layout positions. "
             "Remove credentials and machine paths from configuration; "

@@ -10,13 +10,40 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.blocks.catalog import registry
 from app.metadata.database import Database
 from app.metadata.models import Pipeline, PipelineRevision, Project
-from app.pipelines.models import PipelineDefinition
+from app.pipelines.models import GraphDraft, PipelineDefinition
+from app.pipelines.validation import ValidationReport, validate
 from app.projects import ProjectNotFound, database
 from app.schemas.projects import ProjectCreate
 
 router = APIRouter(prefix="/api/v1/projects/{project_id}/pipelines", tags=["pipelines"])
+validation_router = APIRouter(prefix="/api/v1/pipelines", tags=["pipelines"])
+
+
+class ValidationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    definition: GraphDraft
+
+    @field_validator("definition", mode="before")
+    @classmethod
+    def draft_graph(cls, value: Any) -> GraphDraft:
+        # Strict contracts accept JSON arrays as tuples only in JSON mode.
+        if not isinstance(value, dict):
+            raise ValueError("The definition must be a JSON object.")
+        return GraphDraft.model_validate_json(json.dumps(value))
+
+
+@validation_router.post("/validate", response_model=ValidationReport)
+def validate_pipeline(payload: ValidationRequest) -> ValidationReport:
+    """Check an unsaved draft for execution readiness; never runs blocks (#21).
+
+    A well-formed request always returns 200 with ``valid`` and diagnostics.
+    Malformed JSON, unsupported versions and nonportable configuration remain
+    422 errors, matching the save boundary.
+    """
+    return validate(payload.definition, registry)
 
 
 class PipelineError(Exception):

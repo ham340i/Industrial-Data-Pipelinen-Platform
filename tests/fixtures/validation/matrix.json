@@ -1,0 +1,205 @@
+{
+  "description": "Synthetic valid/invalid graph matrix for #21. Block IDs refer to the test registry in tests/test_validation.py. 'expected' is the exact, ordered diagnostic list (messages are asserted separately).",
+  "cases": [
+    {
+      "name": "valid_source_transform_sink",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "source", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "measurements" } },
+          { "id": "add", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": { "amount": 2 } },
+          { "id": "sink", "block_id": "synthetic.sink", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "source", "port": "table" }, "target": { "node_id": "add", "port": "table" } },
+          { "id": "e2", "source": { "node_id": "add", "port": "table" }, "target": { "node_id": "sink", "port": "table" } }
+        ],
+        "layout": { "positions": { "source": { "x": 0, "y": 0 }, "add": { "x": 250, "y": 0 }, "sink": { "x": 500, "y": 0 } } }
+      },
+      "expected": []
+    },
+    {
+      "name": "cycle",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "a", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": {} },
+          { "id": "b", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": {} },
+          { "id": "c", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": {} },
+          { "id": "sink", "block_id": "synthetic.sink", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "ab", "source": { "node_id": "a", "port": "table" }, "target": { "node_id": "b", "port": "table" } },
+          { "id": "bc", "source": { "node_id": "b", "port": "table" }, "target": { "node_id": "c", "port": "table" } },
+          { "id": "ca", "source": { "node_id": "c", "port": "table" }, "target": { "node_id": "a", "port": "table" } },
+          { "id": "c-sink", "source": { "node_id": "c", "port": "table" }, "target": { "node_id": "sink", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "cycle", "node_id": "a", "edge_id": "ab", "port": null, "field": null },
+        { "code": "cycle", "node_id": "b", "edge_id": "bc", "port": null, "field": null },
+        { "code": "cycle", "node_id": "c", "edge_id": "ca", "port": null, "field": null }
+      ]
+    },
+    {
+      "name": "self_loop",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "a", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "aa", "source": { "node_id": "a", "port": "table" }, "target": { "node_id": "a", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "cycle", "node_id": "a", "edge_id": "aa", "port": null, "field": null }
+      ]
+    },
+    {
+      "name": "missing_required_input",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "add", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": {} },
+          { "id": "sink", "block_id": "synthetic.sink", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "e2", "source": { "node_id": "add", "port": "table" }, "target": { "node_id": "sink", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "missing_input", "node_id": "add", "edge_id": null, "port": "table", "field": null }
+      ]
+    },
+    {
+      "name": "incompatible_port_types",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "source", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "measurements" } },
+          { "id": "label", "block_id": "synthetic.label", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "source", "port": "table" }, "target": { "node_id": "label", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "incompatible_ports", "node_id": "label", "edge_id": "e1", "port": "table", "field": null }
+      ]
+    },
+    {
+      "name": "edge_to_missing_node",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "source", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "measurements" } }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "source", "port": "table" }, "target": { "node_id": "deleted", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "dangling_edge", "node_id": null, "edge_id": "e1", "port": null, "field": null }
+      ]
+    },
+    {
+      "name": "edge_to_missing_port",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "source", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "measurements" } },
+          { "id": "sink", "block_id": "synthetic.sink", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "source", "port": "rows" }, "target": { "node_id": "sink", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "unknown_port", "node_id": "source", "edge_id": "e1", "port": "rows", "field": null },
+        { "code": "missing_input", "node_id": "sink", "edge_id": null, "port": "table", "field": null }
+      ]
+    },
+    {
+      "name": "missing_and_invalid_config",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "blank", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "" } },
+          { "id": "unset", "block_id": "synthetic.source", "block_version": "1.0.0", "config": {} },
+          { "id": "add", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": { "amount": 5000, "colour": "red" } }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "blank", "port": "table" }, "target": { "node_id": "add", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "invalid_config", "node_id": "add", "edge_id": null, "port": null, "field": "amount" },
+        { "code": "unknown_config", "node_id": "add", "edge_id": null, "port": null, "field": "colour" },
+        { "code": "missing_config", "node_id": "blank", "edge_id": null, "port": null, "field": "resource_id" },
+        { "code": "missing_config", "node_id": "unset", "edge_id": null, "port": null, "field": "resource_id" }
+      ]
+    },
+    {
+      "name": "too_many_connections_to_single_input",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "s1", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "a" } },
+          { "id": "s2", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "b" } },
+          { "id": "add", "block_id": "synthetic.add_constant", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "s1", "port": "table" }, "target": { "node_id": "add", "port": "table" } },
+          { "id": "e2", "source": { "node_id": "s2", "port": "table" }, "target": { "node_id": "add", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "input_cardinality", "node_id": "add", "edge_id": "e2", "port": "table", "field": null }
+      ]
+    },
+    {
+      "name": "unavailable_block_version",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "old", "block_id": "synthetic.add_constant", "block_version": "0.9.0", "config": {} },
+          { "id": "gone", "block_id": "synthetic.removed", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "old", "port": "table" }, "target": { "node_id": "gone", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "block_unavailable", "node_id": "gone", "edge_id": null, "port": null, "field": null },
+        { "code": "version_unavailable", "node_id": "old", "edge_id": null, "port": null, "field": null }
+      ]
+    },
+    {
+      "name": "duplicates",
+      "definition": {
+        "schema_version": 1,
+        "nodes": [
+          { "id": "source", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "a" } },
+          { "id": "source", "block_id": "synthetic.source", "block_version": "1.0.0", "config": { "resource_id": "b" } },
+          { "id": "sink", "block_id": "synthetic.sink", "block_version": "1.0.0", "config": {} }
+        ],
+        "edges": [
+          { "id": "e1", "source": { "node_id": "source", "port": "table" }, "target": { "node_id": "sink", "port": "table" } },
+          { "id": "e2", "source": { "node_id": "source", "port": "table" }, "target": { "node_id": "sink", "port": "table" } }
+        ]
+      },
+      "expected": [
+        { "code": "duplicate_connection", "node_id": "sink", "edge_id": "e2", "port": null, "field": null },
+        { "code": "duplicate_node", "node_id": "source", "edge_id": null, "port": null, "field": null }
+      ]
+    },
+    {
+      "name": "empty_pipeline",
+      "definition": { "schema_version": 1, "nodes": [], "edges": [] },
+      "expected": [
+        { "code": "empty_pipeline", "node_id": null, "edge_id": null, "port": null, "field": null }
+      ]
+    }
+  ]
+}
