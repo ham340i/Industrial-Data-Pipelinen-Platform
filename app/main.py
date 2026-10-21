@@ -11,9 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.blocks.catalog import router as blocks_router
 from app.config import settings
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
+from app.pipelines.api import PipelineError, router as pipelines_router
 from app.projects import ProjectNotFound, router as projects_router
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
@@ -96,11 +98,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "X-Correlation-ID"],
 )
 
 app.include_router(projects_router)
+app.include_router(blocks_router)
+app.include_router(pipelines_router)
 
 
 def error_response(
@@ -137,8 +141,23 @@ async def validation_exception_handler(
     return error_response(
         request=request,
         code="validation_error",
-        message="The request body or parameters are invalid.",
+        message=(
+            "Invalid pipeline request. Use schema_version 1, "
+            "a name of 1–128 characters, "
+            "unique node/edge IDs, an acyclic graph and finite layout positions. "
+            "Remove credentials and machine paths from configuration; "
+            "updates require an integer expected_revision."
+            if "/pipelines" in request.url.path
+            else "The request body or parameters are invalid."
+        ),
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+
+
+@app.exception_handler(PipelineError)
+async def pipeline_error_handler(request: Request, exc: PipelineError) -> JSONResponse:
+    return error_response(
+        request=request, code=exc.code, message=exc.message, status_code=exc.status
     )
 
 

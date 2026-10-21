@@ -1,6 +1,6 @@
 # Iteration 2
 
-Status: Planned. Demonstration: Not Yet Demonstrated.
+Status: Local implementation evidence available for #14 and #15; iteration acceptance pending. Demonstration: Not Yet Demonstrated.
 
 ## Dates
 
@@ -24,6 +24,10 @@ Assignments verified against GitHub on October 1, 2026. Existing assignments rem
 | [#19](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/19) | Create list and open local projects | karimikhaeil |
 | [#20](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/20) | Parquet and CSV sink blocks | MarcElHaddad1 |
 | [#21](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/21) | Validate graph ports and required configuration before run | menaboulus |
+
+## Local implementation awaiting review
+
+Issues #15 (canvas/library) and #14 (pipeline persistence) are implemented locally on `feature/15-canvas-14-persistence`, in that order. See [testing evidence](testing-evidence.md), [design](../../architecture/pipeline-authoring.md) and [usage](../../frontend/canvas.md). Remote CI, PR, independent approval and merge remain pending; these are not completed iteration issues.
 
 ## Completed Issues
 
