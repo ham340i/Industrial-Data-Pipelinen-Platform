@@ -10,7 +10,7 @@ The team has supplied the **Industrial Data Pipeline Engineering Platform** Rele
 
 ## Project Status
 
- **Foundation in progress: the React workbench, FastAPI shell and SQLite metadata/migrations are implemented; the complete pipeline workflow remains planned.** This repository provides engineering workflows, documentation templates and repository CI. Metadata issue #7 is pending independent review and merge.
+ **Foundation in progress: the React workbench, FastAPI, SQLite metadata/migrations and local project create/list/open workflow are implemented; the complete pipeline workflow remains planned.** See the [project guide](docs/projects.md) for issue #19's contracts and verification. Independent review and acceptance of that feature remain pending.
 
 ## Problem
 
@@ -49,7 +49,7 @@ This is a proposed logical architecture. See [component status and boundaries](d
 
 ## Getting Started
 
-Follow the [developer guide](docs/getting-started.md), [frontend workbench guide](docs/frontend/workbench.md) and [SQLite metadata guide](docs/metadata.md). The React and FastAPI shells run together through Compose, with metadata migrated at API startup. Project HTTP CRUD and graph execution remain planned.
+Follow the [developer guide](docs/getting-started.md), [frontend workbench guide](docs/frontend/workbench.md) and [SQLite metadata guide](docs/metadata.md). React and FastAPI run together through Compose, with metadata migrated at API startup. [Project create/list/open](docs/projects.md) is available; pipeline persistence and graph execution remain separate work.
 
 ## Prerequisites
 

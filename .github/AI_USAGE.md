@@ -38,3 +38,20 @@ Codex drafted the Release 1 backlog, initial estimates, balanced primary/reviewe
 ## Iteration structure reorganization
 
 Tool: OpenAI Codex. Used to inspect repository/GitHub state and draft iteration, acceptance, traceability and workflow documentation. The user supplied the scope and preservation rules; human review and acceptance remain pending. Existing application implementation and student work retain their authorship. Actual checks and limitations are recorded in the [organization audit](../docs/testing/iteration-structure-validation.md).
+
+## Issue #17 configuration panel
+
+Tool: OpenAI Codex. Yousef directed delivery. Codex adapted the earlier local
+panel draft to the merged graph/registry/persistence/validation contracts, added
+tests, fixed mobile canvas sizing and executed the checks and browser demonstration.
+See the [verification record](../docs/testing/issue-17-configuration.md) and
+[individual record](../docs/individual-contributions/Al-Yousef-iteration-2.md).
+Independent human review and stakeholder acceptance remain pending.
+
+## Issue #10 headless ETL proof
+
+Codex authored the bounded SDK/DAG runner, Polars selection, Parquet read-back
+verification, synthetic fixtures, regression tests and documentation at
+the user's request. The user selected the issue and requested a PR; independent
+human review and stakeholder acceptance remain pending. Actual verification and
+limitations are recorded in [the testing evidence](../docs/testing/issue-10-headless-etl.md).

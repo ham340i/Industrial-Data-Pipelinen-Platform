@@ -1,6 +1,6 @@
 # SQLite metadata foundation (#7)
 
-The API persists project, pipeline revision, run, block registry and output endpoint metadata with SQLAlchemy 2. Alembic revision `0001` owns schema creation; application startup upgrades before serving requests. HTTP metadata CRUD and pipeline execution are subsequent stories. See [ADR-0002](architecture/decisions/ADR-0002-sqlite-metadata.md) and [verification](testing/issue-7-sqlite-metadata.md).
+The API persists project, pipeline revision, run, block registry and output endpoint metadata with SQLAlchemy 2. Alembic revision `0001` owns schema creation; application startup upgrades before serving requests. Issue #19 adds [project create/list/open HTTP operations](projects.md) without a schema migration. Other metadata APIs and pipeline execution remain subsequent stories. See [ADR-0002](architecture/decisions/ADR-0002-sqlite-metadata.md) and [verification](testing/issue-7-sqlite-metadata.md).
 
 ## Start and configure
 

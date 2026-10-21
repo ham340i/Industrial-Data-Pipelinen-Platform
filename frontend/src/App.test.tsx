@@ -61,7 +61,7 @@ describe("workbench", () => {
     );
     await userEvent.click(screen.getByRole("link", { name: "Projects" }));
     expect(
-      screen.getByRole("heading", { name: "Project storage is coming next" }),
+      screen.getByRole("heading", { name: "Create a project" }),
     ).toBeVisible();
   });
 
@@ -102,9 +102,13 @@ describe("workbench", () => {
     );
     await user.click(screen.getByRole("link", { name: "Projects" }));
     await user.click(screen.getByRole("link", { name: "Builder" }));
-    expect(screen.getByRole("textbox")).toHaveValue("Synthetic inspection");
+    expect(
+      screen.getByRole("textbox", { name: "Draft pipeline name" }),
+    ).toHaveValue("Synthetic inspection");
     await user.click(screen.getByRole("button", { name: "Clear draft" }));
-    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(
+      screen.getByRole("textbox", { name: "Draft pipeline name" }),
+    ).toHaveValue("");
     expect(screen.getByRole("button", { name: "Clear draft" })).toBeDisabled();
   });
 

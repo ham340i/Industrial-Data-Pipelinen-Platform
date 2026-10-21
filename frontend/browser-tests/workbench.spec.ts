@@ -20,14 +20,16 @@ test("production shell supports keyboard navigation, drafts and direct links", a
     .fill("Synthetic browser draft");
   await page.getByRole("link", { name: "Projects", exact: true }).click();
   await page.goBack();
-  await expect(page.getByRole("textbox")).toHaveValue(
-    "Synthetic browser draft",
-  );
+  await expect(
+    page.getByRole("textbox", { name: "Draft pipeline name" }),
+  ).toHaveValue("Synthetic browser draft");
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Pipeline builder" }),
   ).toBeVisible();
-  await expect(page.getByRole("textbox")).toHaveValue("");
+  await expect(
+    page.getByRole("textbox", { name: "Draft pipeline name" }),
+  ).toHaveValue("");
 });
 
 test("offline health recovers and mobile shell does not overflow", async ({
@@ -71,4 +73,38 @@ test("real browser enforces the transport timeout", async ({ page }) => {
   await expect(page.getByRole("alert")).toContainText("took too long", {
     timeout: 15000,
   });
+});
+
+test("canvas supports keyboard add, move and delete", async ({ page }) => {
+  await page.route("**/api/v1/health", (route) =>
+    route.fulfill({ json: { status: "ok" } }),
+  );
+  await page.route("**/api/v1/blocks", (route) =>
+    route.fulfill({
+      json: [
+        {
+          sdk_version: 1,
+          block_id: "synthetic.example",
+          version: "1.0.0",
+          name: "Example",
+          category: "synthetic",
+          inputs: [],
+          outputs: [],
+          config_schema: {},
+        },
+      ],
+    }),
+  );
+  await page.goto("/#/builder");
+  const add = page.getByRole("button", { name: "Add Example" });
+  await add.focus();
+  await page.keyboard.press("Enter");
+  const node = page.locator(".react-flow__node");
+  await expect(node).toHaveCount(1);
+  await node.focus();
+  const before = await node.getAttribute("style");
+  await page.keyboard.press("ArrowRight");
+  await expect(node).not.toHaveAttribute("style", before!);
+  await page.keyboard.press("Delete");
+  await expect(node).toHaveCount(0);
 });

@@ -1,6 +1,6 @@
 # Iteration 2
 
-Status: Planned. Demonstration: Not Yet Demonstrated.
+Status: Implementation evidence available for #14, #15 and #17; iteration acceptance pending. Demonstration: Not Yet Demonstrated.
 
 ## Dates
 
@@ -24,6 +24,21 @@ Assignments verified against GitHub on October 1, 2026. Existing assignments rem
 | [#19](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/19) | Create list and open local projects | karimikhaeil |
 | [#20](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/20) | Parquet and CSV sink blocks | MarcElHaddad1 |
 | [#21](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/21) | Validate graph ports and required configuration before run | menaboulus |
+
+## Local implementation awaiting review
+
+Issues #15 (canvas/library) and #14 (pipeline persistence) are implemented locally on `feature/15-canvas-14-persistence`, in that order. See [testing evidence](testing-evidence.md), [design](../../architecture/pipeline-authoring.md) and [usage](../../frontend/canvas.md). [PR #64](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/64) is open. Remote CI, independent approval and merge remain pending; these are not completed iteration issues.
+
+Issue #21 (graph validation before run) is implemented locally on `feature/21-graph-validation`. See [design](../../architecture/graph-validation.md) and [testing evidence](testing-evidence.md#issue-21--graph-validation-before-run). Planned reviewer: @aboudka2003. PR, remote CI, independent approval and merge are pending.
+
+Issue #17 is implemented locally on `feature/17-configuration-panel` against
+merged canvas/persistence and graph validation. See the [configuration guide](../../frontend/block-configuration.md),
+[verification record](../../testing/issue-17-configuration.md) and
+[Yousef's contribution record](../../individual-contributions/Al-Yousef-iteration-2.md).
+[PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66) is open
+with review requested from @karimikhaeil. Hosted status is on the
+[PR checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66/checks);
+independent approval, merge and acceptance remain pending.
 
 ## Completed Issues
 
