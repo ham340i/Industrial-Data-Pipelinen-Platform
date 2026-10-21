@@ -26,7 +26,11 @@ def configure_connection(connection: object, record: ConnectionPoolEntry) -> Non
 
 
 def begin_transaction(connection: Connection) -> None:
-    connection.exec_driver_sql("BEGIN")
+    connection.exec_driver_sql(
+        "BEGIN IMMEDIATE"
+        if connection.get_execution_options().get("sqlite_write")
+        else "BEGIN"
+    )
 
 
 class Database:
@@ -42,9 +46,11 @@ class Database:
         self.sessions = sessionmaker(self.engine, expire_on_commit=False)
 
     @contextmanager
-    def transaction(self) -> Iterator[Session]:
+    def transaction(self, *, write: bool = False) -> Iterator[Session]:
         """Commit the whole unit of work, or roll it back and close the session."""
         with self.sessions.begin() as session:
+            if write:
+                session.connection(execution_options={"sqlite_write": True})
             yield session
 
     def close(self) -> None:

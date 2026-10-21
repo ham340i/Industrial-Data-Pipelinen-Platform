@@ -47,7 +47,9 @@ test("create, reopen and restore a project through the real UI and API", async (
   await expect(
     page.getByText(`Project: ${name}`, { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("textbox")).toHaveValue("");
+  await expect(
+    page.getByRole("textbox", { name: "Draft pipeline name" }),
+  ).toHaveValue("");
   await page.getByRole("link", { name: "Projects", exact: true }).click();
   const open = page.getByRole("link", { name: `Open ${name}`, exact: true });
   await expect(open).toBeVisible();

@@ -201,12 +201,20 @@ describe("local projects", () => {
     detail();
     renderApp(`/projects/${project.id}/builder`);
     await screen.findByText("Project: Synthetic inspection");
-    await userEvent.type(screen.getByRole("textbox"), "First");
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Draft pipeline name" }),
+      "First",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Clear draft" }));
-    await userEvent.type(screen.getByRole("textbox"), "Second");
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Draft pipeline name" }),
+      "Second",
+    );
     await userEvent.click(screen.getByRole("link", { name: "Projects" }));
     await userEvent.click(screen.getByRole("link", { name: "Builder" }));
-    expect(await screen.findByRole("textbox")).toHaveValue("Second");
+    expect(
+      await screen.findByRole("textbox", { name: "Draft pipeline name" }),
+    ).toHaveValue("Second");
   });
   it("keeps navigation usable when browser storage is blocked", async () => {
     const getter = vi

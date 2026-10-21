@@ -107,14 +107,17 @@ function Overview() {
         variant="outlined"
         sx={{ p: { xs: 3, md: 4 }, background: "#e9f2ee" }}
       >
-        <Chip label="Iteration 1 · Foundation" size="small" sx={{ mb: 3 }} />
+        <Chip
+          label="Iteration 2 · Pipeline authoring"
+          size="small"
+          sx={{ mb: 3 }}
+        />
         <Typography component="h2" variant="h2">
           Your workspace starts here
         </Typography>
         <Typography color="text.secondary" sx={{ my: 2 }}>
-          Explore the project workspace and prepare a draft name for your next
-          pipeline. Create and reopen projects now. Visual graph editing arrives
-          in a later iteration.
+          Create a project, compose a visual pipeline, and save your work.
+          Reopen pipelines with their graph and configuration intact.
         </Typography>
         <Button component={Link} to="/projects" variant="contained">
           Explore projects →
@@ -137,7 +140,7 @@ function Overview() {
           [
             "02",
             "Build with clarity",
-            "A reserved builder workspace for the upcoming visual editor.",
+            "Browse blocks, connect compatible ports and arrange your pipeline.",
           ],
         ].map(([number, title, description]) => (
           <Paper key={number} variant="outlined" sx={{ p: 3 }}>
