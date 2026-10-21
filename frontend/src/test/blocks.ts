@@ -17,5 +17,17 @@ export const sampleBlock: BlockMetadata = {
   category: "synthetic",
   inputs: [tablePort],
   outputs: [tablePort],
-  config_schema: { properties: { amount: { type: "integer", default: 1 } } },
+  config_schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      amount: {
+        title: "Amount",
+        type: "integer",
+        default: 1,
+        minimum: -1000,
+        maximum: 1000,
+      },
+    },
+  },
 };

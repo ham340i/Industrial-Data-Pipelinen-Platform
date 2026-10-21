@@ -11,6 +11,7 @@ import {
 import { PipelineControls } from "./PipelineControls";
 import { Canvas } from "./Canvas";
 import { ValidationPanel } from "./ValidationPanel";
+import { ConfigurationPanel } from "./configuration/ConfigurationPanel";
 import { useEditorStore } from "./state/editor";
 import { usePipelineValidation } from "./state/validation";
 
@@ -65,8 +66,24 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
       </Paper>
       {projectId && <PipelineControls key={projectId} projectId={projectId} />}
       <ValidationPanel validation={validation} />
-      <Box inert={busy}>
-        <Canvas diagnostics={validation.report?.diagnostics} />
+      <Box
+        inert={busy}
+        sx={{
+          display: "grid",
+          gap: 2,
+          alignItems: "start",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            xl: "minmax(0, 1fr) 340px",
+          },
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Canvas diagnostics={validation.report?.diagnostics} />
+        </Box>
+        <ConfigurationPanel
+          diagnostics={validation.current ? validation.report?.diagnostics : []}
+        />
       </Box>
     </Stack>
   );

@@ -47,7 +47,9 @@ export function ValidationPanel({
 }: {
   validation: ValidationState;
 }) {
-  const selectNode = useEditorStore((state) => state.selectNode);
+  const focusConfiguration = useEditorStore(
+    (state) => state.focusConfiguration,
+  );
   const nodes = useEditorStore((state) => state.nodes);
   const hasNode = (id: string | null) => nodes.some((n) => n.id === id);
   const subject = useSubject();
@@ -111,7 +113,9 @@ export function ValidationPanel({
               <ListItemButton
                 key={`${index}-${d.code}-${d.node_id}-${d.edge_id}-${d.field}`}
                 disabled={!hasNode(d.node_id)}
-                onClick={() => selectNode(d.node_id)}
+                onClick={() =>
+                  d.node_id && focusConfiguration(d.node_id, d.field)
+                }
               >
                 <ListItemText
                   primary={d.message}
