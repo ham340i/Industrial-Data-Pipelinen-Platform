@@ -1,0 +1,4 @@
+sensor_id,reading,unit,notes
+sensor-01,12.5,C,"synthetic, sample"
+sensor-02,,C,missing reading
+sensor-03,-4.25,C,synthetic
