@@ -31,6 +31,12 @@ Issues #15 (canvas/library) and #14 (pipeline persistence) are implemented local
 
 Issue #21 (graph validation before run) is implemented locally on `feature/21-graph-validation`. See [design](../../architecture/graph-validation.md) and [testing evidence](testing-evidence.md#issue-21--graph-validation-before-run). Planned reviewer: @aboudka2003. PR, remote CI, independent approval and merge are pending.
 
+Issue #17 is implemented locally on `feature/17-configuration-panel` against
+merged canvas/persistence and graph validation. See the [configuration guide](../../frontend/block-configuration.md),
+[verification record](../../testing/issue-17-configuration.md) and
+[Yousef's contribution record](../../individual-contributions/Al-Yousef-iteration-2.md).
+PR publication, remote CI, planned review by @karimikhaeil and acceptance remain pending.
+
 ## Completed Issues
 
 Not recorded. Add accepted issue scope and merged PR evidence when available.
