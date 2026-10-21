@@ -7,6 +7,9 @@ export const server = setupServer(
     HttpResponse.json({ items: [], total: 0, offset: 0, limit: 20 }),
   ),
   http.get("http://127.0.0.1:8000/api/v1/blocks", () => HttpResponse.json([])),
+  http.post("http://127.0.0.1:8000/api/v1/pipelines/validate", () =>
+    HttpResponse.json({ valid: true, diagnostics: [] }),
+  ),
   http.get(healthUrl, () => HttpResponse.json({ status: "ok" })),
   http.get("http://127.0.0.1:8000/api/v1/projects", ({ request }) => {
     const offset = Number(new URL(request.url).searchParams.get("offset") || 0);

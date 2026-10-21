@@ -10,7 +10,9 @@ import {
 } from "@mui/material";
 import { PipelineControls } from "./PipelineControls";
 import { Canvas } from "./Canvas";
+import { ValidationPanel } from "./ValidationPanel";
 import { useEditorStore } from "./state/editor";
+import { usePipelineValidation } from "./state/validation";
 
 export function Builder({ projectId = null }: { projectId?: string | null }) {
   const draftName = useEditorStore((state) =>
@@ -20,6 +22,9 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
   const nodeCount = useEditorStore((state) => state.nodes.length);
   const setDraftName = useEditorStore((state) => state.setDraftName);
   const setProject = useEditorStore((state) => state.setProject);
+  const nodes = useEditorStore((state) => state.nodes);
+  const edges = useEditorStore((state) => state.edges);
+  const validation = usePipelineValidation(nodes, edges);
   useEffect(() => setProject(projectId), [projectId, setProject]);
   return (
     <Stack spacing={3}>
@@ -59,8 +64,9 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
         </Stack>
       </Paper>
       {projectId && <PipelineControls key={projectId} projectId={projectId} />}
+      <ValidationPanel validation={validation} />
       <Box inert={busy}>
-        <Canvas />
+        <Canvas diagnostics={validation.report?.diagnostics} />
       </Box>
     </Stack>
   );
