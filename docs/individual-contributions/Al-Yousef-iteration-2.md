@@ -3,6 +3,8 @@
 Scope: deliver the schema-driven configuration panel requested in
 [issue #17](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/17).
 Branch: `feature/17-configuration-panel`. Review: @karimikhaeil (pending).
+[PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66)
+is open; the planned review was requested October 21, 2026.
 
 Yousef directed this delivery. OpenAI Codex assisted with implementation,
 integration, tests, documentation and verification. The earlier October 16 local

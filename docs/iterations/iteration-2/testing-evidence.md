@@ -84,8 +84,11 @@ The [acceptance and verification record](../../testing/issue-17-configuration.md
 contains exact commands, cases, results, screenshots and unsuccessful attempts.
 The final local frontend suite passed 95 tests using one worker and a 15-second
 test timeout on Windows; lint, formatting, TypeScript and production build passed.
-Backend regression: 374 tests passed. Hosted CI, independent review by
-@karimikhaeil, merge and stakeholder acceptance remain pending.
+Backend regression: 374 tests passed.
+[PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66) is open;
+hosted results are on its [checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66/checks).
+Independent review by @karimikhaeil was requested; approval, merge and stakeholder
+acceptance remain pending.
 
 Usage/design: [block configuration](../../frontend/block-configuration.md).
 Personal record: [Al-Yousef, Iteration 2](../../individual-contributions/Al-Yousef-iteration-2.md).

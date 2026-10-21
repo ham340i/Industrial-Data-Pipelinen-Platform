@@ -1,6 +1,6 @@
 # Iteration 2
 
-Status: Local implementation evidence available for #14 and #15; iteration acceptance pending. Demonstration: Not Yet Demonstrated.
+Status: Implementation evidence available for #14, #15 and #17; iteration acceptance pending. Demonstration: Not Yet Demonstrated.
 
 ## Dates
 
@@ -35,7 +35,10 @@ Issue #17 is implemented locally on `feature/17-configuration-panel` against
 merged canvas/persistence and graph validation. See the [configuration guide](../../frontend/block-configuration.md),
 [verification record](../../testing/issue-17-configuration.md) and
 [Yousef's contribution record](../../individual-contributions/Al-Yousef-iteration-2.md).
-PR publication, remote CI, planned review by @karimikhaeil and acceptance remain pending.
+[PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66) is open
+with review requested from @karimikhaeil. Hosted status is on the
+[PR checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66/checks);
+independent approval, merge and acceptance remain pending.
 
 ## Completed Issues
 

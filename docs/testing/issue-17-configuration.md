@@ -6,6 +6,9 @@ Verified implementation commit: `883dfc9`. Subsequent evidence-only commits add
 this record, usage links and screenshots without changing executable code.
 Checks were executed October 21, 2026 against this branch. Publishing, hosted CI
 and independent review remain separate from the local implementation evidence.
+Published in [PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66);
+review requested from @karimikhaeil on October 21. Independent review and merge
+remain pending.
 
 | Requirement from issue #17 | Implementation / meaningful check | State |
 | --- | --- | --- |
@@ -16,7 +19,9 @@ and independent review remain separate from the local implementation evidence.
 | References instead of runtime credentials/paths | known credential/runtime keys and absolute paths rejected; logical references accepted; unsafe defaults cannot create nodes and imported values are concealed without erasure | PASS |
 | Current dependency integration and regression checks | #6/#8/#15 merged; actual registry, canvas, validation API and project persistence; final production browser and local regressions below | PASS locally |
 | Documentation | feature guide, iteration evidence and individual contribution record | PASS |
-| PR, hosted CI and planned independent reviewer | publication and hosted checks pending; Karim is the planned reviewer; no review has been requested yet | UNVERIFIED |
+| PR publication and planned reviewer request | PR #66 is open; @karimikhaeil review request verified on GitHub | PASS |
+| Hosted CI | [PR checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66/checks); Windows browser job still running at this update | UNVERIFIED |
+| Independent review and stakeholder acceptance | requested review is pending; no approval or signoff recorded | UNVERIFIED |
 
 Scope: scalar strings/numbers/integers/booleans/enums/nullable fields and scalar lists,
 with bounded range, length and list constraints. Nested objects, references,
