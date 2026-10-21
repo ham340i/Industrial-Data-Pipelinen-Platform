@@ -61,7 +61,7 @@ describe("workbench", () => {
     );
     await userEvent.click(screen.getByRole("link", { name: "Projects" }));
     expect(
-      screen.getByRole("heading", { name: "Project storage is coming next" }),
+      screen.getByRole("heading", { name: "Create a project" }),
     ).toBeVisible();
   });
 
