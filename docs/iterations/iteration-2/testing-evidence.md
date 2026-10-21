@@ -72,3 +72,26 @@ macOS 26.6.2 arm64; Python 3.12.15 in the repository `.venv`; Node 24.5.0 / npm 
 ### AI assistance
 
 Tool: Claude Code (Claude Opus 5.5), at the owner's request. Used for: design, backend and frontend implementation, fixtures, tests, documentation, and running the commands above. Human review of the design and code, the manual demonstration, and the owner's own contribution record are pending.
+
+## Issue #17: schema-driven block configuration
+
+Local implementation on `feature/17-configuration-panel`, based on merged main
+`58bc06b429db3cebe4bb24f9d91eec03f8f17ce9`. This integrates the earlier panel
+draft with the merged registry, canvas, pipeline persistence and #21 diagnostics.
+It also fixes the narrow-screen canvas flex sizing found during the demonstration.
+
+The [acceptance and verification record](../../testing/issue-17-configuration.md)
+contains exact commands, cases, results, screenshots and unsuccessful attempts.
+The final local frontend suite passed 95 tests using one worker and a 15-second
+test timeout on Windows; lint, formatting, TypeScript and production build passed.
+Backend regression: 374 tests passed.
+[PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66) is open;
+hosted results are on its [checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66/checks).
+Independent review by @karimikhaeil was requested; approval, merge and stakeholder
+acceptance remain pending.
+
+Usage/design: [block configuration](../../frontend/block-configuration.md).
+Personal record: [Al-Yousef, Iteration 2](../../individual-contributions/Al-Yousef-iteration-2.md).
+Yousef directed delivery; Codex implemented, integrated and verified this change.
+The browser demonstration was performed by Codex. It is not human review or
+stakeholder acceptance, and does not certify the entire iteration.

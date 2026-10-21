@@ -1,0 +1,60 @@
+{
+  "sdk_version": 1,
+  "block_id": "synthetic.add_constant",
+  "version": "1.0.0",
+  "block_type": "transform",
+  "name": "Synthetic Add Constant",
+  "category": "synthetic",
+  "inputs": [
+    {
+      "name": "table",
+      "kind": "data",
+      "required": true,
+      "many": false,
+      "data_schema": {
+        "columns": [
+          {
+            "name": "value",
+            "dtype": "integer",
+            "nullable": false
+          }
+        ],
+        "allow_extra_columns": false
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "table",
+      "kind": "data",
+      "required": true,
+      "many": false,
+      "data_schema": {
+        "columns": [
+          {
+            "name": "value",
+            "dtype": "integer",
+            "nullable": false
+          }
+        ],
+        "allow_extra_columns": false
+      }
+    }
+  ],
+  "supports_preview": true,
+  "preview_reason": null,
+  "config_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "amount": {
+        "default": 1,
+        "maximum": 1000,
+        "minimum": -1000,
+        "title": "Amount",
+        "type": "integer"
+      }
+    },
+    "title": "AddConstantConfig",
+    "type": "object"
+  }
+}

@@ -213,7 +213,7 @@ function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
               aria-label="Pipeline canvas"
               sx={{
                 height: 560,
-                flex: 1,
+                flex: { xs: "0 0 auto", md: 1 },
                 minWidth: 0,
                 border: "1px solid",
                 borderColor: "divider",

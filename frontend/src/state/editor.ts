@@ -10,6 +10,7 @@ import {
 import type { BlockMetadata } from "../api/blocks";
 import type { SavedPipeline } from "../api/pipelines";
 import { connectionError, serializeGraph, type BlockNode } from "./graph";
+import { assertPublic } from "../configuration/schema";
 
 interface EditorState {
   pipelineId: string | null;
@@ -21,6 +22,7 @@ interface EditorState {
   loadSaved: (pipeline: SavedPipeline) => void;
   draftName: string;
   selectedNodeId: string | null;
+  configFocus: { nodeId: string; field: string | null } | null;
   projectId: string | null;
   nodes: BlockNode[];
   edges: Edge[];
@@ -28,6 +30,8 @@ interface EditorState {
   setProject: (id: string | null) => void;
   setDraftName: (name: string) => void;
   selectNode: (id: string | null) => void;
+  focusConfiguration: (id: string, field: string | null) => void;
+  setNodeConfiguration: (id: string, config: Record<string, unknown>) => void;
   addBlock: (block: BlockMetadata, position?: { x: number; y: number }) => void;
   changeNodes: (changes: NodeChange<BlockNode>[]) => void;
   changeEdges: (changes: EdgeChange[]) => void;
@@ -51,6 +55,7 @@ const initialState = {
   busy: false,
   draftName: "",
   selectedNodeId: null,
+  configFocus: null,
   projectId: null,
   nodes: [] as BlockNode[],
   edges: [] as Edge[],
@@ -89,6 +94,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         pipelineId: pipeline.id,
         revision: pipeline.revision,
         selectedNodeId: null,
+        configFocus: null,
         error: null,
         savedFingerprint: fingerprint(pipeline.name, nodes, edges),
         generation: state.generation + 1,
@@ -105,11 +111,32 @@ export const useEditorStore = create<EditorState>((set) => ({
   selectNode: (selectedNodeId) =>
     set((state) => ({
       selectedNodeId,
+      configFocus: null,
       nodes: state.nodes.map((n) => ({
         ...n,
         selected: n.id === selectedNodeId,
       })),
     })),
+  focusConfiguration: (nodeId, field) =>
+    set((state) => ({
+      selectedNodeId: nodeId,
+      configFocus: { nodeId, field },
+      nodes: state.nodes.map((n) => ({ ...n, selected: n.id === nodeId })),
+    })),
+  setNodeConfiguration: (id, config) => {
+    assertPublic(config);
+    set((state) =>
+      state.busy || !state.nodes.some((n) => n.id === id)
+        ? state
+        : {
+            nodes: state.nodes.map((n) =>
+              n.id === id
+                ? { ...n, data: { ...n.data, config: structuredClone(config) } }
+                : n,
+            ),
+          },
+    );
+  },
   addBlock: (block, position) =>
     set((state) => {
       if (state.busy) return state;
@@ -121,6 +148,14 @@ export const useEditorStore = create<EditorState>((set) => ({
           .filter(([, p]) => Object.hasOwn(p, "default"))
           .map(([k, p]) => [k, structuredClone(p.default)]),
       );
+      try {
+        assertPublic(config);
+      } catch {
+        return {
+          error:
+            "This block's defaults contain runtime bindings. Use logical resource references.",
+        };
+      }
       return {
         nodes: [
           ...state.nodes.map((n) => ({ ...n, selected: false })),
@@ -140,6 +175,7 @@ export const useEditorStore = create<EditorState>((set) => ({
           },
         ],
         selectedNodeId: id,
+        configFocus: null,
         error: null,
       };
     }),
@@ -149,6 +185,7 @@ export const useEditorStore = create<EditorState>((set) => ({
       const nodes = applyNodeChanges(changes, state.nodes);
       return {
         nodes,
+        configFocus: null,
         edges: state.edges.filter(
           (e) =>
             nodes.some((n) => n.id === e.source) &&
@@ -190,6 +227,7 @@ export const useEditorStore = create<EditorState>((set) => ({
                 !e.selected,
             ),
             selectedNodeId: null,
+            configFocus: null,
           },
     ),
   clearDraft: () =>
