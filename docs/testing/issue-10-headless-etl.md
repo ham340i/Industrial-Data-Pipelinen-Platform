@@ -1,7 +1,9 @@
 # Issue #10 headless ETL verification
 
 Local verification on October 21, 2026, macOS arm64 / Python 3.13.0, branch
-`feature/10-headless-etl`, based on `202a183`. See the
+`feature/10-headless-etl`, based on `202a183`; implementation commit `5f56766`.
+[PR #67](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/67)
+is open with menaboulus requested for independent review. See the
 [design and reproduction commands](../../experiments/headless_etl/README.md).
 
 ## Observed results

@@ -35,7 +35,7 @@ Metadata #7 has [PR #48](https://github.com/ham340i/Industrial-Data-Pipelinen-Pl
 
 ## Local implementation awaiting review
 
-Issue #10 has a [headless SDK/DAG proof](../../../experiments/headless_etl/README.md) on `feature/10-headless-etl`, with [verification evidence](../../testing/issue-10-headless-etl.md). This local work does not assert issue closure or iteration acceptance.
+Issue #10 has a [headless SDK/DAG proof](../../../experiments/headless_etl/README.md) on `feature/10-headless-etl`, with [verification evidence](../../testing/issue-10-headless-etl.md). [PR #67](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/67) is open with independent review requested. This work does not assert issue closure or iteration acceptance.
 
 ## Slipped Issues
 
