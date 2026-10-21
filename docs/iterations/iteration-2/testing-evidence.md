@@ -2,7 +2,7 @@
 
 ## Issues #15 and #14 — October 20, 2026
 
-Local implementation on `feature/15-canvas-14-persistence`, based on commit `b2faa19c41dd85dfd69f51d4f48ebad477c1c1a6`. Results below apply to the working-tree changes, not the unchanged base commit. #15 was implemented and verified first, then #14, as requested by the owner. These results do not certify the entire iteration.
+Local implementation on `feature/15-canvas-14-persistence`, based on commit `b2faa19c41dd85dfd69f51d4f48ebad477c1c1a6`. The verified implementation is commit `58e86745946c802426cd41bbb5d069f6b3df255e`; it is published in [PR #64](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/64). Results below apply to that implementation, not the unchanged base commit. #15 was implemented and verified first, then #14, as requested by the owner. These results do not certify the entire iteration.
 
 ## Environment
 
@@ -29,7 +29,7 @@ Initial installation failed with a full local disk. After space was freed, depen
 
 ## Review, CI and Manual Verification
 
-Remote CI, independent teammate approval, PR/merge, manual stakeholder demonstration and signoff remain pending. No issue closure, completion tag or completed iteration is claimed. Planned reviewers remain the issue-designated students; no review request has been sent from this session.
+[PR #64](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/64) is open. Remote CI, independent teammate approval, merge, manual stakeholder demonstration and signoff remain pending. No issue closure, completion tag or completed iteration is claimed. The PR identifies Al-Yousef for #15 and adamoug for #14 as the planned independent reviewers. Review requests and current CI status are visible on the PR.
 
 ## Evidence Links and AI Assistance
 
