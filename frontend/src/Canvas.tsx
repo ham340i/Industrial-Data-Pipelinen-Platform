@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -7,6 +7,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -21,22 +22,32 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { getBlocks, type BlockMetadata } from "./api/blocks";
+import type { Diagnostic } from "./api/validation";
 import { useEditorStore } from "./state/editor";
 import type { BlockNode } from "./state/graph";
+import { markEdges, placeDiagnostics } from "./state/validation";
 
 const Catalog = createContext<BlockMetadata[]>([]);
-function BlockCard({ data, selected }: NodeProps<BlockNode>) {
+const NodeProblems = createContext<Map<string, Diagnostic[]>>(new Map());
+function BlockCard({ id, data, selected }: NodeProps<BlockNode>) {
   const block = useContext(Catalog).find(
     (b) => b.block_id === data.block_id && b.version === data.block_version,
   );
+  const problems = useContext(NodeProblems).get(id) ?? [];
   return (
     <Paper
       variant="outlined"
+      aria-invalid={problems.length > 0}
       sx={{
         p: 2,
         minWidth: 210,
-        borderColor: selected ? "primary.main" : "divider",
-        borderWidth: selected ? 2 : 1,
+        maxWidth: 280,
+        borderColor: problems.length
+          ? "error.main"
+          : selected
+            ? "primary.main"
+            : "divider",
+        borderWidth: selected || problems.length ? 2 : 1,
       }}
     >
       <Typography sx={{ fontWeight: "bold" }}>
@@ -64,19 +75,56 @@ function BlockCard({ data, selected }: NodeProps<BlockNode>) {
                 }
                 aria-label={`${direction} ${port.name}`}
               />
-              <Typography variant="caption">
+              <Typography
+                variant="caption"
+                color={
+                  direction === "inputs" &&
+                  problems.some((p) => p.port === port.name)
+                    ? "error"
+                    : undefined
+                }
+              >
                 {port.name} ({port.kind})
               </Typography>
             </Box>
           ))}
         </Box>
       ))}
+      {problems.length > 0 && (
+        <Box
+          component="ul"
+          aria-label={`Problems in ${block?.name ?? data.block_id}`}
+          sx={{ m: 0, mt: 1, pl: 2 }}
+        >
+          {problems.map((p, index) => (
+            <Typography
+              key={index}
+              component="li"
+              variant="caption"
+              color="error"
+              sx={{ display: "list-item" }}
+            >
+              {p.message}
+            </Typography>
+          ))}
+        </Box>
+      )}
     </Paper>
   );
 }
 const nodeTypes = { block: BlockCard };
-function GraphCanvas() {
+function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
   const state = useEditorStore();
+  const theme = useTheme();
+  const placed = useMemo(
+    () => placeDiagnostics(diagnostics, state.nodes, state.edges),
+    [diagnostics, state.nodes, state.edges],
+  );
+  // Highlighting is derived for display only; the stored draft is untouched.
+  const edges = useMemo(
+    () => markEdges(state.edges, placed.byEdge, theme.palette.error.main),
+    [state.edges, placed, theme],
+  );
   const [search, setSearch] = useState("");
   const { screenToFlowPosition } = useReactFlow();
   const catalog = useQuery({
@@ -160,57 +208,59 @@ function GraphCanvas() {
             ))}
         </Paper>
         <Catalog value={blocks}>
-          <Box
-            aria-label="Pipeline canvas"
-            sx={{
-              height: 560,
-              flex: 1,
-              minWidth: 0,
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "copy";
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              try {
-                const key: unknown = JSON.parse(
-                  e.dataTransfer.getData("application/x-pipeline-block"),
-                );
-                const block =
-                  Array.isArray(key) &&
-                  blocks.find(
-                    (b) => b.block_id === key[0] && b.version === key[1],
+          <NodeProblems value={placed.byNode}>
+            <Box
+              aria-label="Pipeline canvas"
+              sx={{
+                height: 560,
+                flex: 1,
+                minWidth: 0,
+                border: "1px solid",
+                borderColor: "divider",
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                try {
+                  const key: unknown = JSON.parse(
+                    e.dataTransfer.getData("application/x-pipeline-block"),
                   );
-                if (block)
-                  state.addBlock(
-                    block,
-                    screenToFlowPosition({ x: e.clientX, y: e.clientY }),
-                  );
-              } catch {
-                /* Foreign drag data does not alter the draft. */
-              }
-            }}
-          >
-            <ReactFlow<BlockNode>
-              nodes={state.nodes}
-              edges={state.edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={state.changeNodes}
-              onEdgesChange={state.changeEdges}
-              onConnect={(c) => state.connect(c, blocks)}
-              onNodeClick={(_, n) => state.selectNode(n.id)}
-              onPaneClick={() => state.selectNode(null)}
-              deleteKeyCode={["Backspace", "Delete"]}
-              fitView
-              fitViewOptions={{ maxZoom: 1 }}
+                  const block =
+                    Array.isArray(key) &&
+                    blocks.find(
+                      (b) => b.block_id === key[0] && b.version === key[1],
+                    );
+                  if (block)
+                    state.addBlock(
+                      block,
+                      screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+                    );
+                } catch {
+                  /* Foreign drag data does not alter the draft. */
+                }
+              }}
             >
-              <Background />
-              <Controls />
-            </ReactFlow>
-          </Box>
+              <ReactFlow<BlockNode>
+                nodes={state.nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={state.changeNodes}
+                onEdgesChange={state.changeEdges}
+                onConnect={(c) => state.connect(c, blocks)}
+                onNodeClick={(_, n) => state.selectNode(n.id)}
+                onPaneClick={() => state.selectNode(null)}
+                deleteKeyCode={["Backspace", "Delete"]}
+                fitView
+                fitViewOptions={{ maxZoom: 1 }}
+              >
+                <Background />
+                <Controls />
+              </ReactFlow>
+            </Box>
+          </NodeProblems>
         </Catalog>
       </Stack>
       <Button
@@ -227,10 +277,10 @@ function GraphCanvas() {
     </Stack>
   );
 }
-export function Canvas() {
+export function Canvas({ diagnostics = [] }: { diagnostics?: Diagnostic[] }) {
   return (
     <ReactFlowProvider>
-      <GraphCanvas />
+      <GraphCanvas diagnostics={diagnostics} />
     </ReactFlowProvider>
   );
 }

@@ -29,6 +29,8 @@ Assignments verified against GitHub on October 1, 2026. Existing assignments rem
 
 Issues #15 (canvas/library) and #14 (pipeline persistence) are implemented locally on `feature/15-canvas-14-persistence`, in that order. See [testing evidence](testing-evidence.md), [design](../../architecture/pipeline-authoring.md) and [usage](../../frontend/canvas.md). [PR #64](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/64) is open. Remote CI, independent approval and merge remain pending; these are not completed iteration issues.
 
+Issue #21 (graph validation before run) is implemented locally on `feature/21-graph-validation`. See [design](../../architecture/graph-validation.md) and [testing evidence](testing-evidence.md#issue-21--graph-validation-before-run). Planned reviewer: @aboudka2003. PR, remote CI, independent approval and merge are pending.
+
 ## Completed Issues
 
 Not recorded. Add accepted issue scope and merged PR evidence when available.
