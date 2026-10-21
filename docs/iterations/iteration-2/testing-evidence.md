@@ -39,7 +39,7 @@ Codex authored the implementation, tests and documentation at the owner's reques
 
 ## Issue #21 — graph validation before run
 
-Implemented on `feature/21-graph-validation`, branched from `main` at `ebd52150001387d7753501e14d3415bea41e07c6`. Results below apply to that branch's implementation commit, not to the base. They do not certify the iteration. Design: [graph validation](../../architecture/graph-validation.md).
+Implemented on `feature/21-graph-validation`, branched from `main` at `ebd52150001387d7753501e14d3415bea41e07c6`. The verified implementation is commit `b0b79ac6aae1dda22795a3df00db1e0b69a8bcf4`. Results below apply to that commit, not to the base. They do not certify the iteration. Design: [graph validation](../../architecture/graph-validation.md).
 
 ### Environment
 
