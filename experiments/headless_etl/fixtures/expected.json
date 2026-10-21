@@ -1,0 +1,1 @@
+{"columns":["sensor_id","reading"],"rows":[{"sensor_id":"sensor-01","reading":"12.5"},{"sensor_id":"sensor-02","reading":""},{"sensor_id":"sensor-03","reading":"-4.25"}]}

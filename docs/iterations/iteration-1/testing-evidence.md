@@ -48,3 +48,7 @@ See the [workspace verification](../../testing/issue-4-local-workspace.md) for r
 ## Metadata issue #7
 
 The [metadata verification record](../../testing/issue-7-sqlite-metadata.md) records 72 passing backend tests on Windows/Python 3.12, including 48 new metadata cases, migration failure rollback and restart persistence. Ruff and mypy pass. Docker is unavailable locally; the PR's Compose CI run supplies actual container evidence. Independent student review, merge and iteration demonstration remain pending.
+
+## Issue #10 headless ETL spike
+
+The [headless proof](../../../experiments/headless_etl/README.md) uses the SDK and portable DAG to execute synthetic CSV → Select Columns → Parquet. See the [verification record](../../testing/issue-10-headless-etl.md) for commands, results and limitations. Independent review, hosted CI and merge remain pending.

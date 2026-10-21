@@ -47,3 +47,11 @@ tests, fixed mobile canvas sizing and executed the checks and browser demonstrat
 See the [verification record](../docs/testing/issue-17-configuration.md) and
 [individual record](../docs/individual-contributions/Al-Yousef-iteration-2.md).
 Independent human review and stakeholder acceptance remain pending.
+
+## Issue #10 headless ETL proof
+
+Codex authored the bounded SDK/DAG runner, Polars selection, Parquet read-back
+verification, synthetic fixtures, regression tests and documentation at
+the user's request. The user selected the issue and requested a PR; independent
+human review and stakeholder acceptance remain pending. Actual verification and
+limitations are recorded in [the testing evidence](../docs/testing/issue-10-headless-etl.md).
