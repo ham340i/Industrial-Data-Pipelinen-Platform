@@ -89,3 +89,13 @@ Not recorded. Add actions, owners and issues in the [retrospective](retrospectiv
 ## Tag
 
 Planned: `v0.3.0-iteration3`. Not created. Follow the [tag strategy](../README.md#completion-tags).
+
+## Issue #22 implementation preparation
+
+The local executor implementation is on `feature/22-local-dag-executor`.
+See the [execution guide](../../execution.md),
+[design](../../architecture/local-executor.md),
+[verification](../../testing/issue-22-local-executor.md) and
+[AI-assisted owner record](../../individual-contributions/ham340i-iteration-3.md).
+Production catalog integration, designated review and hosted CI remain pending;
+this is not an iteration completion claim.
