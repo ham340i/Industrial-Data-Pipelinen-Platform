@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-// Real API, no mocks (#21). The Release 1 catalog only registers the synthetic
-// add-constant transform, whose input is required, so every graph built from
-// it has an unconnected first input. A fully valid run awaits source blocks.
+// Real API, no mocks (#21). Use the synthetic transform's required input to
+// exercise invalid graphs. File-source catalog coverage is in file-blocks.spec.
 test("real API diagnoses the draft, maps problems to nodes and gates running", async ({
   page,
 }) => {
@@ -29,13 +28,11 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
     all.map((n) => n.getAttribute("data-id")),
   );
 
-  // Added nodes are offset slightly and overlap; drag the second one aside.
-  const title = nodes.last().getByText("Synthetic Add Constant");
-  const box = (await title.boundingBox())!;
-  await page.mouse.move(box.x + 20, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 420, box.y + 220, { steps: 10 });
-  await page.mouse.up();
+  // Keyboard movement is independent of page scroll and the expanded library.
+  // The old page-coordinate drag could leave the two nodes overlapping.
+  await nodes.last().focus();
+  for (let step = 0; step < 20; step++)
+    await page.keyboard.press("Shift+ArrowRight");
   await page.getByRole("button", { name: "Fit View", exact: true }).click();
 
   // Fix the second node's input; only the first node still needs one.

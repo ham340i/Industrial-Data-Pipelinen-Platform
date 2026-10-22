@@ -1,0 +1,5 @@
+sensor,reading,unused
+A,12.5,keep
+B,NULL,skip
+C,-4.25,skip
+D,3.25,keep
