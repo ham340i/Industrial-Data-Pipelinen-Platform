@@ -85,7 +85,8 @@ def test_required_failure_blocks_publication(
         assert result.failures["quality"].code == "quality_failed"
         assert result.failures["quality"].diagnostics
         assert result.failures["sink"].code == "dependency_failed"
-        assert "quality" not in result.outputs and "sink" not in result.outputs
+        assert "quality" not in result.outputs
+        assert "sink" not in result.outputs
         assert not any(
             e.event == "succeeded" and e.node_id == "quality"
             for e in result.block_events

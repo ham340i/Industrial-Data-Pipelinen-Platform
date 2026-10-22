@@ -46,3 +46,12 @@ writable output directory and normal Windows file access). Those failed/setup
 runs are not counted as passes. The full final suite uses the real file sinks.
 No coverage percentage, student approval or customer acceptance is inferred.
 Hosted CI and main integration remain separate from these local checks.
+
+## Static-analysis follow-up
+
+Sonar's initial quality gate passed but reported 15 maintainability findings.
+The nested status expression was simplified, exception-test setup was moved
+outside each raises block, and a composite publication assertion was split.
+No exception expectation or behavioral coverage was removed. After these edits:
+56 focused cases passed in 0.37s; Ruff lint/format and mypy all passed. The
+updated PR's hosted checks verify the complete suite at its latest revision.

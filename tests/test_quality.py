@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.blocks.catalog import registry
 from app.blocks.context import BlockContext, BlockEvent
-from app.blocks.contracts import Column, DataSchema, Table
+from app.blocks.contracts import Column, DataSchema, Table, PortValues
 from app.blocks.tabular import DType
 from app.blocks.errors import BlockError
 from app.blocks.quality import NullCheck, NullHandling, RowCount, SchemaValidation
@@ -93,11 +93,12 @@ def test_fill_typed_values(dtype: DType, value: Any):
 
 @pytest.mark.parametrize("value", [True, 1.5, "0"])
 def test_fill_never_coerces_integer(value: Any):
+    block, table = NullHandling(), sample()
     with pytest.raises(BlockError, match="declared types") as exc:
         run(
-            NullHandling(),
+            block,
             {"policy": "fill", "columns": ["value"], "fill_values": {"value": value}},
-            sample(),
+            table,
         )
     assert exc.value.failure.code == "invalid_fill"
 
@@ -124,8 +125,9 @@ def test_fill_never_coerces_integer(value: Any):
     ],
 )
 def test_invalid_configuration_rejected(block: RegisteredBlock, config: dict[str, Any]):
+    table = sample()
     with pytest.raises(BlockError) as exc:
-        run(block, config, sample())
+        run(block, config, table)
     assert exc.value.failure.code == "invalid_config"
 
 
@@ -147,16 +149,18 @@ def test_invalid_configuration_rejected(block: RegisteredBlock, config: dict[str
 def test_unavailable_or_mismatched_selection(
     block: RegisteredBlock, config: dict[str, Any]
 ):
+    table = sample()
     with pytest.raises(BlockError):
-        run(block, config, sample())
+        run(block, config, table)
 
 
 @pytest.mark.parametrize("maximum,expected", [(1, "fail"), (2, "pass"), (3, "pass")])
 def test_null_threshold_boundary(maximum: int, expected: str):
     events: list[BlockEvent] = []
+    block, table = NullCheck(), sample()
     if expected == "fail":
         with pytest.raises(BlockError) as exc:
-            run(NullCheck(), {"max_nulls": maximum}, sample(), events)
+            run(block, {"max_nulls": maximum}, table, events)
         assert exc.value.failure.diagnostics[-1].row_indices == (0, 2)
     else:
         assert run(NullCheck(), {"max_nulls": maximum}, sample(), events) == sample()
@@ -171,11 +175,12 @@ def test_null_threshold_boundary(maximum: int, expected: str):
 @pytest.mark.parametrize("count,valid", [(0, False), (1, True), (2, True), (3, False)])
 def test_row_count_inclusive_bounds(count: int, valid: bool):
     table = sample(tuple({"name": "a", "value": i} for i in range(count)))
+    block = RowCount()
     if valid:
         assert run(RowCount(), {"min_rows": 1, "max_rows": 2}, table) == table
     else:
         with pytest.raises(BlockError) as exc:
-            run(RowCount(), {"min_rows": 1, "max_rows": 2}, table)
+            run(block, {"min_rows": 1, "max_rows": 2}, table)
         diagnostic = exc.value.failure.diagnostics[0]
         assert (diagnostic.minimum, diagnostic.maximum, diagnostic.observed) == (
             1,
@@ -202,6 +207,7 @@ def test_empty_inputs_keep_schema_and_zero_boundaries():
 
 
 def test_schema_checks_metadata_values_and_extra_columns():
+    block, original = SchemaValidation(), sample()
     config = {
         "columns": [
             {"name": "name", "dtype": "integer"},
@@ -210,7 +216,7 @@ def test_schema_checks_metadata_values_and_extra_columns():
         ]
     }
     with pytest.raises(BlockError) as exc:
-        run(SchemaValidation(), config, sample())
+        run(block, config, original)
     assert [d.code for d in exc.value.failure.diagnostics] == [
         "type_mismatch",
         "missing_column",
@@ -219,9 +225,9 @@ def test_schema_checks_metadata_values_and_extra_columns():
     assert exc.value.failure.node_id == "quality"
     with pytest.raises(BlockError) as extra:
         run(
-            SchemaValidation(),
+            block,
             {"columns": [{"name": "name", "dtype": "string"}]},
-            sample(),
+            original,
         )
     assert extra.value.failure.diagnostics[0].code == "extra_column"
     assert (
@@ -272,8 +278,9 @@ def test_diagnostics_bounded_redacted_and_enforced_without_observer():
         tuple({"name": "synthetic-private", "value": None} for _ in range(35))
     )
     events: list[BlockEvent] = []
+    block = NullCheck()
     with pytest.raises(BlockError) as exc:
-        run(NullCheck(), {}, table, events)
+        run(block, {}, table, events)
     diagnostic = exc.value.failure.diagnostics[-1]
     assert diagnostic.observed == 35
     assert diagnostic.row_indices == tuple(range(20))
@@ -286,12 +293,9 @@ def test_diagnostics_bounded_redacted_and_enforced_without_observer():
     def broken_observer(event: BlockEvent) -> None:
         raise RuntimeError("logging unavailable")
 
+    context = BlockContext("test", "quality", log_sink=broken_observer)
     with pytest.raises(BlockError) as no_logger:
-        NullCheck().run(
-            {},
-            {"table": (table,)},
-            BlockContext("test", "quality", log_sink=broken_observer),
-        )
+        block.run({}, {"table": (table,)}, context)
     assert no_logger.value.failure.code == "quality_failed"
 
 
@@ -314,8 +318,10 @@ def test_catalog_has_one_schema_implementation_and_safe_preview():
     for name in expected:
         block = registry.resolve(name, "1.0.0")
         assert block.public_metadata()["config_schema"]["additionalProperties"] is False
+        inputs: PortValues = {"table": (sample(),)}
+        context = BlockContext("test", "preview")
         with pytest.raises(BlockError) as exc:
-            block.preview({}, {"table": (sample(),)}, BlockContext("test", "preview"))
+            block.preview({}, inputs, context)
         assert exc.value.failure.code == "preview_unsupported"
 
 
@@ -340,34 +346,35 @@ def test_fill_rejects_platform_overflow_or_precision_loss(dtype: DType, value: i
         data_schema=DataSchema(columns=(Column(name="x", dtype=dtype, nullable=True),)),
         rows=({"x": None},),
     )
+    block = NullHandling()
     with pytest.raises(BlockError):
-        run(NullHandling(), {"policy": "fill", "fill_values": {"x": value}}, table)
+        run(block, {"policy": "fill", "fill_values": {"x": value}}, table)
 
 
 def test_empty_table_still_validates_declared_types():
+    block, table = SchemaValidation(), sample(())
     with pytest.raises(BlockError) as exc:
         run(
-            SchemaValidation(),
+            block,
             {
                 "columns": [
                     {"name": "name", "dtype": "integer"},
                     {"name": "value", "dtype": "integer", "nullable": True},
                 ]
             },
-            sample(()),
+            table,
         )
     assert exc.value.failure.diagnostics[0].code == "type_mismatch"
 
 
 def test_cancelled_quality_never_reports_success():
     events: list[BlockEvent] = []
+    block = RowCount()
+    inputs: PortValues = {"table": (sample(),)}
+    context = BlockContext(
+        "test", "cancelled", log_sink=events.append, is_cancelled=lambda: True
+    )
     with pytest.raises(BlockError) as exc:
-        RowCount().run(
-            {},
-            {"table": (sample(),)},
-            BlockContext(
-                "test", "cancelled", log_sink=events.append, is_cancelled=lambda: True
-            ),
-        )
+        block.run({}, inputs, context)
     assert exc.value.failure.code == "cancelled"
     assert all(e.event != "succeeded" for e in events)

@@ -60,7 +60,9 @@ def report(
 
 
 def status(valid: bool, required: bool) -> Literal["pass", "fail", "warning"]:
-    return "pass" if valid else ("fail" if required else "warning")
+    if valid:
+        return "pass"
+    return "fail" if required else "warning"
 
 
 class ColumnSelection(BlockConfig):
