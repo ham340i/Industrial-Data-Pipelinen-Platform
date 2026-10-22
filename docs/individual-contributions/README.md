@@ -16,3 +16,6 @@ Recorded implementation evidence: [Al-Yousef, Iteration 1 metadata](Al-Yousef-it
 
 Issue #17 local implementation evidence: [Al-Yousef, Iteration 2 configuration](Al-Yousef-iteration-2.md).
 Independent review and acceptance remain pending.
+
+Issue #25 implementation evidence: [Al-Yousef, Iteration 3 data quality](Al-Yousef-iteration-3.md).
+Independent student review and main integration remain pending.
