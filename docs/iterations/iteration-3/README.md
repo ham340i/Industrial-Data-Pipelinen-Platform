@@ -99,3 +99,12 @@ See the [execution guide](../../execution.md),
 [AI-assisted owner record](../../individual-contributions/ham340i-iteration-3.md).
 Production catalog integration, designated review and hosted CI remain pending;
 this is not an iteration completion claim.
+
+## Issue #25 quality blocks
+
+Implementation is on `feature/25-data-quality`, stacked on executor PR #70.
+See [design](../../architecture/data-quality.md), [usage](../../data-quality.md),
+[verification](../../testing/issue-25-data-quality.md) and
+[AI-assisted contribution evidence](../../individual-contributions/Al-Yousef-iteration-3.md).
+Independent student review, main integration and Iteration 4 UI acceptance remain
+pending; this is not an iteration completion claim.
