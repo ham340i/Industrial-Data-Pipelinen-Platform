@@ -76,6 +76,7 @@ class Executor:
         run_id: str | None = None,
         resolve_resource: Callable[[str], Path] | None = None,
         cancellation: Cancellation | None = None,
+        workspace_root: Path | None = None,
         on_state: Callable[[StateEvent], None] | None = None,
     ) -> ExecutionContext:
         # Check size before cloning, then validate a detached definition.
@@ -89,7 +90,12 @@ class Executor:
         if diagnostics:
             raise InvalidPipeline(diagnostics)
         identity = str(uuid4()) if run_id is None else run_id
-        BlockContext(identity, "runtime", resolve_resource=resolve_resource)
+        BlockContext(
+            identity,
+            "runtime",
+            resolve_resource=resolve_resource,
+            workspace_root=workspace_root,
+        )
         result = ExecutionContext(identity)
         token = cancellation or Cancellation()
         order = graph.topological_order()
@@ -158,6 +164,7 @@ class Executor:
                     node_id,
                     log_sink=result.block_events.append,
                     resolve_resource=resolve_resource,
+                    workspace_root=workspace_root,
                     is_cancelled=token.is_cancelled,
                 )
                 context.check_cancelled()

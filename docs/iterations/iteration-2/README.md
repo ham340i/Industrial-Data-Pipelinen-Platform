@@ -1,6 +1,22 @@
 # Iteration 2
 
-Status: Implementation evidence available for #14, #15 and #17; iteration acceptance pending. Demonstration: Not Yet Demonstrated.
+Status: Iteration acceptance pending. GitHub snapshot on October 21, 2026:
+seven closed issues and three open (#16, #18, #20). Demonstration: Not Yet Demonstrated.
+
+## Current delivery snapshot
+
+- #14/#15 merged in [PR #64](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/64).
+- #19 merged in [PR #63](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/63).
+- #21 merged in [PR #65](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/65).
+- #17 merged in [PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66), with @ham340i's recorded approval.
+- #16/#18/#20 have a local implementation on `feature/16-file-blocks`; independent
+  review and merge are pending. See [design](../../architecture/iteration-2-file-blocks.md),
+  [usage](../../blocks/file-and-column-blocks.md) and
+  [verification](../../testing/iteration-2-file-blocks.md).
+
+This live snapshot supersedes the earlier local/pending PR statuses recorded
+below. Issue closure and merged code do not establish stakeholder acceptance or
+completion of the iteration demonstration.
 
 ## Dates
 

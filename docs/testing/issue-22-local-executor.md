@@ -43,3 +43,18 @@ local checks at the user's request. Human code review remains pending.
 Results describe uncommitted changes on the branch above, not a published
 revision. GitHub CLI is unauthenticated in this environment; no PR, review
 request, issue closure or hosted CI result was created.
+
+## PR preparation update
+
+Current main `e2f5cf6` includes the merged issue #10 proof and #16/#18/#20 file
+pipeline. Integration preserves both workspace-root and cancellation context
+fields and adopts main's Polars 1.44.2 / PyArrow 25.0.1 lock. A new production
+CSV → Select Columns → Parquet test verifies workspace policy propagation.
+The previous prerequisite-merge and CLI-access limitations above are historical:
+Git's stored credential provides authenticated GitHub access for publishing.
+
+After integration with main, macOS Python 3.13 and the updated hash-pinned
+packages: `python -m pytest -q` passed **514 tests** (16 executor cases), with
+38 existing deprecation warnings. Ruff lint, format check and mypy passed
+(54 source files). The earlier Python 3.12 run predates this integration;
+GitHub CI will verify the final branch on its configured runtime.

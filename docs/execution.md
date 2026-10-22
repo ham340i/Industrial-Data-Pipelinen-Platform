@@ -12,7 +12,8 @@ print(result.run_id, result.state, result.node_states)
 ```
 
 `registry`, `definition` and the optional resource resolver are supplied by the
-caller. The resolver maps approved logical names to local paths; the engine does
+caller. Production file blocks also require `workspace_root=Path(...)`; the
+executor passes this trusted runtime directory through to their path policy. The resolver maps approved logical names to local paths; the engine does
 not invent filesystem access policy. Runs receive unique UUIDs by default, or
 accept a caller-provided nonblank `run_id` for telemetry correlation.
 
@@ -53,9 +54,9 @@ Run the synthetic source/transform/Parquet golden integration:
 python -m pytest tests/test_execution.py -q
 ```
 
-This reuses the exact issue #10 fixture and primitive implementations. It is not
-an assertion that the production catalog source, transform and sink issues are
-complete. No new execute endpoint is exposed; API/UI wiring, run persistence
+This reuses the exact issue #10 fixture and primitive implementations. A second
+integration test executes the merged production CSV, Select Columns and Parquet
+blocks using their workspace policy. No new execute endpoint is exposed; API/UI wiring, run persistence
 and governed artifacts remain separate issues. See the
 [design](architecture/local-executor.md) and
 [verification record](testing/issue-22-local-executor.md).

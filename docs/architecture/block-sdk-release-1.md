@@ -40,6 +40,13 @@ New blocks register against this interface; the engine resolves them by identity
 
 ## Required registry coverage
 
+The Iteration 2 [file and column blocks](../blocks/file-and-column-blocks.md)
+implement CSV/JSON/Parquet sources, Select/Rename/Filter/Cast and CSV/Parquet
+sinks through this contract. Runtime file blocks additionally require a
+non-serialized `BlockContext.workspace_root`; context resolution never removes
+the workspace containment check. The context field is optional so existing
+non-file SDK callers retain their contract.
+
 - Triggers: Manual, bounded Timer.
 - Sources: CSV, JSON, Parquet, SQL.
 - Transforms: Select Columns, Rename Columns, Filter, Cast, Null Handling, Join, Aggregate, Sort.

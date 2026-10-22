@@ -379,3 +379,38 @@ def test_unrepresentable_values_rejected(dtype, value):
     )
     with pytest.raises(BlockError, match="represented"):
         Frame.from_table(table)
+
+
+def test_production_catalog_file_pipeline(tmp_path: Path):
+    from app.blocks.catalog import registry as catalog
+
+    (tmp_path / "input.csv").write_text("name,value\na,1\nb,2\n")
+    graph = PipelineDefinition(
+        nodes=(
+            Node(
+                id="source",
+                block_id="source.csv",
+                block_version="1.0.0",
+                config={"resource_ref": "input.csv"},
+            ),
+            Node(
+                id="select",
+                block_id="transform.select",
+                block_version="1.0.0",
+                config={"columns": ["name"]},
+            ),
+            Node(
+                id="sink",
+                block_id="sink.parquet",
+                block_version="1.0.0",
+                config={"resource_ref": "output.parquet"},
+            ),
+        ),
+        edges=(edge("a", "source", "select"), edge("b", "select", "sink")),
+    )
+    result = Executor(catalog).execute(graph, workspace_root=tmp_path)
+    assert result.state == "completed", result.failures
+    assert pl.read_parquet(tmp_path / "output.parquet").to_dicts() == [
+        {"name": "a"},
+        {"name": "b"},
+    ]

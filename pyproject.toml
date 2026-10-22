@@ -27,8 +27,3 @@ minversion = "8.0"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
 xfail_strict = true
-
-[[tool.mypy.overrides]]
-# Arrow has no bundled typing; used by the shared Parquet integration proof.
-module = ["pyarrow.*"]
-ignore_missing_imports = true
