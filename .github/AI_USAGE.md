@@ -46,7 +46,19 @@ panel draft to the merged graph/registry/persistence/validation contracts, added
 tests, fixed mobile canvas sizing and executed the checks and browser demonstration.
 See the [verification record](../docs/testing/issue-17-configuration.md) and
 [individual record](../docs/individual-contributions/Al-Yousef-iteration-2.md).
-Independent human review and stakeholder acceptance remain pending.
+PR #66 subsequently received @ham340i's approval and merged October 21, 2026.
+Stakeholder acceptance remains pending.
+
+## Iteration 2 sources, transforms and sinks (#16, #18, #20)
+
+Tool: OpenAI Codex. Yousef directed the expanded delivery. Codex reused the
+existing team headless proof and SDK contracts, implemented the bounded file
+adapter and nine blocks, added golden/negative/integration/browser tests,
+prepared documentation, and ran the recorded checks and real browser
+demonstration. Historical authorship remains intact. The original issue owners
+remain assigned; their independent review and stakeholder acceptance are pending.
+See [verification](../docs/testing/iteration-2-file-blocks.md) and
+[Yousef's actual contribution record](../docs/individual-contributions/Al-Yousef-iteration-2.md).
 
 ## Issue #10 headless ETL proof
 

@@ -1,0 +1,6 @@
+{
+  "selected": [{"sensor":"A","reading":"12.5"},{"sensor":"B","reading":null},{"sensor":"C","reading":"-4.25"},{"sensor":"D","reading":"3.25"}],
+  "cast": [{"sensor":"A","reading":12.5},{"sensor":"B","reading":null},{"sensor":"C","reading":-4.25},{"sensor":"D","reading":3.25}],
+  "renamed": [{"sensor":"A","temperature":12.5},{"sensor":"B","temperature":null},{"sensor":"C","temperature":-4.25},{"sensor":"D","temperature":3.25}],
+  "filtered": [{"sensor":"A","temperature":12.5},{"sensor":"D","temperature":3.25}]
+}
