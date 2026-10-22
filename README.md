@@ -71,6 +71,10 @@ Repository checks require no configuration. Root `.env.example` documents safe C
 
 ## API Development
 
+The headless DAG executor is available as a Python library; see the
+[execution guide](docs/execution.md) for Polars context, lifecycle, failure and
+cancellation behavior. API execution and UI integration remain separate work.
+
 The API uses Python 3.12, FastAPI and Pydantic v2.
 
 On Windows PowerShell, use the virtual environment's interpreter directly:
