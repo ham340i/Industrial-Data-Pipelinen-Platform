@@ -56,15 +56,38 @@ row order; inputs are detached by the SDK and are not mutated.
 
 | ID | Configuration | Behavior |
 |---|---|---|
-| `transform.select` | `columns: ["sensor", "reading"]` | Reuses the proof's Polars selection; order follows the list; require at least one unique existing column. |
-| `transform.rename` | `columns: ["reading"]`, `names: ["temperature"]` | Parallel lists; preserve types/nullability/order. Allow simultaneous swaps. Reject missing names or collisions with renamed or untouched columns. |
-| `transform.filter` | `column`, `operator`, `value_text` | One typed predicate; operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `is_null`, `is_not_null`. No eval or expression execution. |
-| `transform.cast` | `column`, `dtype`, `on_error` | Cast to an SDK type. `on_error="error"` fails the block; `"null"` replaces invalid values and declares the target nullable. Other fields retain their schemas. |
+| `transform.select` | `columns: ["sensor", "reading"]` | Selects columns in the configured order; requires unique existing columns. |
+| `transform.rename` | `columns: ["reading"]`, `names: ["temperature"]` | Renames columns in parallel; preserves types, nullability and order; allows simultaneous swaps; rejects collisions. |
+| `transform.filter` | `column`, `operator`, `value_text` | Applies one typed predicate using bounded operators; does not evaluate arbitrary expressions. |
+| `transform.cast` | `column`, `dtype`, `on_error` | Casts one column to an SDK type; `on_error="error"` fails invalid values and `on_error="null"` replaces them with null. |
+| `transform.join` | `left_on`, `right_on`, `how`, `cardinality` | Joins two tables using explicit key pairs. Supported join types are `inner`, `left` and `outer`. Supported cardinalities are `many_to_many`, `one_to_one`, `one_to_many` and `many_to_one`. |
+| `transform.aggregate` | `group_by`, `operations` | Groups rows and applies bounded `count`, `sum`, `min`, `max` or `mean` operations. Output names are explicitly configured and must be unique. |
+| `transform.sort` | `columns` with `column`, `descending` and `nulls_last` | Performs stable multi-column sorting while preserving the complete input schema and row values. Null placement is explicitly configured per sort column. |
 
 Filter `value_text` is the literal value for a string column, and JSON scalar
 text for numbers/integers/booleans. Examples: `"12.5"`, `"0"`, `"true"` as config
 string values. Null operators ignore `value_text`; other comparisons drop null
 rows. Boolean columns support only equality/inequality and null operators.
+
+Join keys are configured explicitly as parallel `left_on` and `right_on` lists.
+The lists must have equal lengths, each key must exist, and paired key types must
+match. Join output columns contain all left columns followed by non-key right
+columns. Duplicate non-key names are rejected rather than silently suffixed.
+Cardinality is validated before the join: `one_to_one` requires unique keys on
+both inputs, `one_to_many` requires unique left keys, and `many_to_one`
+requires unique right keys. Null-containing keys are not counted as duplicate
+keys for cardinality validation.
+
+Aggregate operations are intentionally bounded and do not accept arbitrary
+expressions. `count` counts non-null values and returns an integer. `sum`,
+`min`, `max` and `mean` ignore null values where supported by the source type.
+`mean` returns a number. Empty grouped inputs retain their declared output
+schema. Aggregate output names must not collide with group columns or each
+other.
+
+Sort is stable. Each sort column independently controls direction and null
+placement. Sorting does not change column order, types or declared nullability.
+Empty inputs retain their complete input schema.
 
 Casts accept exact lowercase `true`/`false` strings as booleans and numeric
 0/1 as booleans. Numeric overflow, fractional float-to-integer truncation,
@@ -102,6 +125,8 @@ Failures include `invalid_config`, `workspace_required`, `unsafe_resource`,
 `file_unavailable`, `invalid_csv`, `invalid_file`, `file_limit`, `table_limit`,
 `schema_required`, `schema_mismatch`, `unsupported_type`, `unsupported_value`,
 `missing_column`, `duplicate_column`, `invalid_filter`, `cast_failed`,
+`join_key_type_mismatch`, `invalid_cardinality`, `join_failed`,
+`invalid_aggregate`, `aggregate_failed`,
 `output_exists`, `ambiguous_null`, and `write_failed`. The SDK adds node context;
 messages/events omit original exception text and private file locations.
 
