@@ -75,6 +75,7 @@ def scalar_table(empty: bool = False) -> Table:
         "transform.rename",
         "transform.filter",
         "transform.cast",
+        "transform.join",
         "sink.csv",
         "sink.parquet",
     ],
