@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import math
-from typing import Literal
+from collections.abc import Mapping
+from typing import Any, Literal, cast
 
 import polars as pl
 from pydantic import Field, field_validator, model_validator
@@ -265,7 +266,7 @@ class Join(Block[JoinConfig]):
 
     @staticmethod
     def _key_tuple(
-        row: dict[str, object],
+        row: Mapping[str, object],
         columns: list[str],
     ) -> tuple[object, ...]:
         return tuple(row[column] for column in columns)
@@ -483,7 +484,7 @@ class Sort(Block[SortConfig]):
             null_rows = [row for row in rows if row[name] is None]
 
             non_null_rows.sort(
-                key=lambda row: row[name],
+                key=lambda row: cast(Any, row[name]),
                 reverse=descending,
             )
 
