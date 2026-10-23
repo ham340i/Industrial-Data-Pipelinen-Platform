@@ -236,3 +236,57 @@ class Cast(Block[CastConfig]):
             )
         )
         return {"table": (from_frame(frame, schema),)}
+    
+    class JoinConfig(BlockConfig):
+        left_on: list[NonBlank] = Field(min_length=1, max_length=100)
+        right_on: list[NonBlank] = Field(min_length=1, max_length=100)
+        how: Literal["inner", "left", "outer"] = "inner"
+        cardinality: Literal[
+            "many_to_many",
+            "one_to_one",
+            "one_to_many",
+            "many_to_one",
+        ] = "many_to_many"
+
+        @model_validator(mode="after")
+        def validate_keys(self) -> JoinConfig:
+            checked_names(self.left_on)
+            checked_names(self.right_on)
+            if len(self.left_on) != len(self.right_on):
+                raise ValueError("Join key lists must have matching lengths")
+            return self
+
+
+    class AggregateOperation(BlockConfig):
+        column: NonBlank
+        function: Literal["count", "sum", "min", "max", "mean"]
+        output_name: NonBlank
+
+
+    class AggregateConfig(BlockConfig):
+        group_by: list[NonBlank] = Field(default_factory=list, max_length=100)
+        operations: list[AggregateOperation] = Field(
+            min_length=1,
+            max_length=100,
+        )
+
+        @field_validator("group_by")
+        @classmethod
+        def unique_group_columns(cls, value: list[str]) -> list[str]:
+            return checked_names(value)
+
+        @model_validator(mode="after")
+        def unique_output_names(self) -> AggregateConfig:
+            names = [operation.output_name for operation in self.operations]
+            checked_names(names)
+            return self
+
+
+    class SortColumn(BlockConfig):
+        column: NonBlank
+        descending: bool = False
+        nulls_last: bool = True
+
+
+    class SortConfig(BlockConfig):
+        columns: list[SortColumn] = Field(min_length=1, max_length=100)
