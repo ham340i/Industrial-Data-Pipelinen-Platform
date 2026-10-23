@@ -17,6 +17,7 @@ from app.blocks.contracts import (
     Column,
     DataSchema,
     NonBlank,
+    Port,
     PortValues,
     Table,
 )
@@ -235,6 +236,160 @@ class JoinConfig(BlockConfig):
         if len(self.left_on) != len(self.right_on):
             raise ValueError("Join key lists must have matching lengths")
         return self
+
+
+class Join(Block[JoinConfig]):
+    config_model = JoinConfig
+    descriptor = BlockDescriptor(
+        **descriptor_values("transform.join", "Join", "transform"),
+        inputs=(
+            Port(name="left", data_schema=TABLE_PORT.data_schema),
+            Port(name="right", data_schema=TABLE_PORT.data_schema),
+        ),
+        outputs=(
+            Port(
+                name="table",
+                data_schema=DataSchema(columns=(), allow_extra_columns=True),
+            ),
+        ),
+    )
+
+    @staticmethod
+    def _key_tuple(row: dict[str, object], columns: list[str]) -> tuple[object, ...]:
+        return tuple(row[column] for column in columns)
+
+    @classmethod
+    def _duplicate_keys(
+        cls, table: Table, columns: list[str]
+    ) -> set[tuple[object, ...]]:
+        counts: dict[tuple[object, ...], int] = {}
+
+        for row in table.rows:
+            key = cls._key_tuple(row, columns)
+
+            # Polars joins do not match null keys by default. Do not count
+            # null-containing keys for one-to-one/cardinality validation.
+            if any(value is None for value in key):
+                continue
+
+            counts[key] = counts.get(key, 0) + 1
+
+        return {key for key, count in counts.items() if count > 1}
+
+    @staticmethod
+    def _column_map(table: Table) -> dict[str, Column]:
+        return {column.name: column for column in table.data_schema.columns}
+
+    def _execute(
+        self, config: JoinConfig, inputs: PortValues, context: BlockContext
+    ) -> PortValues:
+        left = inputs["left"][0]
+        right = inputs["right"][0]
+        assert isinstance(left, Table)
+        assert isinstance(right, Table)
+
+        require_columns(left, config.left_on)
+        require_columns(right, config.right_on)
+
+        left_columns = self._column_map(left)
+        right_columns = self._column_map(right)
+
+        for left_name, right_name in zip(config.left_on, config.right_on, strict=True):
+            if left_columns[left_name].dtype != right_columns[right_name].dtype:
+                raise BlockError(
+                    "join_key_type_mismatch",
+                    "Join key types must match.",
+                    field=left_name,
+                )
+
+        right_key_names = set(config.right_on)
+        left_names = set(left_columns)
+        duplicate_names = (set(right_columns) - right_key_names) & left_names
+
+        if duplicate_names:
+            raise BlockError(
+                "duplicate_column",
+                "Join would create duplicate output columns.",
+                field=sorted(duplicate_names)[0],
+            )
+
+        left_duplicates = self._duplicate_keys(left, config.left_on)
+        right_duplicates = self._duplicate_keys(right, config.right_on)
+
+        if config.cardinality == "one_to_one" and (left_duplicates or right_duplicates):
+            raise BlockError(
+                "invalid_cardinality",
+                "The join configuration requires unique keys on both inputs.",
+            )
+
+        if config.cardinality == "one_to_many" and left_duplicates:
+            raise BlockError(
+                "invalid_cardinality",
+                "The left input contains duplicate join keys.",
+            )
+
+        if config.cardinality == "many_to_one" and right_duplicates:
+            raise BlockError(
+                "invalid_cardinality",
+                "The right input contains duplicate join keys.",
+            )
+
+        join_how = "full" if config.how == "outer" else config.how
+
+        try:
+            frame = to_frame(left).join(
+                to_frame(right),
+                left_on=config.left_on,
+                right_on=config.right_on,
+                how=join_how,
+                suffix="__right",
+                maintain_order="left",
+            )
+        except Exception:
+            raise BlockError(
+                "join_failed",
+                "The configured tables could not be joined.",
+            ) from None
+
+        output_names = list(left_columns)
+        right_value_names = [
+            name for name in right_columns if name not in right_key_names
+        ]
+        output_names.extend(right_value_names)
+
+        try:
+            frame = frame.select(output_names)
+        except Exception:
+            raise BlockError(
+                "join_failed",
+                "The join output columns could not be constructed.",
+            ) from None
+
+        output_columns: list[Column] = []
+
+        for column in left.data_schema.columns:
+            nullable = column.nullable or config.how == "outer"
+            output_columns.append(
+                Column(
+                    name=column.name,
+                    dtype=column.dtype,
+                    nullable=nullable,
+                )
+            )
+
+        for name in right_value_names:
+            column = right_columns[name]
+            nullable = column.nullable or config.how in ("left", "outer")
+            output_columns.append(
+                Column(
+                    name=name,
+                    dtype=column.dtype,
+                    nullable=nullable,
+                )
+            )
+
+        schema = DataSchema(columns=tuple(output_columns))
+        return {"table": (from_frame(frame, schema),)}
 
 
 class AggregateOperation(BlockConfig):

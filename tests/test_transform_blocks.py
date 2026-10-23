@@ -5,9 +5,16 @@ from typing import Any
 
 import pytest
 
+from app.blocks.context import BlockContext
 from app.blocks.contracts import Column, DataSchema, Table
 from app.blocks.errors import BlockError
-from app.blocks.transforms import Cast, Filter, RenameColumns, SelectColumns
+from app.blocks.transforms import (
+    Cast,
+    Filter,
+    Join,
+    RenameColumns,
+    SelectColumns,
+)
 from tests.test_file_blocks import run
 
 
@@ -225,3 +232,294 @@ def test_cast_failure_and_explicit_null_policy(
     )
     assert actual.rows == ({"v": None},)
     assert actual.data_schema.columns[0].nullable
+
+    # ---------------------------------------------------------------------------
+    # Issue #24: Join transform
+    # ---------------------------------------------------------------------------
+
+
+def join_left_table() -> Table:
+    return Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="customer_id", dtype="integer"),
+                Column(name="region", dtype="string"),
+                Column(name="customer_name", dtype="string"),
+            )
+        ),
+        rows=(
+            {
+                "customer_id": 1,
+                "region": "east",
+                "customer_name": "Alpha",
+            },
+            {
+                "customer_id": 1,
+                "region": "east",
+                "customer_name": "Alpha",
+            },
+            {
+                "customer_id": 2,
+                "region": "west",
+                "customer_name": "Beta",
+            },
+            {
+                "customer_id": 3,
+                "region": "north",
+                "customer_name": "Gamma",
+            },
+        ),
+    )
+
+
+def join_right_table() -> Table:
+    return Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="customer_id", dtype="integer"),
+                Column(name="amount", dtype="number", nullable=True),
+                Column(name="segment", dtype="string"),
+            )
+        ),
+        rows=(
+            {
+                "customer_id": 1,
+                "amount": 10.0,
+                "segment": "industrial",
+            },
+            {
+                "customer_id": 1,
+                "amount": 12.5,
+                "segment": "industrial",
+            },
+            {
+                "customer_id": 2,
+                "amount": 5.0,
+                "segment": "commercial",
+            },
+            {
+                "customer_id": 4,
+                "amount": None,
+                "segment": "unknown",
+            },
+        ),
+    )
+
+
+def run_join(
+    tmp_path: Path,
+    config: dict[str, Any],
+    left: Table | None = None,
+    right: Table | None = None,
+) -> Table:
+    outputs = Join().run(
+        config,
+        {
+            "left": (join_left_table() if left is None else left,),
+            "right": (join_right_table() if right is None else right,),
+        },
+        BlockContext(
+            run_id="join-test",
+            node_id="join",
+            workspace_root=tmp_path,
+        ),
+    )
+
+    value = outputs["table"][0]
+    assert isinstance(value, Table)
+    return value
+
+
+def test_join_inner_multiples_duplicate_keys(tmp_path: Path):
+    actual = run_join(
+        tmp_path,
+        {
+            "left_on": ["customer_id"],
+            "right_on": ["customer_id"],
+            "how": "inner",
+            "cardinality": "many_to_many",
+        },
+    )
+
+    assert actual.rows == (
+        {
+            "customer_id": 1,
+            "region": "east",
+            "customer_name": "Alpha",
+            "amount": 10.0,
+            "segment": "industrial",
+        },
+        {
+            "customer_id": 1,
+            "region": "east",
+            "customer_name": "Alpha",
+            "amount": 12.5,
+            "segment": "industrial",
+        },
+        {
+            "customer_id": 1,
+            "region": "east",
+            "customer_name": "Alpha",
+            "amount": 10.0,
+            "segment": "industrial",
+        },
+        {
+            "customer_id": 1,
+            "region": "east",
+            "customer_name": "Alpha",
+            "amount": 12.5,
+            "segment": "industrial",
+        },
+        {
+            "customer_id": 2,
+            "region": "west",
+            "customer_name": "Beta",
+            "amount": 5.0,
+            "segment": "commercial",
+        },
+    )
+
+    assert actual.data_schema.columns == (
+        Column(name="customer_id", dtype="integer"),
+        Column(name="region", dtype="string"),
+        Column(name="customer_name", dtype="string"),
+        Column(name="amount", dtype="number", nullable=True),
+        Column(name="segment", dtype="string"),
+    )
+
+
+def test_join_left_preserves_unmatched_left_rows(tmp_path: Path):
+    actual = run_join(
+        tmp_path,
+        {
+            "left_on": ["customer_id"],
+            "right_on": ["customer_id"],
+            "how": "left",
+            "cardinality": "many_to_many",
+        },
+    )
+
+    assert actual.rows[-1] == {
+        "customer_id": 3,
+        "region": "north",
+        "customer_name": "Gamma",
+        "amount": None,
+        "segment": None,
+    }
+
+    amount_column = next(
+        column for column in actual.data_schema.columns if column.name == "amount"
+    )
+    segment_column = next(
+        column for column in actual.data_schema.columns if column.name == "segment"
+    )
+
+    assert amount_column.nullable
+    assert segment_column.nullable
+
+
+def test_join_rejects_missing_key(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_join(
+            tmp_path,
+            {
+                "left_on": ["missing"],
+                "right_on": ["customer_id"],
+                "how": "inner",
+                "cardinality": "many_to_many",
+            },
+        )
+
+    assert error.value.failure.code == "missing_column"
+
+
+def test_join_rejects_mismatched_key_lengths(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_join(
+            tmp_path,
+            {
+                "left_on": ["customer_id", "region"],
+                "right_on": ["customer_id"],
+                "how": "inner",
+                "cardinality": "many_to_many",
+            },
+        )
+
+    assert error.value.failure.code == "invalid_config"
+
+
+def test_join_rejects_invalid_one_to_one_cardinality(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_join(
+            tmp_path,
+            {
+                "left_on": ["customer_id"],
+                "right_on": ["customer_id"],
+                "how": "inner",
+                "cardinality": "one_to_one",
+            },
+        )
+
+    assert error.value.failure.code == "invalid_cardinality"
+
+
+def test_join_rejects_duplicate_output_columns(tmp_path: Path):
+    right = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="customer_id", dtype="integer"),
+                Column(name="region", dtype="string"),
+            )
+        ),
+        rows=(
+            {
+                "customer_id": 1,
+                "region": "duplicate",
+            },
+        ),
+    )
+
+    with pytest.raises(BlockError) as error:
+        run_join(
+            tmp_path,
+            {
+                "left_on": ["customer_id"],
+                "right_on": ["customer_id"],
+                "how": "inner",
+                "cardinality": "many_to_many",
+            },
+            right=right,
+        )
+
+    assert error.value.failure.code == "duplicate_column"
+
+
+def test_join_rejects_mismatched_key_types(tmp_path: Path):
+    right = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="customer_id", dtype="string"),
+                Column(name="amount", dtype="number"),
+            )
+        ),
+        rows=(
+            {
+                "customer_id": "1",
+                "amount": 10.0,
+            },
+        ),
+    )
+
+    with pytest.raises(BlockError) as error:
+        run_join(
+            tmp_path,
+            {
+                "left_on": ["customer_id"],
+                "right_on": ["customer_id"],
+                "how": "inner",
+                "cardinality": "many_to_many",
+            },
+            right=right,
+        )
+
+    assert error.value.failure.code == "join_key_type_mismatch"
