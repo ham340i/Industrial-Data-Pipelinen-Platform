@@ -443,6 +443,63 @@ class SortColumn(BlockConfig):
 class SortConfig(BlockConfig):
     columns: list[SortColumn] = Field(min_length=1, max_length=100)
 
+    @model_validator(mode="after")
+    def unique_columns(self) -> SortConfig:
+        checked_names([column.column for column in self.columns])
+        return self
+
+
+class Sort(Block[SortConfig]):
+    config_model = SortConfig
+    descriptor = BlockDescriptor(
+        **descriptor_values("transform.sort", "Sort", "transform"),
+        inputs=(TABLE_PORT,),
+        outputs=(TABLE_PORT,),
+    )
+
+    def _execute(
+        self,
+        config: SortConfig,
+        inputs: PortValues,
+        context: BlockContext,
+    ) -> PortValues:
+        table = input_table(inputs)
+        require_columns(
+            table,
+            [column.column for column in config.columns],
+        )
+
+        rows = list(table.rows)
+
+        # Python's sort is stable. Applying each configured key from
+        # right-to-left gives deterministic multi-column sorting while
+        # allowing null order to be independent of sort direction.
+        for sort_column in reversed(config.columns):
+            name = sort_column.column
+            nulls_last = sort_column.nulls_last
+            descending = sort_column.descending
+
+            non_null_rows = [row for row in rows if row[name] is not None]
+            null_rows = [row for row in rows if row[name] is None]
+
+            non_null_rows.sort(
+                key=lambda row: row[name],
+                reverse=descending,
+            )
+
+            rows = (
+                non_null_rows + null_rows if nulls_last else null_rows + non_null_rows
+            )
+
+        return {
+            "table": (
+                Table(
+                    data_schema=table.data_schema,
+                    rows=tuple(rows),
+                ),
+            )
+        }
+
 
 class Aggregate(Block[AggregateConfig]):
     config_model = AggregateConfig

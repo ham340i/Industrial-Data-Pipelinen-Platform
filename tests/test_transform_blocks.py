@@ -15,6 +15,7 @@ from app.blocks.transforms import (
     Join,
     RenameColumns,
     SelectColumns,
+    Sort,
 )
 from tests.test_file_blocks import run
 
@@ -721,6 +722,252 @@ def test_aggregate_rejects_duplicate_output_names(tmp_path: Path):
                 ],
             },
             aggregate_table(),
+        )
+
+    assert error.value.failure.code == "invalid_config"
+
+
+def run_sort(
+    tmp_path: Path,
+    config: dict[str, Any],
+    table: Table,
+) -> Table:
+    outputs = Sort().run(
+        config,
+        {"table": (table,)},
+        BlockContext(
+            run_id="sort-test",
+            node_id="sort",
+            workspace_root=tmp_path,
+        ),
+    )
+
+    value = outputs["table"][0]
+    assert isinstance(value, Table)
+    return value
+
+
+def sort_table() -> Table:
+    return Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="priority", dtype="integer", nullable=True),
+                Column(name="sequence", dtype="integer"),
+                Column(name="label", dtype="string"),
+            )
+        ),
+        rows=(
+            {
+                "priority": None,
+                "sequence": 1,
+                "label": "null-first",
+            },
+            {
+                "priority": 1,
+                "sequence": 2,
+                "label": "first",
+            },
+            {
+                "priority": 1,
+                "sequence": 3,
+                "label": "second",
+            },
+            {
+                "priority": None,
+                "sequence": 4,
+                "label": "null-second",
+            },
+        ),
+    )
+
+
+def test_sort_is_stable_and_places_nulls_last(tmp_path: Path):
+    actual = run_sort(
+        tmp_path,
+        {
+            "columns": [
+                {
+                    "column": "priority",
+                    "descending": False,
+                    "nulls_last": True,
+                },
+            ],
+        },
+        sort_table(),
+    )
+
+    assert actual.rows == (
+        {
+            "priority": 1,
+            "sequence": 2,
+            "label": "first",
+        },
+        {
+            "priority": 1,
+            "sequence": 3,
+            "label": "second",
+        },
+        {
+            "priority": None,
+            "sequence": 1,
+            "label": "null-first",
+        },
+        {
+            "priority": None,
+            "sequence": 4,
+            "label": "null-second",
+        },
+    )
+
+    assert actual.data_schema == sort_table().data_schema
+
+
+def test_sort_supports_descending_nulls_first(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="value", dtype="integer", nullable=True),)
+        ),
+        rows=(
+            {"value": 1},
+            {"value": None},
+            {"value": 3},
+            {"value": 2},
+        ),
+    )
+
+    actual = run_sort(
+        tmp_path,
+        {
+            "columns": [
+                {
+                    "column": "value",
+                    "descending": True,
+                    "nulls_last": False,
+                },
+            ],
+        },
+        source,
+    )
+
+    assert actual.rows == (
+        {"value": None},
+        {"value": 3},
+        {"value": 2},
+        {"value": 1},
+    )
+
+
+def test_sort_supports_multiple_columns(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="group", dtype="string"),
+                Column(name="value", dtype="integer"),
+                Column(name="sequence", dtype="integer"),
+            )
+        ),
+        rows=(
+            {"group": "b", "value": 1, "sequence": 1},
+            {"group": "a", "value": 2, "sequence": 2},
+            {"group": "a", "value": 1, "sequence": 3},
+            {"group": "a", "value": 1, "sequence": 4},
+        ),
+    )
+
+    actual = run_sort(
+        tmp_path,
+        {
+            "columns": [
+                {
+                    "column": "group",
+                    "descending": False,
+                    "nulls_last": True,
+                },
+                {
+                    "column": "value",
+                    "descending": True,
+                    "nulls_last": True,
+                },
+            ],
+        },
+        source,
+    )
+
+    assert actual.rows == (
+        {"group": "a", "value": 2, "sequence": 2},
+        {"group": "a", "value": 1, "sequence": 3},
+        {"group": "a", "value": 1, "sequence": 4},
+        {"group": "b", "value": 1, "sequence": 1},
+    )
+
+
+def test_sort_empty_input_preserves_schema(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="value", dtype="integer", nullable=True),
+                Column(name="label", dtype="string"),
+            )
+        ),
+        rows=(),
+    )
+
+    actual = run_sort(
+        tmp_path,
+        {
+            "columns": [
+                {
+                    "column": "value",
+                    "descending": False,
+                    "nulls_last": True,
+                },
+            ],
+        },
+        source,
+    )
+
+    assert actual.rows == ()
+    assert actual.data_schema == source.data_schema
+
+
+def test_sort_rejects_missing_column(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_sort(
+            tmp_path,
+            {
+                "columns": [
+                    {
+                        "column": "missing",
+                        "descending": False,
+                        "nulls_last": True,
+                    },
+                ],
+            },
+            sort_table(),
+        )
+
+    assert error.value.failure.code == "missing_column"
+
+
+def test_sort_rejects_duplicate_columns(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_sort(
+            tmp_path,
+            {
+                "columns": [
+                    {
+                        "column": "priority",
+                        "descending": False,
+                        "nulls_last": True,
+                    },
+                    {
+                        "column": "priority",
+                        "descending": True,
+                        "nulls_last": False,
+                    },
+                ],
+            },
+            sort_table(),
         )
 
     assert error.value.failure.code == "invalid_config"

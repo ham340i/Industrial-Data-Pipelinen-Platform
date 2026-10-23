@@ -13,6 +13,7 @@ from app.blocks.transforms import (
     Join,
     RenameColumns,
     SelectColumns,
+    Sort,
 )
 
 router = APIRouter(prefix="/api/v1/blocks", tags=["blocks"])
@@ -28,6 +29,7 @@ for block in (
     Cast(),
     Join(),
     Aggregate(),
+    Sort(),
     CsvSink(),
     ParquetSink(),
 ):
