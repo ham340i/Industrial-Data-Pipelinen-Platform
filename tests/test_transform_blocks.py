@@ -9,6 +9,7 @@ from app.blocks.context import BlockContext
 from app.blocks.contracts import Column, DataSchema, Table
 from app.blocks.errors import BlockError
 from app.blocks.transforms import (
+    Aggregate,
     Cast,
     Filter,
     Join,
@@ -523,3 +524,203 @@ def test_join_rejects_mismatched_key_types(tmp_path: Path):
         )
 
     assert error.value.failure.code == "join_key_type_mismatch"
+
+
+def run_aggregate(
+    tmp_path: Path,
+    config: dict[str, Any],
+    table: Table,
+) -> Table:
+    outputs = Aggregate().run(
+        config,
+        {"table": (table,)},
+        BlockContext(
+            run_id="aggregate-test",
+            node_id="aggregate",
+            workspace_root=tmp_path,
+        ),
+    )
+
+    value = outputs["table"][0]
+    assert isinstance(value, Table)
+    return value
+
+
+def aggregate_table() -> Table:
+    return Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="region", dtype="string"),
+                Column(name="amount", dtype="number", nullable=True),
+                Column(name="units", dtype="integer"),
+            )
+        ),
+        rows=(
+            {"region": "east", "amount": 10.0, "units": 2},
+            {"region": "east", "amount": 12.5, "units": 3},
+            {"region": "west", "amount": 5.0, "units": 1},
+            {"region": "west", "amount": None, "units": 4},
+        ),
+    )
+
+
+def test_aggregate_grouped_sum_and_count(tmp_path: Path):
+    actual = run_aggregate(
+        tmp_path,
+        {
+            "group_by": ["region"],
+            "operations": [
+                {
+                    "column": "amount",
+                    "function": "sum",
+                    "output_name": "amount_sum",
+                },
+                {
+                    "column": "amount",
+                    "function": "count",
+                    "output_name": "amount_count",
+                },
+            ],
+        },
+        aggregate_table(),
+    )
+
+    assert actual.rows == (
+        {
+            "region": "east",
+            "amount_sum": 22.5,
+            "amount_count": 2,
+        },
+        {
+            "region": "west",
+            "amount_sum": 5.0,
+            "amount_count": 1,
+        },
+    )
+
+    assert [column.name for column in actual.data_schema.columns] == [
+        "region",
+        "amount_sum",
+        "amount_count",
+    ]
+
+
+def test_aggregate_mean_ignores_null_values(tmp_path: Path):
+    actual = run_aggregate(
+        tmp_path,
+        {
+            "group_by": ["region"],
+            "operations": [
+                {
+                    "column": "amount",
+                    "function": "mean",
+                    "output_name": "amount_mean",
+                },
+            ],
+        },
+        aggregate_table(),
+    )
+
+    assert actual.rows == (
+        {"region": "east", "amount_mean": 11.25},
+        {"region": "west", "amount_mean": 5.0},
+    )
+
+
+def test_aggregate_empty_input_preserves_schema(tmp_path: Path):
+    source = Table(
+        data_schema=aggregate_table().data_schema,
+        rows=(),
+    )
+
+    actual = run_aggregate(
+        tmp_path,
+        {
+            "group_by": ["region"],
+            "operations": [
+                {
+                    "column": "amount",
+                    "function": "sum",
+                    "output_name": "amount_sum",
+                },
+                {
+                    "column": "units",
+                    "function": "count",
+                    "output_name": "units_count",
+                },
+            ],
+        },
+        source,
+    )
+
+    assert actual.rows == ()
+    assert [column.name for column in actual.data_schema.columns] == [
+        "region",
+        "amount_sum",
+        "units_count",
+    ]
+
+
+def test_aggregate_rejects_missing_group_column(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_aggregate(
+            tmp_path,
+            {
+                "group_by": ["missing"],
+                "operations": [
+                    {
+                        "column": "amount",
+                        "function": "sum",
+                        "output_name": "amount_sum",
+                    },
+                ],
+            },
+            aggregate_table(),
+        )
+
+    assert error.value.failure.code == "missing_column"
+
+
+def test_aggregate_rejects_missing_operation_column(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_aggregate(
+            tmp_path,
+            {
+                "group_by": ["region"],
+                "operations": [
+                    {
+                        "column": "missing",
+                        "function": "sum",
+                        "output_name": "total",
+                    },
+                ],
+            },
+            aggregate_table(),
+        )
+
+    assert error.value.failure.code == "missing_column"
+
+
+def test_aggregate_rejects_duplicate_output_names(tmp_path: Path):
+    with pytest.raises(BlockError) as error:
+        run_aggregate(
+            tmp_path,
+            {
+                "group_by": ["region"],
+                "operations": [
+                    {
+                        "column": "amount",
+                        "function": "sum",
+                        "output_name": "value",
+                    },
+                    {
+                        "column": "units",
+                        "function": "count",
+                        "output_name": "value",
+                    },
+                ],
+            },
+            aggregate_table(),
+        )
+
+    assert error.value.failure.code == "invalid_config"

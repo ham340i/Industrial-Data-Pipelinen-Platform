@@ -1,4 +1,4 @@
-"""Deterministic, structured Polars column operations (#18)."""
+"""Deterministic, structured Polars transform operations."""
 
 from __future__ import annotations
 
@@ -99,12 +99,14 @@ class RenameColumns(Block[RenameConfig]):
         require_columns(table, config.columns)
         mapping = dict(zip(config.columns, config.names, strict=True))
         names = [mapping.get(c.name, c.name) for c in table.data_schema.columns]
+
         if len(set(names)) != len(names):
             raise BlockError(
                 "duplicate_column",
                 "Renaming would create duplicate columns.",
                 field="names",
             )
+
         schema = DataSchema(
             columns=tuple(
                 Column(
@@ -115,6 +117,7 @@ class RenameColumns(Block[RenameConfig]):
                 for c in table.data_schema.columns
             )
         )
+
         return {"table": (from_frame(to_frame(table).rename(mapping), schema),)}
 
 
@@ -160,6 +163,7 @@ class Filter(Block[FilterConfig]):
                     if column.dtype == "string"
                     else json.loads(config.value_text)
                 )
+
                 expected = {
                     "string": (str,),
                     "integer": (int,),
@@ -233,8 +237,10 @@ class JoinConfig(BlockConfig):
     def validate_keys(self) -> JoinConfig:
         checked_names(self.left_on)
         checked_names(self.right_on)
+
         if len(self.left_on) != len(self.right_on):
             raise ValueError("Join key lists must have matching lengths")
+
         return self
 
 
@@ -249,26 +255,32 @@ class Join(Block[JoinConfig]):
         outputs=(
             Port(
                 name="table",
-                data_schema=DataSchema(columns=(), allow_extra_columns=True),
+                data_schema=DataSchema(
+                    columns=(),
+                    allow_extra_columns=True,
+                ),
             ),
         ),
     )
 
     @staticmethod
-    def _key_tuple(row: dict[str, object], columns: list[str]) -> tuple[object, ...]:
+    def _key_tuple(
+        row: dict[str, object],
+        columns: list[str],
+    ) -> tuple[object, ...]:
         return tuple(row[column] for column in columns)
 
     @classmethod
     def _duplicate_keys(
-        cls, table: Table, columns: list[str]
+        cls,
+        table: Table,
+        columns: list[str],
     ) -> set[tuple[object, ...]]:
         counts: dict[tuple[object, ...], int] = {}
 
         for row in table.rows:
             key = cls._key_tuple(row, columns)
 
-            # Polars joins do not match null keys by default. Do not count
-            # null-containing keys for one-to-one/cardinality validation.
             if any(value is None for value in key):
                 continue
 
@@ -281,7 +293,10 @@ class Join(Block[JoinConfig]):
         return {column.name: column for column in table.data_schema.columns}
 
     def _execute(
-        self, config: JoinConfig, inputs: PortValues, context: BlockContext
+        self,
+        config: JoinConfig,
+        inputs: PortValues,
+        context: BlockContext,
     ) -> PortValues:
         left = inputs["left"][0]
         right = inputs["right"][0]
@@ -294,7 +309,11 @@ class Join(Block[JoinConfig]):
         left_columns = self._column_map(left)
         right_columns = self._column_map(right)
 
-        for left_name, right_name in zip(config.left_on, config.right_on, strict=True):
+        for left_name, right_name in zip(
+            config.left_on,
+            config.right_on,
+            strict=True,
+        ):
             if left_columns[left_name].dtype != right_columns[right_name].dtype:
                 raise BlockError(
                     "join_key_type_mismatch",
@@ -368,23 +387,21 @@ class Join(Block[JoinConfig]):
         output_columns: list[Column] = []
 
         for column in left.data_schema.columns:
-            nullable = column.nullable or config.how == "outer"
             output_columns.append(
                 Column(
                     name=column.name,
                     dtype=column.dtype,
-                    nullable=nullable,
+                    nullable=column.nullable or config.how == "outer",
                 )
             )
 
         for name in right_value_names:
             column = right_columns[name]
-            nullable = column.nullable or config.how in ("left", "outer")
             output_columns.append(
                 Column(
                     name=name,
                     dtype=column.dtype,
-                    nullable=nullable,
+                    nullable=column.nullable or config.how in ("left", "outer"),
                 )
             )
 
@@ -427,6 +444,150 @@ class SortConfig(BlockConfig):
     columns: list[SortColumn] = Field(min_length=1, max_length=100)
 
 
+class Aggregate(Block[AggregateConfig]):
+    config_model = AggregateConfig
+    descriptor = BlockDescriptor(
+        **descriptor_values("transform.aggregate", "Aggregate", "transform"),
+        inputs=(TABLE_PORT,),
+        outputs=(
+            Port(
+                name="table",
+                data_schema=DataSchema(
+                    columns=(),
+                    allow_extra_columns=True,
+                ),
+            ),
+        ),
+    )
+
+    @staticmethod
+    def _column_map(table: Table) -> dict[str, Column]:
+        return {column.name: column for column in table.data_schema.columns}
+
+    @staticmethod
+    def _operation_dtype(
+        source: Column,
+        function: str,
+    ) -> Literal["string", "integer", "number", "boolean"]:
+        if function == "count":
+            return "integer"
+
+        if function == "mean":
+            return "number"
+
+        return source.dtype
+
+    @staticmethod
+    def _operation_nullable(
+        source: Column,
+        function: str,
+        has_group_by: bool,
+    ) -> bool:
+        if function == "count":
+            return False
+
+        return source.nullable or not has_group_by
+
+    def _execute(
+        self,
+        config: AggregateConfig,
+        inputs: PortValues,
+        context: BlockContext,
+    ) -> PortValues:
+        table = input_table(inputs)
+        columns = self._column_map(table)
+
+        require_columns(table, config.group_by)
+        require_columns(
+            table,
+            [operation.column for operation in config.operations],
+        )
+
+        group_names = set(config.group_by)
+        output_names = [operation.output_name for operation in config.operations]
+
+        if group_names.intersection(output_names):
+            raise BlockError(
+                "duplicate_column",
+                "Aggregate output names cannot match group columns.",
+                field="operations",
+            )
+
+        expressions: list[pl.Expr] = []
+
+        for operation in config.operations:
+            source = columns[operation.column]
+
+            if operation.function == "count":
+                expression = pl.col(operation.column).count()
+            elif operation.function == "sum":
+                if source.dtype not in ("integer", "number"):
+                    raise BlockError(
+                        "invalid_aggregate",
+                        "Sum requires an integer or number column.",
+                        field=operation.column,
+                    )
+                expression = pl.col(operation.column).sum()
+            elif operation.function == "min":
+                expression = pl.col(operation.column).min()
+            elif operation.function == "max":
+                expression = pl.col(operation.column).max()
+            elif operation.function == "mean":
+                if source.dtype not in ("integer", "number"):
+                    raise BlockError(
+                        "invalid_aggregate",
+                        "Mean requires an integer or number column.",
+                        field=operation.column,
+                    )
+                expression = pl.col(operation.column).mean()
+            else:
+                raise BlockError(
+                    "invalid_aggregate",
+                    "The aggregate operation is unsupported.",
+                    field="operations",
+                )
+
+            expressions.append(expression.alias(operation.output_name))
+
+        frame = to_frame(table)
+
+        try:
+            if config.group_by:
+                result = frame.group_by(
+                    config.group_by,
+                    maintain_order=True,
+                ).agg(expressions)
+            else:
+                result = frame.select(expressions)
+        except Exception:
+            raise BlockError(
+                "aggregate_failed",
+                "The configured aggregate operations could not be applied.",
+            ) from None
+
+        output_columns = [columns[name] for name in config.group_by]
+
+        for operation in config.operations:
+            source = columns[operation.column]
+            output_columns.append(
+                Column(
+                    name=operation.output_name,
+                    dtype=self._operation_dtype(
+                        source,
+                        operation.function,
+                    ),
+                    nullable=self._operation_nullable(
+                        source,
+                        operation.function,
+                        bool(config.group_by),
+                    ),
+                )
+            )
+
+        schema = DataSchema(columns=tuple(output_columns))
+        return {"table": (from_frame(result, schema),)}
+
+
 class Cast(Block[CastConfig]):
     config_model = CastConfig
     descriptor = BlockDescriptor(
@@ -436,23 +597,32 @@ class Cast(Block[CastConfig]):
     )
 
     def _execute(
-        self, config: CastConfig, inputs: PortValues, context: BlockContext
+        self,
+        config: CastConfig,
+        inputs: PortValues,
+        context: BlockContext,
     ) -> PortValues:
         table = input_table(inputs)
         require_columns(table, [config.column])
+
         frame = cast_column(
-            to_frame(table), config.column, config.dtype, config.on_error
+            to_frame(table),
+            config.column,
+            config.dtype,
+            config.on_error,
         )
+
         schema = DataSchema(
             columns=tuple(
                 Column(
-                    name=c.name,
+                    name=column.name,
                     dtype=config.dtype,
-                    nullable=c.nullable or config.on_error == "null",
+                    nullable=column.nullable or config.on_error == "null",
                 )
-                if c.name == config.column
-                else c
-                for c in table.data_schema.columns
+                if column.name == config.column
+                else column
+                for column in table.data_schema.columns
             )
         )
+
         return {"table": (from_frame(frame, schema),)}
