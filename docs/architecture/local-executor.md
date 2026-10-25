@@ -25,8 +25,8 @@ table values, configuration, resource paths or raw exception text. Runtime
 frames and resource resolvers are never serialized into pipeline definitions.
 
 The runtime resolves injected blocks; catalog implementations from #16/#18/#20
-must meet the same SDK contract. Production catalog integration remains dependent
-on those implementations. API execution, persisted telemetry, artifact governance
+must meet the same SDK contract. The merged CSV/Select/Parquet catalog is covered by an integration test; the
+executor propagates its workspace root policy through the block context. API execution, persisted telemetry, artifact governance
 and UI integration belong to #29, #27, #28 and the Iteration 4 workflow.
 
 Design and implementation assistance: OpenAI Codex. Designated reviewer
