@@ -28,6 +28,7 @@ class BlockContext:
     log_sink: Callable[[BlockEvent], None] | None = field(default=None, repr=False)
     resolve_resource: Callable[[str], Path] | None = field(default=None, repr=False)
     workspace_root: Path | None = field(default=None, repr=False)
+    is_cancelled: Callable[[], bool] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.workspace_root is not None and not isinstance(
@@ -45,9 +46,16 @@ class BlockContext:
             )
         if any(
             service is not None and not callable(service)
-            for service in (self.log_sink, self.resolve_resource)
+            for service in (self.log_sink, self.resolve_resource, self.is_cancelled)
         ):
             raise BlockError("invalid_context", "Context services must be callable.")
+
+    def check_cancelled(self) -> None:
+        """Cooperative checkpoint for long-running blocks."""
+        if self.is_cancelled is not None and self.is_cancelled():
+            raise BlockError(
+                "cancelled", "Execution was cancelled.", node_id=self.node_id
+            )
 
     def emit(self, event: BlockEvent) -> None:
         if self.log_sink is not None:

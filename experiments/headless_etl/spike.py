@@ -9,8 +9,8 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 import polars as pl
-import pyarrow as pa
-import pyarrow.parquet as pq
+import pyarrow as pa  # type: ignore[import-untyped]
+import pyarrow.parquet as pq  # type: ignore[import-untyped]
 from pydantic import Field, field_validator
 
 from app.blocks.base import Block
@@ -23,6 +23,7 @@ from app.blocks.contracts import (
     NonBlank,
     Port,
     PortValues,
+    Scalar,
     Table,
 )
 from app.blocks.errors import BlockError
@@ -81,7 +82,7 @@ class CsvSource(Block[ResourceConfig]):
                 or len(set(header)) != len(header)
             ):
                 raise BlockError("invalid_csv", "CSV requires unique nonblank headers.")
-            rows = []
+            rows: list[dict[str, Scalar]] = []
             for values in reader:
                 if len(values) != len(header):
                     raise BlockError(
