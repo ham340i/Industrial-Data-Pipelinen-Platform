@@ -9,8 +9,8 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 import polars as pl
-import pyarrow as pa  # type: ignore[import-untyped]
-import pyarrow.parquet as pq  # type: ignore[import-untyped]
+import pyarrow as pa
+import pyarrow.parquet as pq
 from pydantic import Field, field_validator
 
 from app.blocks.base import Block
