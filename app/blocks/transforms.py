@@ -36,6 +36,7 @@ from app.blocks.tabular import (
 INT64_MIN = -(2**63)
 INT64_MAX = 2**63 - 1
 
+
 def input_table(inputs: PortValues) -> Table:
     table = inputs["table"][0]
     assert isinstance(table, Table)
@@ -45,7 +46,8 @@ def input_table(inputs: PortValues) -> Table:
 def require_columns(table: Table, names: list[str]) -> None:
     if set(names) - {column.name for column in table.data_schema.columns}:
         raise BlockError("missing_column", "A configured column is unavailable.")
-    
+
+
 def check_integer_sum_overflow(
     table: Table,
     column: str,
@@ -397,7 +399,7 @@ class Join(Block[JoinConfig]):
                 "The configured tables could not be joined.",
             ) from None
 
-                # A full/outer join can produce a right-only row. In that case,
+        # A full/outer join can produce a right-only row. In that case,
         # Polars leaves the retained left key null and stores the right key
         # separately. Coalesce each key pair so right-only keys are preserved.
         if config.how == "outer":
@@ -409,9 +411,7 @@ class Join(Block[JoinConfig]):
                 strict=True,
             ):
                 right_joined_name = (
-                    f"{right_name}__right"
-                    if left_name == right_name
-                    else right_name
+                    f"{right_name}__right" if left_name == right_name else right_name
                 )
 
                 if right_joined_name not in frame.columns:
