@@ -62,6 +62,13 @@ def check_integer_sum_overflow(
         if value is None:
             continue
 
+        if not isinstance(value, int):
+            raise BlockError(
+                "aggregate_failed",
+                "Integer sum received a non-integer value.",
+                field=column,
+            )
+
         key = tuple(row[name] for name in group_by) if group_by else ()
         totals[key] = totals.get(key, 0) + value
 
