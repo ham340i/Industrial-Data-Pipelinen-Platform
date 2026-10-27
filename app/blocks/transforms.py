@@ -33,6 +33,8 @@ from app.blocks.tabular import (
     to_frame,
 )
 
+INT64_MIN = -(2**63)
+INT64_MAX = 2**63 - 1
 
 def input_table(inputs: PortValues) -> Table:
     table = inputs["table"][0]
@@ -43,6 +45,30 @@ def input_table(inputs: PortValues) -> Table:
 def require_columns(table: Table, names: list[str]) -> None:
     if set(names) - {column.name for column in table.data_schema.columns}:
         raise BlockError("missing_column", "A configured column is unavailable.")
+    
+def check_integer_sum_overflow(
+    table: Table,
+    column: str,
+    group_by: list[str],
+    output_name: str,
+) -> None:
+    totals: dict[tuple[object, ...], int] = {}
+
+    for row in table.rows:
+        value = row[column]
+
+        if value is None:
+            continue
+
+        key = tuple(row[name] for name in group_by) if group_by else ()
+        totals[key] = totals.get(key, 0) + value
+
+    if any(total < INT64_MIN or total > INT64_MAX for total in totals.values()):
+        raise BlockError(
+            "aggregate_overflow",
+            "The integer aggregate result is outside the supported range.",
+            field=output_name,
+        )
 
 
 class SelectConfig(BlockConfig):
@@ -371,6 +397,47 @@ class Join(Block[JoinConfig]):
                 "The configured tables could not be joined.",
             ) from None
 
+                # A full/outer join can produce a right-only row. In that case,
+        # Polars leaves the retained left key null and stores the right key
+        # separately. Coalesce each key pair so right-only keys are preserved.
+        if config.how == "outer":
+            coalesced_key_expressions: list[pl.Expr] = []
+
+            for left_name, right_name in zip(
+                config.left_on,
+                config.right_on,
+                strict=True,
+            ):
+                right_joined_name = (
+                    f"{right_name}__right"
+                    if left_name == right_name
+                    else right_name
+                )
+
+                if right_joined_name not in frame.columns:
+                    raise BlockError(
+                        "join_failed",
+                        "The joined key columns could not be constructed.",
+                        field=right_name,
+                    )
+
+                coalesced_key_expressions.append(
+                    pl.coalesce(
+                        [
+                            pl.col(left_name),
+                            pl.col(right_joined_name),
+                        ]
+                    ).alias(left_name)
+                )
+
+            try:
+                frame = frame.with_columns(coalesced_key_expressions)
+            except Exception:
+                raise BlockError(
+                    "join_failed",
+                    "The joined key columns could not be coalesced.",
+                ) from None
+
         output_names = list(left_columns)
         right_value_names = [
             name for name in right_columns if name not in right_key_names
@@ -585,6 +652,15 @@ class Aggregate(Block[AggregateConfig]):
                         "Sum requires an integer or number column.",
                         field=operation.column,
                     )
+
+                if source.dtype == "integer":
+                    check_integer_sum_overflow(
+                        table,
+                        operation.column,
+                        config.group_by,
+                        operation.output_name,
+                    )
+
                 expression = pl.col(operation.column).sum()
             elif operation.function == "min":
                 expression = pl.col(operation.column).min()

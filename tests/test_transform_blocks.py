@@ -526,6 +526,147 @@ def test_join_rejects_mismatched_key_types(tmp_path: Path):
 
     assert error.value.failure.code == "join_key_type_mismatch"
 
+def test_join_outer_preserves_right_only_key(tmp_path: Path):
+    left = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="id", dtype="integer"),)
+        ),
+        rows=({"id": 1},),
+    )
+    right = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="id", dtype="integer"),
+                Column(name="value", dtype="string"),
+            )
+        ),
+        rows=({"id": 2, "value": "right-only"},),
+    )
+
+    actual = run_join(
+        tmp_path,
+        {
+            "left_on": ["id"],
+            "right_on": ["id"],
+            "how": "outer",
+            "cardinality": "many_to_many",
+        },
+        left=left,
+        right=right,
+    )
+
+    assert {row["id"] for row in actual.rows} == {1, 2}
+    assert {row["value"] for row in actual.rows} == {None, "right-only"}
+
+
+def test_join_outer_coalesces_different_key_names(tmp_path: Path):
+    left = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="id", dtype="integer"),)
+        ),
+        rows=({"id": 1},),
+    )
+    right = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="right_id", dtype="integer"),
+                Column(name="value", dtype="string"),
+            )
+        ),
+        rows=({"right_id": 2, "value": "right-only"},),
+    )
+
+    actual = run_join(
+        tmp_path,
+        {
+            "left_on": ["id"],
+            "right_on": ["right_id"],
+            "how": "outer",
+            "cardinality": "many_to_many",
+        },
+        left=left,
+        right=right,
+    )
+
+    assert {row["id"] for row in actual.rows} == {1, 2}
+    assert [column.name for column in actual.data_schema.columns] == [
+        "id",
+        "value",
+    ]
+
+
+def test_join_outer_coalesces_composite_keys(tmp_path: Path):
+    left = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="tenant_id", dtype="integer"),
+                Column(name="record_id", dtype="integer"),
+            )
+        ),
+        rows=({"tenant_id": 1, "record_id": 10},),
+    )
+    right = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="tenant", dtype="integer"),
+                Column(name="record", dtype="integer"),
+                Column(name="value", dtype="string"),
+            )
+        ),
+        rows=({"tenant": 2, "record": 20, "value": "right-only"},),
+    )
+
+    actual = run_join(
+        tmp_path,
+        {
+            "left_on": ["tenant_id", "record_id"],
+            "right_on": ["tenant", "record"],
+            "how": "outer",
+            "cardinality": "many_to_many",
+        },
+        left=left,
+        right=right,
+    )
+
+    assert {
+        (row["tenant_id"], row["record_id"])
+        for row in actual.rows
+    } == {(1, 10), (2, 20)}
+
+
+def test_join_outer_preserves_right_rows_when_left_is_empty(tmp_path: Path):
+    left = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="id", dtype="integer"),)
+        ),
+        rows=(),
+    )
+    right = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="id", dtype="integer"),
+                Column(name="value", dtype="string"),
+            )
+        ),
+        rows=({"id": 2, "value": "right-only"},),
+    )
+
+    actual = run_join(
+        tmp_path,
+        {
+            "left_on": ["id"],
+            "right_on": ["id"],
+            "how": "outer",
+            "cardinality": "many_to_many",
+        },
+        left=left,
+        right=right,
+    )
+
+    assert actual.rows == (
+        {"id": 2, "value": "right-only"},
+    )
+
 
 def run_aggregate(
     tmp_path: Path,
@@ -725,6 +866,120 @@ def test_aggregate_rejects_duplicate_output_names(tmp_path: Path):
         )
 
     assert error.value.failure.code == "invalid_config"
+
+def test_aggregate_rejects_integer_sum_overflow(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="value", dtype="integer"),)
+        ),
+        rows=(
+            {"value": 2**63 - 1},
+            {"value": 1},
+        ),
+    )
+
+    with pytest.raises(BlockError) as error:
+        run_aggregate(
+            tmp_path,
+            {
+                "group_by": [],
+                "operations": [
+                    {
+                        "column": "value",
+                        "function": "sum",
+                        "output_name": "total",
+                    }
+                ],
+            },
+            source,
+        )
+
+    assert error.value.failure.code == "aggregate_overflow"
+
+
+def test_aggregate_rejects_grouped_integer_sum_overflow(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="group", dtype="string"),
+                Column(name="value", dtype="integer"),
+            )
+        ),
+        rows=(
+            {"group": "a", "value": 2**63 - 1},
+            {"group": "a", "value": 1},
+        ),
+    )
+
+    with pytest.raises(BlockError) as error:
+        run_aggregate(
+            tmp_path,
+            {
+                "group_by": ["group"],
+                "operations": [
+                    {
+                        "column": "value",
+                        "function": "sum",
+                        "output_name": "total",
+                    }
+                ],
+            },
+            source,
+        )
+
+    assert error.value.failure.code == "aggregate_overflow"
+
+
+def test_aggregate_accepts_integer_sum_upper_boundary(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="value", dtype="integer"),)
+        ),
+        rows=({"value": 2**63 - 1},),
+    )
+
+    actual = run_aggregate(
+        tmp_path,
+        {
+            "group_by": [],
+            "operations": [
+                {
+                    "column": "value",
+                    "function": "sum",
+                    "output_name": "total",
+                }
+            ],
+        },
+        source,
+    )
+
+    assert actual.rows == ({"total": 2**63 - 1},)
+
+
+def test_aggregate_accepts_integer_sum_lower_boundary(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="value", dtype="integer"),)
+        ),
+        rows=({"value": -(2**63)},),
+    )
+
+    actual = run_aggregate(
+        tmp_path,
+        {
+            "group_by": [],
+            "operations": [
+                {
+                    "column": "value",
+                    "function": "sum",
+                    "output_name": "total",
+                }
+            ],
+        },
+        source,
+    )
+
+    assert actual.rows == ({"total": -(2**63)},)
 
 
 def run_sort(

@@ -126,7 +126,7 @@ Failures include `invalid_config`, `workspace_required`, `unsafe_resource`,
 `schema_required`, `schema_mismatch`, `unsupported_type`, `unsupported_value`,
 `missing_column`, `duplicate_column`, `invalid_filter`, `cast_failed`,
 `join_key_type_mismatch`, `invalid_cardinality`, `join_failed`,
-`invalid_aggregate`, `aggregate_failed`,
+`invalid_aggregate`, `aggregate_overflow`, `aggregate_failed`,
 `output_exists`, `ambiguous_null`, and `write_failed`. The SDK adds node context;
 messages/events omit original exception text and private file locations.
 
