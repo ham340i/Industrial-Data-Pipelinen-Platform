@@ -526,11 +526,10 @@ def test_join_rejects_mismatched_key_types(tmp_path: Path):
 
     assert error.value.failure.code == "join_key_type_mismatch"
 
+
 def test_join_outer_preserves_right_only_key(tmp_path: Path):
     left = Table(
-        data_schema=DataSchema(
-            columns=(Column(name="id", dtype="integer"),)
-        ),
+        data_schema=DataSchema(columns=(Column(name="id", dtype="integer"),)),
         rows=({"id": 1},),
     )
     right = Table(
@@ -561,9 +560,7 @@ def test_join_outer_preserves_right_only_key(tmp_path: Path):
 
 def test_join_outer_coalesces_different_key_names(tmp_path: Path):
     left = Table(
-        data_schema=DataSchema(
-            columns=(Column(name="id", dtype="integer"),)
-        ),
+        data_schema=DataSchema(columns=(Column(name="id", dtype="integer"),)),
         rows=({"id": 1},),
     )
     right = Table(
@@ -628,17 +625,15 @@ def test_join_outer_coalesces_composite_keys(tmp_path: Path):
         right=right,
     )
 
-    assert {
-        (row["tenant_id"], row["record_id"])
-        for row in actual.rows
-    } == {(1, 10), (2, 20)}
+    assert {(row["tenant_id"], row["record_id"]) for row in actual.rows} == {
+        (1, 10),
+        (2, 20),
+    }
 
 
 def test_join_outer_preserves_right_rows_when_left_is_empty(tmp_path: Path):
     left = Table(
-        data_schema=DataSchema(
-            columns=(Column(name="id", dtype="integer"),)
-        ),
+        data_schema=DataSchema(columns=(Column(name="id", dtype="integer"),)),
         rows=(),
     )
     right = Table(
@@ -663,9 +658,7 @@ def test_join_outer_preserves_right_rows_when_left_is_empty(tmp_path: Path):
         right=right,
     )
 
-    assert actual.rows == (
-        {"id": 2, "value": "right-only"},
-    )
+    assert actual.rows == ({"id": 2, "value": "right-only"},)
 
 
 def run_aggregate(
@@ -867,11 +860,10 @@ def test_aggregate_rejects_duplicate_output_names(tmp_path: Path):
 
     assert error.value.failure.code == "invalid_config"
 
+
 def test_aggregate_rejects_integer_sum_overflow(tmp_path: Path):
     source = Table(
-        data_schema=DataSchema(
-            columns=(Column(name="value", dtype="integer"),)
-        ),
+        data_schema=DataSchema(columns=(Column(name="value", dtype="integer"),)),
         rows=(
             {"value": 2**63 - 1},
             {"value": 1},
@@ -932,9 +924,7 @@ def test_aggregate_rejects_grouped_integer_sum_overflow(tmp_path: Path):
 
 def test_aggregate_accepts_integer_sum_upper_boundary(tmp_path: Path):
     source = Table(
-        data_schema=DataSchema(
-            columns=(Column(name="value", dtype="integer"),)
-        ),
+        data_schema=DataSchema(columns=(Column(name="value", dtype="integer"),)),
         rows=({"value": 2**63 - 1},),
     )
 
@@ -958,9 +948,7 @@ def test_aggregate_accepts_integer_sum_upper_boundary(tmp_path: Path):
 
 def test_aggregate_accepts_integer_sum_lower_boundary(tmp_path: Path):
     source = Table(
-        data_schema=DataSchema(
-            columns=(Column(name="value", dtype="integer"),)
-        ),
+        data_schema=DataSchema(columns=(Column(name="value", dtype="integer"),)),
         rows=({"value": -(2**63)},),
     )
 
