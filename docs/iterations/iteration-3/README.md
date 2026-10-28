@@ -102,9 +102,11 @@ this is not an iteration completion claim.
 
 ## Issue #25 quality blocks
 
-Implementation is on `feature/25-data-quality`, stacked on executor PR #70.
+Implementation is on `feature/25-data-quality`, PR #71, targeting `main` after
+executor PR #70 merged on October 25, 2026 (`00d2c91`).
 See [design](../../architecture/data-quality.md), [usage](../../data-quality.md),
 [verification](../../testing/issue-25-data-quality.md) and
 [AI-assisted contribution evidence](../../individual-contributions/Al-Yousef-iteration-3.md).
-Independent student review, main integration and Iteration 4 UI acceptance remain
-pending; this is not an iteration completion claim.
+MarcElHaddad1 submitted review feedback on October 26. Follow-up student approval,
+PR #71's merge and Iteration 4 UI acceptance remain pending; this is not an
+iteration completion claim.

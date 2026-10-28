@@ -80,6 +80,18 @@ def selected(table: Table, config: ColumnSelection) -> list[str]:
     return names
 
 
+def null_rows(table: Table, names: list[str]) -> tuple[int, tuple[int, ...]]:
+    """Count all matching rows while retaining only the first 20 indices."""
+    count = 0
+    indices: list[int] = []
+    for index, row in enumerate(table.rows):
+        if any(row[name] is None for name in names):
+            count += 1
+            if len(indices) < 20:
+                indices.append(index)
+    return count, tuple(indices)
+
+
 class NullHandlingConfig(ColumnSelection):
     policy: Literal["fill", "drop"]
     fill_values: dict[NonBlank, Scalar] = Field(default_factory=dict)
@@ -127,11 +139,7 @@ class NullHandling(Block[NullHandlingConfig]):
                 raise BlockError(
                     "invalid_fill", "Fill values must match declared types."
                 )
-        affected = [
-            i
-            for i, row in enumerate(table.rows)
-            if any(row[name] is None for name in names)
-        ]
+        affected, row_indices = null_rows(table, names)
         if config.policy == "drop":
             rows = tuple(
                 dict(row)
@@ -167,8 +175,8 @@ class NullHandling(Block[NullHandlingConfig]):
                 QualityDiagnostic(
                     code=f"null_{config.policy}",
                     status="pass",
-                    observed=len(affected),
-                    row_indices=tuple(affected[:20]),
+                    observed=affected,
+                    row_indices=row_indices,
                 ),
             ),
         )
@@ -221,17 +229,27 @@ class SchemaValidation(Block[SchemaValidationConfig]):
                         actual_type=actual[name].dtype,
                     )
                 )
+            if actual[name].nullable != column.nullable:
+                diagnostics.append(
+                    QualityDiagnostic(
+                        code="nullability_mismatch",
+                        status=bad,
+                        column=name,
+                        expected_nullable=column.nullable,
+                        actual_nullable=actual[name].nullable,
+                    )
+                )
             if not column.nullable:
-                indices = [i for i, row in enumerate(table.rows) if row[name] is None]
-                if indices:
+                count, row_indices = null_rows(table, [name])
+                if count:
                     diagnostics.append(
                         QualityDiagnostic(
                             code="unexpected_null",
                             status=bad,
                             column=name,
-                            observed=len(indices),
+                            observed=count,
                             maximum=0,
-                            row_indices=tuple(indices[:20]),
+                            row_indices=row_indices,
                         )
                     )
         if not config.allow_extra_columns:
@@ -265,15 +283,15 @@ class NullCheck(Block[NullCheckConfig]):
         table = input_table(inputs)
         diagnostics = []
         for name in selected(table, config):
-            indices = [i for i, row in enumerate(table.rows) if row[name] is None]
+            count, row_indices = null_rows(table, [name])
             diagnostics.append(
                 QualityDiagnostic(
                     code="null_count",
                     column=name,
-                    observed=len(indices),
+                    observed=count,
                     maximum=config.max_nulls,
-                    row_indices=tuple(indices[:20]),
-                    status=status(len(indices) <= config.max_nulls, config.required),
+                    row_indices=row_indices,
+                    status=status(count <= config.max_nulls, config.required),
                 )
             )
         if not diagnostics:

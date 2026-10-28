@@ -20,6 +20,8 @@ class QualityDiagnostic(Contract):
     maximum: int | None = Field(default=None, ge=0)
     expected_type: NonBlank | None = None
     actual_type: NonBlank | None = None
+    expected_nullable: bool | None = None
+    actual_nullable: bool | None = None
     row_indices: tuple[int, ...] = Field(default=(), max_length=20)
 
 

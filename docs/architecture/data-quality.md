@@ -1,14 +1,18 @@
 # Data-quality blocks (#25)
 
-Design recorded before implementation, October 22, 2026. This branch starts
-from current main and stacks on PR #70 for its actual executor integration.
-Student design/code review by MarcElHaddad1 remains pending.
+Design recorded before implementation, October 22, 2026. Initially stacked on
+executor PR #70; that prerequisite merged into `main` on October 25 as `00d2c91`.
+PR #71 now targets `main`. MarcElHaddad1 submitted review comments on October 26;
+follow-up student approval remains pending.
 
 ## Decisions
 
 Four registered implementations use the existing single-table SDK contract:
 Null Handling, Schema Validation (displayed as Validate Schema), Null Check,
 and Row Count. Validation blocks pass the original table through unchanged.
+Schema validation compares exact declared types and nullability, including
+empty tables. Nullability mismatches carry expected and actual booleans;
+non-null expectations additionally report actual null counts and row samples.
 Null Handling explicitly fills selected columns or drops rows with any null
 in selected columns. Empty column selection means all columns. Fill values
 must match declared scalar types; no implicit cast or imputation is performed.
@@ -20,7 +24,9 @@ An unrelated branch may still run under the executor's existing semantics;
 this is a dependency gate, not an atomic transaction over all pipeline sinks.
 
 Diagnostics contain codes, schema names/types, counts, thresholds, and at most
-20 zero-based row indices. They never contain row values or configuration
+20 zero-based row indices. Each scan counts all matches while retaining only
+those 20 samples; auxiliary index storage is independent of the row count.
+They never contain row values or configuration
 fill values. They are carried by quality BlockEvents and by BlockFailure on
 required failures. This reuses the executor's event collection without adding
 an alternate executor or treating observational logging as a validation gate.
@@ -46,5 +52,6 @@ mandatory graph wiring to every quality node, so events/failures are used.
 | Developer/operator/provenance docs | docs/data-quality.md and contribution/testing records | reconcile final behavior and actual results |
 
 UI acceptance is deferred to Iteration 4, as required by the issue. Integration
-on main is gated by PR #70 and both PRs' independent student review. No customer
-or student acceptance is claimed by automated checks.
+on main now depends on PR #71's follow-up student approval, passing checks and
+merge; the executor prerequisite is already merged. No customer or student
+acceptance is claimed by automated checks.

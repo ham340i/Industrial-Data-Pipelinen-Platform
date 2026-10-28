@@ -1,6 +1,7 @@
 """Requirements-derived typed/null/boundary and diagnostic cases for #25."""
 
 import json
+import tracemalloc
 from typing import Any
 
 import pytest
@@ -8,10 +9,16 @@ from fastapi.testclient import TestClient
 
 from app.blocks.catalog import registry
 from app.blocks.context import BlockContext, BlockEvent
-from app.blocks.contracts import Column, DataSchema, Table, PortValues
+from app.blocks.contracts import Column, DataSchema, Table, PortValues, Scalar
 from app.blocks.tabular import DType
 from app.blocks.errors import BlockError
-from app.blocks.quality import NullCheck, NullHandling, RowCount, SchemaValidation
+from app.blocks.quality import (
+    NullCheck,
+    NullHandling,
+    RowCount,
+    SchemaValidation,
+    null_rows,
+)
 from app.blocks.registry import RegisteredBlock
 from app.main import app
 
@@ -220,6 +227,7 @@ def test_schema_checks_metadata_values_and_extra_columns():
     assert [d.code for d in exc.value.failure.diagnostics] == [
         "type_mismatch",
         "missing_column",
+        "nullability_mismatch",
         "unexpected_null",
     ]
     assert exc.value.failure.node_id == "quality"
@@ -241,7 +249,7 @@ def test_schema_checks_metadata_values_and_extra_columns():
         )
         == sample()
     )
-    # Nullable declaration can contain zero actual nulls; no coercion is needed.
+    # Matching nullable declarations pass even when current rows contain no nulls.
     table = sample(({"name": "a", "value": 2},))
     assert (
         run(
@@ -249,7 +257,7 @@ def test_schema_checks_metadata_values_and_extra_columns():
             {
                 "columns": [
                     {"name": "name", "dtype": "string"},
-                    {"name": "value", "dtype": "integer"},
+                    {"name": "value", "dtype": "integer", "nullable": True},
                 ]
             },
             table,
@@ -271,6 +279,51 @@ def test_optional_violation_is_warning(block: RegisteredBlock, config: dict[str,
     assert run(block, {**config, "required": False}, sample(), events) == sample()
     assert any(d.status == "warning" for e in events for d in e.diagnostics)
     assert events[-1].event == "succeeded"
+
+
+@pytest.mark.parametrize("rows", [(), ({"x": 1},)])
+@pytest.mark.parametrize("actual_nullable", [False, True])
+@pytest.mark.parametrize("expected_nullable", [False, True])
+@pytest.mark.parametrize("required", [False, True])
+def test_schema_declared_nullability_is_checked_without_null_rows(
+    rows: tuple[dict[str, Any], ...],
+    actual_nullable: bool,
+    expected_nullable: bool,
+    required: bool,
+):
+    table = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="x", dtype="integer", nullable=actual_nullable),)
+        ),
+        rows=rows,
+    )
+    config = {
+        "columns": [{"name": "x", "dtype": "integer", "nullable": expected_nullable}],
+        "required": required,
+    }
+    block = SchemaValidation()
+    events: list[BlockEvent] = []
+    mismatch = actual_nullable != expected_nullable
+    if mismatch and required:
+        with pytest.raises(BlockError) as exc:
+            run(block, config, table, events)
+        assert exc.value.failure.code == "quality_failed"
+    else:
+        assert run(block, config, table, events) == table
+    diagnostics = next(
+        event.diagnostics for event in events if event.event == "quality"
+    )
+    if mismatch:
+        assert len(diagnostics) == 1
+        diagnostic = diagnostics[0]
+        assert diagnostic.code == "nullability_mismatch"
+        assert diagnostic.column == "x"
+        assert diagnostic.status == ("fail" if required else "warning")
+        assert diagnostic.model_dump()["expected_nullable"] is expected_nullable
+        assert diagnostic.model_dump()["actual_nullable"] is actual_nullable
+        assert diagnostic.row_indices == ()
+    else:
+        assert [item.code for item in diagnostics] == ["schema_valid"]
 
 
 def test_diagnostics_bounded_redacted_and_enforced_without_observer():
@@ -297,6 +350,74 @@ def test_diagnostics_bounded_redacted_and_enforced_without_observer():
     with pytest.raises(BlockError) as no_logger:
         block.run({}, {"table": (table,)}, context)
     assert no_logger.value.failure.code == "quality_failed"
+
+
+@pytest.mark.parametrize(
+    "block,config,code",
+    [
+        (NullHandling(), {"policy": "drop"}, "null_drop"),
+        (
+            NullHandling(),
+            {"policy": "fill", "columns": ["value"], "fill_values": {"value": 0}},
+            "null_fill",
+        ),
+        (NullCheck(), {"columns": ["value"], "required": False}, "null_count"),
+        (
+            SchemaValidation(),
+            {
+                "columns": [
+                    {"name": "name", "dtype": "string"},
+                    {"name": "value", "dtype": "integer"},
+                ],
+                "required": False,
+            },
+            "unexpected_null",
+        ),
+    ],
+)
+def test_all_null_scans_count_every_match_and_sample_first_twenty(
+    block: RegisteredBlock, config: dict[str, Any], code: str
+):
+    table = sample(
+        tuple({"name": "synthetic-private", "value": None} for _ in range(35))
+    )
+    events: list[BlockEvent] = []
+    run(block, config, table, events)
+    diagnostic = next(
+        item
+        for event in events
+        if event.event == "quality"
+        for item in event.diagnostics
+        if item.code == code
+    )
+    assert diagnostic.observed == 35
+    assert diagnostic.row_indices == tuple(range(20))
+    assert "synthetic-private" not in diagnostic.model_dump_json()
+
+
+@pytest.mark.parametrize("row_count", [0, 20, 21, 10_000])
+def test_null_scan_auxiliary_memory_is_bounded(row_count: int):
+    row: dict[str, Scalar] = {"x": None, "y": None}
+    table = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="x", dtype="integer", nullable=True),
+                Column(name="y", dtype="integer", nullable=True),
+            )
+        ),
+        rows=(row,) * row_count,
+    )
+    # Input construction is excluded: this measures diagnostic-scan storage only,
+    # not the SDK's intentional detached table copies or transformed output rows.
+    tracemalloc.start()
+    try:
+        count, indices = null_rows(table, ["x", "y"])
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert count == row_count  # A row with two null columns is counted once.
+    assert indices == tuple(range(min(row_count, 20)))
+    assert peak < 64 * 1024
 
 
 def test_catalog_has_one_schema_implementation_and_safe_preview():

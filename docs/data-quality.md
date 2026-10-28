@@ -14,9 +14,11 @@ every sink they must guard. See [design and coverage](architecture/data-quality.
 Schema Validation and Validate Schema refer to the same implementation, not two
 catalog entries. Types are exactly `string`, `integer`, `number`, `boolean`.
 No string-to-number, boolean-to-integer, integer-to-number schema widening, or
-other silent conversion occurs. Schema Validation checks declared types even
-for empty tables. Non-null expectations inspect actual values, so a nullable
-declaration with no actual nulls passes. Extra columns fail unless allowed;
+other silent conversion occurs. Schema Validation checks exact declared types
+and nullability even for empty tables. Different nullability declarations report
+`nullability_mismatch` with `expected_nullable` and `actual_nullable`, even when
+current rows contain no nulls. Non-null expectations also inspect actual values.
+Extra columns fail unless allowed;
 column order is retained and does not affect validation. None of the validators
 changes data or rewrites its schema.
 
@@ -40,7 +42,9 @@ lifecycle outcome. Required failures also carry `BlockFailure.diagnostics` so
 enforcement and diagnostics do not depend on a working logger. Codes, counts,
 thresholds, column/type names and at most 20 zero-based row indices are included;
 row values and fill values are excluded. Counts include all offending rows, not
-only the reported indices. Row Count uses no row samples. Schema mismatch output
+only the reported indices. Scans count every match but retain at most 20 indices
+throughout the scan, rather than collecting all indices before truncation.
+Row Count uses no row samples. Schema mismatch output
 is structural; review it before passing sensitive column names to external logs.
 
 For example, `{"max_nulls":1}` passes a column with one null and fails one with
@@ -57,6 +61,7 @@ python scripts/demo_data_quality.py
 python -m pytest tests/test_quality.py tests/test_quality_execution.py -q
 ```
 
-UI/E2E integration remains planned for Iteration 4. Main integration depends on
-the executor PR #70 and independent student review; no stakeholder approval is
-implied. See [verification](testing/issue-25-data-quality.md).
+UI/E2E integration remains planned for Iteration 4. Executor PR #70 merged into
+`main` on October 25, 2026 as `00d2c91`; PR #71 now targets `main`. PR #71 remains
+pending follow-up student approval and merge; no stakeholder approval is implied.
+See [verification](testing/issue-25-data-quality.md).

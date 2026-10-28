@@ -18,4 +18,5 @@ Issue #17 local implementation evidence: [Al-Yousef, Iteration 2 configuration](
 Independent review and acceptance remain pending.
 
 Issue #25 implementation evidence: [Al-Yousef, Iteration 3 data quality](Al-Yousef-iteration-3.md).
-Independent student review and main integration remain pending.
+Review feedback was submitted on PR #71; follow-up student approval and its merge
+remain pending. Executor PR #70 is already merged into `main`.

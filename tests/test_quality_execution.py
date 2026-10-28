@@ -143,3 +143,49 @@ def test_valid_warning_and_null_policy_publish(
         assert any(
             d.status == "warning" for e in result.block_events for d in e.diagnostics
         )
+
+
+@pytest.mark.parametrize("content", ["name,value\n", "name,value\na,1\n"])
+@pytest.mark.parametrize("required", [False, True])
+def test_declared_nullability_controls_publication_without_null_values(
+    tmp_path: Path, content: str, required: bool
+):
+    (tmp_path / "input.csv").write_text(content)
+    config = {
+        "columns": [
+            {"name": "name", "dtype": "string"},
+            {"name": "value", "dtype": "integer", "nullable": False},
+        ],
+        "required": required,
+    }
+    for existing in (False, True):
+        if existing:
+            (tmp_path / "output.csv").write_text("previous successful artifact\n")
+        result = Executor(registry).execute(
+            pipeline("quality.schema_validation", config), workspace_root=tmp_path
+        )
+        assert result.state == ("failed" if required else "completed")
+        diagnostic = next(
+            item
+            for event in result.block_events
+            if event.event == "quality"
+            for item in event.diagnostics
+            if item.code == "nullability_mismatch"
+        )
+        assert diagnostic.column == "value"
+        assert diagnostic.expected_nullable is False
+        assert diagnostic.actual_nullable is True
+        assert diagnostic.status == ("fail" if required else "warning")
+        if required:
+            assert result.node_states["quality"] == "failed"
+            assert result.node_states["sink"] == "skipped"
+            assert result.failures["quality"].code == "quality_failed"
+            if existing:
+                assert (
+                    tmp_path / "output.csv"
+                ).read_text() == "previous successful artifact\n"
+            else:
+                assert not (tmp_path / "output.csv").exists()
+        else:
+            assert result.node_states["sink"] == "completed"
+            assert (tmp_path / "output.csv").read_text() == content
