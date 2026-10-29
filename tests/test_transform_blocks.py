@@ -661,6 +661,47 @@ def test_join_outer_preserves_right_rows_when_left_is_empty(tmp_path: Path):
     assert actual.rows == ({"id": 2, "value": "right-only"},)
 
 
+def test_join_outer_coalesces_reordered_overlapping_composite_keys(
+    tmp_path: Path,
+):
+    left = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="a", dtype="integer"),
+                Column(name="b", dtype="integer"),
+            )
+        ),
+        rows=({"a": 1, "b": 10},),
+    )
+    right = Table(
+        data_schema=DataSchema(
+            columns=(
+                Column(name="b", dtype="integer"),
+                Column(name="a", dtype="integer"),
+                Column(name="value", dtype="string"),
+            )
+        ),
+        rows=({"b": 2, "a": 20, "value": "right-only"},),
+    )
+
+    actual = run_join(
+        tmp_path,
+        {
+            "left_on": ["a", "b"],
+            "right_on": ["b", "a"],
+            "how": "outer",
+            "cardinality": "many_to_many",
+        },
+        left=left,
+        right=right,
+    )
+
+    assert {(row["a"], row["b"]) for row in actual.rows} == {
+        (1, 10),
+        (2, 20),
+    }
+
+
 def run_aggregate(
     tmp_path: Path,
     config: dict[str, Any],

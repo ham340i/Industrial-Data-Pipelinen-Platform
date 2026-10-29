@@ -418,7 +418,9 @@ class Join(Block[JoinConfig]):
                 strict=True,
             ):
                 right_joined_name = (
-                    f"{right_name}__right" if left_name == right_name else right_name
+                    f"{right_name}__right"
+                    if right_name in left_columns
+                    else right_name
                 )
 
                 if right_joined_name not in frame.columns:
