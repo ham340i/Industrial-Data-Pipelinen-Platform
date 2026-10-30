@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """SQLAlchemy 2 metadata entities with retained, versioned pipeline history."""
 
 from __future__ import annotations
@@ -148,6 +149,7 @@ class Run(Base):
             "ended_at IS NULL OR (started_at IS NOT NULL AND ended_at >= started_at)",
             name="times",
         ),
+        CheckConstraint("duration_ms IS NULL OR duration_ms >= 0", name="duration"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -159,8 +161,77 @@ class Run(Base):
     started_at: Mapped[datetime | None]
     ended_at: Mapped[datetime | None]
     row_count: Mapped[int | None]
+    # Monotonic measurement; wall-clock timestamps can move backwards.
+    duration_ms: Mapped[int | None]
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_reason: Mapped[str | None] = mapped_column(String(512))
     pipeline_revision: Mapped[PipelineRevision] = relationship(back_populates="runs")
     outputs: Mapped[list[OutputEndpoint]] = relationship(back_populates="run")
+    blocks: Mapped[list[RunBlock]] = relationship(
+        back_populates="run", order_by="RunBlock.position"
+    )
+    events: Mapped[list[RunEvent]] = relationship(
+        back_populates="run", order_by="RunEvent.sequence"
+    )
+
+
+class RunBlock(Base):
+    """Per-node evidence. NULL row counts mean unknown, never zero (#27)."""
+
+    __tablename__ = "run_blocks"
+    __table_args__ = (
+        UniqueConstraint("run_id", "node_id"),
+        CheckConstraint(
+            "state IN ('queued','running','completed','failed','skipped')",
+            name="state",
+        ),
+        CheckConstraint("position >= 0", name="position"),
+        CheckConstraint("rows_in IS NULL OR rows_in >= 0", name="rows_in"),
+        CheckConstraint("rows_out IS NULL OR rows_out >= 0", name="rows_out"),
+        CheckConstraint("duration_ms IS NULL OR duration_ms >= 0", name="duration"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(
+        ForeignKey("runs.id", ondelete="RESTRICT"), index=True
+    )
+    position: Mapped[int]
+    node_id: Mapped[str] = mapped_column(String(128))
+    block_id: Mapped[str] = mapped_column(String(128))
+    block_version: Mapped[str] = mapped_column(String(32))
+    state: Mapped[str] = mapped_column(String(16), default="queued")
+    started_at: Mapped[datetime | None]
+    ended_at: Mapped[datetime | None]
+    duration_ms: Mapped[int | None]
+    rows_in: Mapped[int | None]
+    rows_out: Mapped[int | None]
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_reason: Mapped[str | None] = mapped_column(String(512))
+    run: Mapped[Run] = relationship(back_populates="blocks")
+
+
+class RunEvent(Base):
+    """Append-only, redacted run log; never stores table values or config."""
+
+    __tablename__ = "run_events"
+    __table_args__ = (
+        UniqueConstraint("run_id", "sequence"),
+        CheckConstraint("sequence >= 0", name="sequence"),
+        CheckConstraint("level IN ('info','warning','error')", name="level"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(
+        ForeignKey("runs.id", ondelete="RESTRICT"), index=True
+    )
+    sequence: Mapped[int]
+    created_at: Mapped[datetime] = mapped_column(default=utc_now)
+    level: Mapped[str] = mapped_column(String(16))
+    node_id: Mapped[str | None] = mapped_column(String(128))
+    kind: Mapped[str] = mapped_column(String(32))
+    code: Mapped[str | None] = mapped_column(String(64))
+    message: Mapped[str] = mapped_column(String(512))
+    run: Mapped[Run] = relationship(back_populates="events")
 
 
 class BlockRegistryEntry(Base):

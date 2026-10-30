@@ -67,3 +67,12 @@ verification, synthetic fixtures, regression tests and documentation at
 the user's request. The user selected the issue and requested a PR; independent
 human review and stakeholder acceptance remain pending. Actual verification and
 limitations are recorded in [the testing evidence](../docs/testing/issue-10-headless-etl.md).
+
+## Issue #27 run telemetry
+
+Tool: Claude Code. Assisted with the run recorder, interrupted-run recovery,
+log redaction, run status/detail APIs and their tests
+([PR #74](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/74)).
+Verified by 30 automated tests ([record](../docs/testing/issue-27-run-telemetry.md)).
+Correction found in review: two failure logs included full exception text,
+which could leak bound SQL values, and were reduced to the exception type.
