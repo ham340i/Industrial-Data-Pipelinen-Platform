@@ -4,3 +4,5 @@
 -r requirements.txt
 ruff>=0.9,<1
 mypy>=1.14,<3
+# Reuse the issue #10 Parquet golden integration proof in executor tests.
+pyarrow==25.0.1
