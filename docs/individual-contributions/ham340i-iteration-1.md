@@ -11,3 +11,7 @@ Engineering decisions and alternatives: [workspace design](../architecture/local
 The integration resolves the `/health` versus `/api/v1/health` mismatch through the container's API base prefix and same-origin proxy. The named volume survives normal teardown; only explicit reset or isolated smoke cleanup deletes data. Builds exclude local datasets and credentials.
 
 Actual personal time, student learning/reflection and human review: not recorded; the owner must supply their own account. Initial issue estimate remains 5 story points / 10 ideal hours, not a claim of time spent. Stakeholder demonstration, independent approval and merge remain pending.
+
+## Issue #10 follow-up (October 21, 2026)
+
+The current issue assignee is ham340i. The user requested implementation and a PR; Codex authored the [headless proof](../../experiments/headless_etl/README.md), tests and documentation. [Verification](../testing/issue-10-headless-etl.md) records actual automated results. Personal human design, code review and stakeholder demonstration have not been recorded for this change; assignment and AI-generated implementation are not asserted as personal engineering evidence.

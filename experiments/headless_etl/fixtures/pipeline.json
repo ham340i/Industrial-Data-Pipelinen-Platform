@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "nodes": [
+    {"id":"source","block_id":"spike.csv","block_version":"1.0.0","config":{"resource":"input"}},
+    {"id":"select","block_id":"spike.select","block_version":"1.0.0","config":{"columns":["sensor_id","reading"]}},
+    {"id":"sink","block_id":"spike.parquet","block_version":"1.0.0","config":{"resource":"output"}}
+  ],
+  "edges": [
+    {"id":"read-select","source":{"node_id":"source","port":"table"},"target":{"node_id":"select","port":"table"}},
+    {"id":"select-write","source":{"node_id":"select","port":"table"},"target":{"node_id":"sink","port":"table"}}
+  ]
+}

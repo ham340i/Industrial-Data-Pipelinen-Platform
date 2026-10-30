@@ -64,7 +64,7 @@ def main():
             raise RuntimeError('SPA deep link failed')
         if compose('exec', '-T', 'frontend', 'id', '-u').strip() == '0':
             raise RuntimeError('Frontend must run as a non-root user')
-        marker = uuid4().hex
+        marker = str(uuid4())
         compose('exec', '-T', 'api', 'python', '-c',
                 "import os\nfrom pathlib import Path\n"
                 "from app.config import settings\n"
@@ -98,6 +98,9 @@ def main():
         if saved.strip() != marker:
             raise RuntimeError('Metadata did not survive container recreation')
         verify_health(address('frontend', 8080) + HEALTH_PATH)
+        project = json.loads(get(address('frontend', 8080) + '/api/v1/projects/' + marker))
+        if project.get('id') != marker or project.get('name') != 'Synthetic smoke':
+            raise RuntimeError('Project API did not reopen persisted metadata')
         print('PASS: real API, frontend assets, SPA routes, proxy, non-root SQLite writes and project persistence.')
     finally:
         compose('down', '--volumes', '--remove-orphans', '--timeout', '10')

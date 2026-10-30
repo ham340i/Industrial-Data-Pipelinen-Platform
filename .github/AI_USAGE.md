@@ -38,3 +38,32 @@ Codex drafted the Release 1 backlog, initial estimates, balanced primary/reviewe
 ## Iteration structure reorganization
 
 Tool: OpenAI Codex. Used to inspect repository/GitHub state and draft iteration, acceptance, traceability and workflow documentation. The user supplied the scope and preservation rules; human review and acceptance remain pending. Existing application implementation and student work retain their authorship. Actual checks and limitations are recorded in the [organization audit](../docs/testing/iteration-structure-validation.md).
+
+## Issue #17 configuration panel
+
+Tool: OpenAI Codex. Yousef directed delivery. Codex adapted the earlier local
+panel draft to the merged graph/registry/persistence/validation contracts, added
+tests, fixed mobile canvas sizing and executed the checks and browser demonstration.
+See the [verification record](../docs/testing/issue-17-configuration.md) and
+[individual record](../docs/individual-contributions/Al-Yousef-iteration-2.md).
+PR #66 subsequently received @ham340i's approval and merged October 21, 2026.
+Stakeholder acceptance remains pending.
+
+## Iteration 2 sources, transforms and sinks (#16, #18, #20)
+
+Tool: OpenAI Codex. Yousef directed the expanded delivery. Codex reused the
+existing team headless proof and SDK contracts, implemented the bounded file
+adapter and nine blocks, added golden/negative/integration/browser tests,
+prepared documentation, and ran the recorded checks and real browser
+demonstration. Historical authorship remains intact. The original issue owners
+remain assigned; their independent review and stakeholder acceptance are pending.
+See [verification](../docs/testing/iteration-2-file-blocks.md) and
+[Yousef's actual contribution record](../docs/individual-contributions/Al-Yousef-iteration-2.md).
+
+## Issue #10 headless ETL proof
+
+Codex authored the bounded SDK/DAG runner, Polars selection, Parquet read-back
+verification, synthetic fixtures, regression tests and documentation at
+the user's request. The user selected the issue and requested a PR; independent
+human review and stakeholder acceptance remain pending. Actual verification and
+limitations are recorded in [the testing evidence](../docs/testing/issue-10-headless-etl.md).

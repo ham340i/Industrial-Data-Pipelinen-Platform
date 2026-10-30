@@ -9,14 +9,14 @@ import {
   Divider,
   Paper,
   Stack,
-  TextField,
   ThemeProvider,
   Typography,
   createTheme,
 } from "@mui/material";
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useHealth } from "./api/health";
-import { useEditorStore } from "./state/editor";
+import { Projects } from "./Projects";
+import { BuilderEntry, ProjectWorkspace } from "./ProjectWorkspace";
 
 const theme = createTheme({
   palette: {
@@ -107,14 +107,17 @@ function Overview() {
         variant="outlined"
         sx={{ p: { xs: 3, md: 4 }, background: "#e9f2ee" }}
       >
-        <Chip label="Iteration 1 · Foundation" size="small" sx={{ mb: 3 }} />
+        <Chip
+          label="Iteration 2 · Pipeline authoring"
+          size="small"
+          sx={{ mb: 3 }}
+        />
         <Typography component="h2" variant="h2">
           Your workspace starts here
         </Typography>
         <Typography color="text.secondary" sx={{ my: 2 }}>
-          Explore the project workspace and prepare a draft name for your next
-          pipeline. Saving projects and editing graphs arrive in later
-          iterations.
+          Create a project, compose a visual pipeline, and save your work.
+          Reopen pipelines with their graph and configuration intact.
         </Typography>
         <Button component={Link} to="/projects" variant="contained">
           Explore projects →
@@ -137,7 +140,7 @@ function Overview() {
           [
             "02",
             "Build with clarity",
-            "A reserved builder workspace for the upcoming visual editor.",
+            "Browse blocks, connect compatible ports and arrange your pipeline.",
           ],
         ].map(([number, title, description]) => (
           <Paper key={number} variant="outlined" sx={{ p: 3 }}>
@@ -157,85 +160,6 @@ function Overview() {
   );
 }
 
-function Projects() {
-  return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography component="h1" variant="h1">
-          Projects
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          A home for your pipeline work.
-        </Typography>
-      </Box>
-      <Paper
-        variant="outlined"
-        sx={{ p: { xs: 3, md: 6 }, textAlign: "center" }}
-      >
-        <Typography component="h2" variant="h2">
-          Project storage is coming next
-        </Typography>
-        <Typography color="text.secondary" sx={{ my: 2 }}>
-          This foundation does not load or save projects yet. You can explore
-          the builder workspace and prepare an unsaved draft.
-        </Typography>
-        <Button component={Link} to="/builder" variant="contained">
-          Open builder workspace
-        </Button>
-      </Paper>
-    </Stack>
-  );
-}
-
-function Builder() {
-  const draftName = useEditorStore((state) => state.draftName);
-  const setDraftName = useEditorStore((state) => state.setDraftName);
-  const reset = useEditorStore((state) => state.reset);
-  return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography component="h1" variant="h1">
-          Pipeline builder
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Prepare your workspace.
-        </Typography>
-      </Box>
-      <Alert severity="info">
-        The visual graph editor is planned for a later iteration. This draft
-        stays in this tab and is lost when you refresh.
-      </Alert>
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Stack spacing={3} sx={{ alignItems: "flex-start" }}>
-          <TextField
-            label="Draft pipeline name"
-            value={draftName}
-            onChange={(event) => setDraftName(event.target.value)}
-            fullWidth
-            helperText="Unsaved draft · up to 120 characters"
-            slotProps={{ htmlInput: { maxLength: 120 } }}
-          />
-          <Button variant="outlined" onClick={reset} disabled={!draftName}>
-            Clear draft
-          </Button>
-        </Stack>
-      </Paper>
-      <Paper
-        variant="outlined"
-        sx={{ p: 6, textAlign: "center", borderStyle: "dashed" }}
-      >
-        <Typography component="h2" variant="h2">
-          Your future canvas
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Nodes, connections and validation will appear here when the graph
-          editor is available.
-        </Typography>
-      </Paper>
-    </Stack>
-  );
-}
-
 export function App() {
   const { pathname } = useLocation();
   const main = useRef<HTMLElement>(null);
@@ -248,7 +172,10 @@ export function App() {
           "/projects": "Projects",
           "/builder": "Pipeline builder",
         } as Record<string, string>
-      )[pathname] ?? "Page not found";
+      )[pathname] ??
+      (pathname.startsWith("/projects/")
+        ? "Pipeline builder"
+        : "Page not found");
     document.title = `${title} | Local Pipeline Studio`;
     if (previousPath.current !== pathname) main.current?.focus();
     previousPath.current = pathname;
@@ -389,7 +316,11 @@ export function App() {
             <Routes>
               <Route path="/" element={<Overview />} />
               <Route path="/projects" element={<Projects />} />
-              <Route path="/builder" element={<Builder />} />
+              <Route
+                path="/projects/:projectId/builder"
+                element={<ProjectWorkspace />}
+              />
+              <Route path="/builder" element={<BuilderEntry />} />
               <Route
                 path="*"
                 element={

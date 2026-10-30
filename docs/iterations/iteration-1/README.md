@@ -33,6 +33,10 @@ Verified October 4, 2026: #4 workspace ([PR #47](https://github.com/ham340i/Indu
 
 Metadata #7 has [PR #48](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48) open with passing checks and review requested. SQL spike #12 now has [PR #52](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/52), with passing CI and Al-Yousef requested; [three additional correctness findings](../../testing/pr-52-sql-review.md) need correction before merge. #8/#9/#10/#13 have no published implementation PR in the inspected repository; local/private progress is unknown. Additional foundation integration corrections are in [PR #51](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/51), pending independent review.
 
+## Local implementation awaiting review
+
+Issue #10 has a [headless SDK/DAG proof](../../../experiments/headless_etl/README.md) on `feature/10-headless-etl`, with [verification evidence](../../testing/issue-10-headless-etl.md). [PR #67](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/67) is open with independent review requested. This work does not assert issue closure or iteration acceptance.
+
 ## Slipped Issues
 
 Not recorded. Do not infer slippage before the iteration review.

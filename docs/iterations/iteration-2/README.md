@@ -1,6 +1,22 @@
 # Iteration 2
 
-Status: Planned. Demonstration: Not Yet Demonstrated.
+Status: Iteration acceptance pending. GitHub snapshot on October 21, 2026:
+seven closed issues and three open (#16, #18, #20). Demonstration: Not Yet Demonstrated.
+
+## Current delivery snapshot
+
+- #14/#15 merged in [PR #64](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/64).
+- #19 merged in [PR #63](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/63).
+- #21 merged in [PR #65](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/65).
+- #17 merged in [PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66), with @ham340i's recorded approval.
+- #16/#18/#20 have a local implementation on `feature/16-file-blocks`; independent
+  review and merge are pending. See [design](../../architecture/iteration-2-file-blocks.md),
+  [usage](../../blocks/file-and-column-blocks.md) and
+  [verification](../../testing/iteration-2-file-blocks.md).
+
+This live snapshot supersedes the earlier local/pending PR statuses recorded
+below. Issue closure and merged code do not establish stakeholder acceptance or
+completion of the iteration demonstration.
 
 ## Dates
 
@@ -24,6 +40,21 @@ Assignments verified against GitHub on October 1, 2026. Existing assignments rem
 | [#19](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/19) | Create list and open local projects | karimikhaeil |
 | [#20](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/20) | Parquet and CSV sink blocks | MarcElHaddad1 |
 | [#21](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/21) | Validate graph ports and required configuration before run | menaboulus |
+
+## Local implementation awaiting review
+
+Issues #15 (canvas/library) and #14 (pipeline persistence) are implemented locally on `feature/15-canvas-14-persistence`, in that order. See [testing evidence](testing-evidence.md), [design](../../architecture/pipeline-authoring.md) and [usage](../../frontend/canvas.md). [PR #64](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/64) is open. Remote CI, independent approval and merge remain pending; these are not completed iteration issues.
+
+Issue #21 (graph validation before run) is implemented locally on `feature/21-graph-validation`. See [design](../../architecture/graph-validation.md) and [testing evidence](testing-evidence.md#issue-21--graph-validation-before-run). Planned reviewer: @aboudka2003. PR, remote CI, independent approval and merge are pending.
+
+Issue #17 is implemented locally on `feature/17-configuration-panel` against
+merged canvas/persistence and graph validation. See the [configuration guide](../../frontend/block-configuration.md),
+[verification record](../../testing/issue-17-configuration.md) and
+[Yousef's contribution record](../../individual-contributions/Al-Yousef-iteration-2.md).
+[PR #66](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66) is open
+with review requested from @karimikhaeil. Hosted status is on the
+[PR checks](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/66/checks);
+independent approval, merge and acceptance remain pending.
 
 ## Completed Issues
 
