@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 from __future__ import annotations
 
 import re
@@ -21,6 +22,8 @@ from app.pipelines.api import (
     validation_router,
 )
 from app.projects import ProjectNotFound, router as projects_router
+from app.runs import recover_interrupted
+from app.runs.api import RunNotFound, router as runs_router
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
@@ -82,6 +85,8 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     database = Database(settings.metadata_path)
     try:
         upgrade(database)
+        # Runs a previous process left queued/running can never finish (#27).
+        recover_interrupted(database)
         application.state.database = database
         yield
     finally:
@@ -110,6 +115,7 @@ app.include_router(projects_router)
 app.include_router(blocks_router)
 app.include_router(pipelines_router)
 app.include_router(validation_router)
+app.include_router(runs_router)
 
 
 def error_response(
@@ -178,6 +184,16 @@ async def project_not_found_handler(
         request=request,
         code="project_not_found",
         message="Project was not found.",
+        status_code=404,
+    )
+
+
+@app.exception_handler(RunNotFound)
+async def run_not_found_handler(request: Request, exc: RunNotFound) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="run_not_found",
+        message="Run was not found.",
         status_code=404,
     )
 
