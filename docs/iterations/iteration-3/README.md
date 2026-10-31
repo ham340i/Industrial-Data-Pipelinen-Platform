@@ -99,3 +99,14 @@ See the [execution guide](../../execution.md),
 [AI-assisted owner record](../../individual-contributions/ham340i-iteration-3.md).
 Production catalog integration, designated review and hosted CI remain pending;
 this is not an iteration completion claim.
+
+## Issue #25 quality blocks
+
+Implementation is on `feature/25-data-quality`, PR #71, targeting `main` after
+executor PR #70 merged on October 25, 2026 (`00d2c91`).
+See [design](../../architecture/data-quality.md), [usage](../../data-quality.md),
+[verification](../../testing/issue-25-data-quality.md) and
+[AI-assisted contribution evidence](../../individual-contributions/Al-Yousef-iteration-3.md).
+MarcElHaddad1 submitted review feedback on October 26. Follow-up student approval,
+PR #71's merge and Iteration 4 UI acceptance remain pending; this is not an
+iteration completion claim.
