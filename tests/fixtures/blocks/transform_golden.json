@@ -1,0 +1,33 @@
+{
+  "join_inner": [
+    {
+      "customer_id": 1,
+      "region": "east",
+      "amount": 10.0,
+      "segment": "industrial"
+    },
+    {
+      "customer_id": 1,
+      "region": "east",
+      "amount": 10.0,
+      "segment": "industrial"
+    }
+  ],
+  "aggregate": [
+    {
+      "region": "east",
+      "amount_sum": 20.0,
+      "amount_count": 2
+    }
+  ],
+  "sort": [
+    {
+      "customer_id": 1,
+      "amount": 10.0
+    },
+    {
+      "customer_id": 2,
+      "amount": null
+    }
+  ]
+}

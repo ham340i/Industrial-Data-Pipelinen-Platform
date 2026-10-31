@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-import pyarrow as pa  # type: ignore[import-untyped]
-import pyarrow.parquet as pq  # type: ignore[import-untyped]
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from app.blocks.catalog import registry
@@ -75,6 +75,9 @@ def scalar_table(empty: bool = False) -> Table:
         "transform.rename",
         "transform.filter",
         "transform.cast",
+        "transform.join",
+        "transform.aggregate",
+        "transform.sort",
         "sink.csv",
         "sink.parquet",
     ],
