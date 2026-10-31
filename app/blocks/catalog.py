@@ -36,7 +36,6 @@ for block in (
     Join(),
     Aggregate(),
     Sort(),
-
     CsvSink(),
     ParquetSink(),
 ):
