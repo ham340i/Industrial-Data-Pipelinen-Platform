@@ -24,6 +24,17 @@ from app.runs.redaction import MAX_LENGTH, redact, redact_optional
         ),
         ("read /home/alice/data.csv now", "/home/alice", "read [PATH] now"),
         ("read C:\\Users\\bob\\in.csv", "bob", "read [PATH]"),
+        ("read C:/Users/Alice/private.csv", "Alice", "read [PATH]"),
+        (
+            '{"password": "synthetic-secret"}',
+            "synthetic-secret",
+            '{"password": "[REDACTED]"}',
+        ),
+        (
+            "password='synthetic secret'",
+            "synthetic secret",
+            "password=[REDACTED]",
+        ),
     ],
 )
 def test_secrets_and_machine_paths_are_masked(raw: str, leak: str, expected: str):

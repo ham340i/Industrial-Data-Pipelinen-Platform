@@ -9,6 +9,7 @@ from app.blocks.context import BlockContext
 from app.blocks.contracts import (
     BlockConfig,
     BlockDescriptor,
+    ControlSignal,
     Port,
     PortValues,
     Scalar,
@@ -23,6 +24,7 @@ from app.metadata.models import Pipeline, PipelineRevision, Project
 
 SECRET_REASON = "Cannot open /home/alice/plant/secret.csv with password=hunter2"
 TABLE = (Port(name="table", data_schema=VALUE_SCHEMA),)
+SIGNAL = (Port(name="signal", kind="control"),)
 
 
 def descriptor(block_id: str, block_type: str, **ports: Any) -> BlockDescriptor:
@@ -78,6 +80,18 @@ class Fail(Double):
         raise BlockError("source_unreadable", SECRET_REASON)
 
 
+class Trigger(Block[BlockConfig]):
+    """A one-node, no-edge graph: emits only a ControlSignal, never a Table."""
+
+    config_model = BlockConfig
+    descriptor = descriptor("test.trigger", "trigger", outputs=SIGNAL)
+
+    def _execute(
+        self, config: BlockConfig, inputs: PortValues, context: BlockContext
+    ) -> PortValues:
+        return {"signal": (ControlSignal(),)}
+
+
 class Sink(Block[BlockConfig]):
     config_model = BlockConfig
     descriptor = descriptor("test.sink", "sink", inputs=TABLE)
@@ -110,6 +124,7 @@ def executor(cancel: Cancel | None = None) -> Executor:
         Double(),
         Fail(),
         Sink(),
+        Trigger(),
         cancel or Cancel(),
     ):
         registry.register(block)

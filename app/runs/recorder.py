@@ -46,9 +46,28 @@ def plan(definition: PipelineDefinition) -> tuple[PlannedNode, ...]:
 
 
 def count_rows(values: FrameValues | None) -> int | None:
-    """Rows carried by frames; None when the port values hold no frame at all."""
+    """Rows carried by frames; None when the port values hold no frame at all.
+
+    This covers both "no port was populated" and "a port was populated but
+    carried only non-tabular values (e.g. a ControlSignal)" - both are
+    genuinely unmeasured, not zero.
+    """
     frames = [v for vs in (values or {}).values() for v in vs if isinstance(v, Frame)]
     return sum(frame.data.height for frame in frames) if frames else None
+
+
+def count_input_rows(values: FrameValues | None) -> int | None:
+    """Rows received on input ports, applying the no-input-edges convention.
+
+    A node with no input edges at all (``values`` empty/absent) has
+    definitionally received zero rows - that's a structural fact, not an
+    estimate. A node that *does* have an input edge, but whose values carry
+    no tabular Frame (e.g. only a ControlSignal), is genuinely unmeasured and
+    stays None like ``count_rows`` (#27).
+    """
+    if not values:
+        return 0
+    return count_rows(values)
 
 
 def next_sequence(session: Session, run_id: str) -> int:
@@ -222,7 +241,11 @@ class RunRecorder:
     def _finish_block(self, block: RunBlock, context: ExecutionContext) -> None:
         block.state = context.node_states.get(block.node_id, block.state)
         if block.state == "completed":
-            block.rows_in = count_rows(context.inputs.get(block.node_id)) or 0
+            # rows_in: 0 when this block has no input edges at all (the
+            # no-input-source convention), None when an edge exists but
+            # carried no tabular frame. rows_out never gets that convention -
+            # None always means "no tabular output was measured" (#27).
+            block.rows_in = count_input_rows(context.inputs.get(block.node_id))
             block.rows_out = count_rows(context.outputs.get(block.node_id))
         failure = context.failures.get(block.node_id)
         if failure is not None:
@@ -253,14 +276,21 @@ class RunRecorder:
         )
 
     def _row_count(self, context: ExecutionContext) -> int | None:
-        """Rows written by leaf nodes: sinks count inputs, other leaves outputs."""
+        """Rows written by leaf nodes: sinks count inputs, other leaves outputs.
+
+        None means unknown, not zero: a single leaf with no tabular frame on
+        either port (e.g. a trigger-only graph) makes the whole run's count
+        unknown rather than silently undercounting it as zero (#27).
+        """
         total = 0
         for node_id in self._leaves:
             if context.node_states.get(node_id) != "completed":
                 return None
             rows = count_rows(context.outputs.get(node_id))
             if rows is None:
-                rows = count_rows(context.inputs.get(node_id)) or 0
+                rows = count_rows(context.inputs.get(node_id))
+            if rows is None:
+                return None
             total += rows
         return total
 

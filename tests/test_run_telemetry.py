@@ -88,6 +88,19 @@ def test_measured_zero_rows_differ_from_unknown_counts(db: Database):
     assert (failed_blocks[1].rows_in, failed_blocks[1].rows_out) == (None, None)
 
 
+def test_control_only_graph_reports_unknown_row_count(db: Database):
+    """A trigger-only run never measures a table, so counts stay unknown (#27)."""
+    outcome = execute_revision(db, executor(), seed_revision(db, chain("test.trigger")))
+    run, blocks, _ = stored(db, outcome.run_id)
+
+    assert run.state == "succeeded"
+    assert run.row_count is None  # no table was ever measured, unlike a true 0
+    assert len(blocks) == 1
+    # No input edges at all is a definite zero (the no-input-source
+    # convention); rows_out stays None since no tabular output was measured.
+    assert (blocks[0].rows_in, blocks[0].rows_out) == (0, None)
+
+
 def test_block_failure_is_structured_redacted_and_root_caused(db: Database):
     revision_id = seed_revision(db, chain("test.source", "test.fail", "test.sink"))
     outcome = execute_revision(db, executor(), revision_id)

@@ -76,3 +76,21 @@ log redaction, run status/detail APIs and their tests
 Verified by 30 automated tests ([record](../docs/testing/issue-27-run-telemetry.md)).
 Correction found in review: two failure logs included full exception text,
 which could leak bound SQL values, and were reduced to the exception type.
+
+Further corrections found in `ham340i`'s review of
+[PR #74](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/74)
+(Claude Code, verified by new/updated automated tests, one per item):
+the `0002` migration dropped and recreated `runs` via a batch CHECK-constraint
+add, which fails with a foreign-key error on any workspace that already has
+artifact rows referencing a run; changed to plain `ADD COLUMN`/`DROP COLUMN`
+(no table rebuild) and moved the `duration_ms >= 0` invariant from a DB CHECK
+constraint to an ORM `@validates` method. The credential redactor's
+key/value regex missed JSON-quoted keys (`"password": "..."`) entirely and
+truncated quoted multi-word values at the first space; both are now matched
+and replaced in full. It also only redacted backslash-style Windows paths,
+missing forward-slash absolute paths (`C:/Users/...`); the path rule now
+matches both separators. The run/block row-count recorder collapsed "no
+tabular data was measured" (e.g. a trigger emitting only a `ControlSignal`)
+into a reported `0`, indistinguishable from a genuinely empty table; it now
+preserves `None` for unmeasured counts while keeping the separate, intentional
+convention that a block with no input edges at all reports `rows_in=0`.

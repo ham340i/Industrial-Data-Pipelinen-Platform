@@ -17,17 +17,18 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("runs", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("duration_ms", sa.Integer(), nullable=True))
-        batch_op.add_column(
-            sa.Column("error_code", sa.String(length=64), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("error_reason", sa.String(length=512), nullable=True)
-        )
-        batch_op.create_check_constraint(
-            op.f("ck_runs_duration"), "duration_ms IS NULL OR duration_ms >= 0"
-        )
+    # Plain ADD COLUMN (not batch_alter_table) on purpose: SQLite supports it
+    # without recreating the table. A batch add_column+create_check_constraint
+    # here would force Alembic to copy/drop/rename `runs`, and DROP TABLE runs
+    # fails with a FOREIGN KEY error on any workspace that already has
+    # artifact rows referencing it (ON DELETE RESTRICT). The non-negative
+    # invariant for duration_ms is instead enforced by the ORM (see
+    # Run.duration_ms validation in app/metadata/models.py).
+    op.add_column("runs", sa.Column("duration_ms", sa.Integer(), nullable=True))
+    op.add_column("runs", sa.Column("error_code", sa.String(length=64), nullable=True))
+    op.add_column(
+        "runs", sa.Column("error_reason", sa.String(length=512), nullable=True)
+    )
 
     op.create_table(
         "run_blocks",
@@ -111,8 +112,7 @@ def downgrade() -> None:
     with op.batch_alter_table("run_blocks", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_run_blocks_run_id"))
     op.drop_table("run_blocks")
-    with op.batch_alter_table("runs", schema=None) as batch_op:
-        batch_op.drop_constraint(op.f("ck_runs_duration"), type_="check")
-        batch_op.drop_column("error_reason")
-        batch_op.drop_column("error_code")
-        batch_op.drop_column("duration_ms")
+    # Plain DROP COLUMN, mirroring upgrade()'s plain ADD COLUMN above.
+    op.drop_column("runs", "error_reason")
+    op.drop_column("runs", "error_code")
+    op.drop_column("runs", "duration_ms")

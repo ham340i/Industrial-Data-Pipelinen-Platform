@@ -18,7 +18,13 @@ from sqlalchemy import (
     event,
     inspect,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship,
+    validates,
+)
 
 from app.metadata.portable import PortableJSON, portable_definition
 
@@ -149,7 +155,10 @@ class Run(Base):
             "ended_at IS NULL OR (started_at IS NOT NULL AND ended_at >= started_at)",
             name="times",
         ),
-        CheckConstraint("duration_ms IS NULL OR duration_ms >= 0", name="duration"),
+        # No DB-level CHECK for duration_ms (see validates() below): adding one
+        # requires Alembic to recreate this table on SQLite, which breaks on
+        # populated workspaces (#27 migration review). Enforced in the ORM
+        # instead.
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -173,6 +182,12 @@ class Run(Base):
     events: Mapped[list[RunEvent]] = relationship(
         back_populates="run", order_by="RunEvent.sequence"
     )
+
+    @validates("duration_ms")
+    def _validate_duration_ms(self, key: str, value: int | None) -> int | None:
+        if value is not None and value < 0:
+            raise ValueError("duration_ms must be non-negative")
+        return value
 
 
 class RunBlock(Base):
