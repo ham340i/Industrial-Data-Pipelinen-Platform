@@ -41,9 +41,11 @@ flowchart LR
     Pipeline --> PipelineRevision
     PipelineRevision --> Run
     Run --> OutputEndpoint
+    Run --> RunBlock
+    Run --> RunEvent
     Project --> WorkspaceBinding
     PipelineRevision --> PortableJSON[Portable graph JSON]
     WorkspaceBinding --> Private[Private paths and provider references]
 ```
 
-Arrows identify parent/child relationships or owned values. Each run retains its exact revision; exporting the definition returns only graph JSON. Private bindings are resolved separately at runtime. See the [metadata integration guide](../metadata.md).
+Arrows identify parent/child relationships or owned values. Each run retains its exact revision; exporting the definition returns only graph JSON. Private bindings are resolved separately at runtime. See the [metadata integration guide](../metadata.md). `RunBlock` and `RunEvent` hold per-node evidence and the redacted run log; see [run telemetry](run-telemetry.md) (#27).

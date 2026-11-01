@@ -56,7 +56,8 @@ python -m pytest tests/test_execution.py -q
 
 This reuses the exact issue #10 fixture and primitive implementations. A second
 integration test executes the merged production CSV, Select Columns and Parquet
-blocks using their workspace policy. No new execute endpoint is exposed; API/UI wiring, run persistence
-and governed artifacts remain separate issues. See the
+blocks using their workspace policy. No new execute endpoint is exposed; API/UI wiring and governed artifacts
+remain separate issues. Run persistence is provided by
+[`app.runs.execute_revision`](architecture/run-telemetry.md) (#27). See the
 [design](architecture/local-executor.md) and
 [verification record](testing/issue-22-local-executor.md).
