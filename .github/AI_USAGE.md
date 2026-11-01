@@ -67,3 +67,50 @@ verification, synthetic fixtures, regression tests and documentation at
 the user's request. The user selected the issue and requested a PR; independent
 human review and stakeholder acceptance remain pending. Actual verification and
 limitations are recorded in [the testing evidence](../docs/testing/issue-10-headless-etl.md).
+
+## Issue #27 run telemetry
+
+Tool: Claude Code. Assisted with the run recorder, interrupted-run recovery,
+log redaction, run status/detail APIs and their tests
+([PR #74](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/74)).
+Verified by 30 automated tests ([record](../docs/testing/issue-27-run-telemetry.md)).
+Correction found in review: two failure logs included full exception text,
+which could leak bound SQL values, and were reduced to the exception type.
+
+Further corrections found in `ham340i`'s review of
+[PR #74](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/74)
+(Claude Code, verified by new/updated automated tests, one per item):
+the `0002` migration dropped and recreated `runs` via a batch CHECK-constraint
+add, which fails with a foreign-key error on any workspace that already has
+artifact rows referencing a run; changed to plain `ADD COLUMN`/`DROP COLUMN`
+(no table rebuild) and moved the `duration_ms >= 0` invariant from a DB CHECK
+constraint to an ORM `@validates` method. The credential redactor's
+key/value regex missed JSON-quoted keys (`"password": "..."`) entirely and
+truncated quoted multi-word values at the first space; both are now matched
+and replaced in full. It also only redacted backslash-style Windows paths,
+missing forward-slash absolute paths (`C:/Users/...`); the path rule now
+matches both separators. The run/block row-count recorder collapsed "no
+tabular data was measured" (e.g. a trigger emitting only a `ControlSignal`)
+into a reported `0`, indistinguishable from a genuinely empty table; it now
+preserves `None` for unmeasured counts while keeping the separate, intentional
+convention that a block with no input edges at all reports `rows_in=0`.
+
+A follow-up review on the same PR found the redaction fix above was still
+incomplete: its quoted-value regex excluded both quote characters
+universally (`[^"']`) instead of only the matching delimiter, so a credential
+containing the *other* quote character, or an escaped matching quote, either
+skipped the redaction rule entirely or had the match end early and leak the
+remainder - confirmed persisted in `Run`/`RunBlock.error_reason` and returned
+from `GET /api/v1/runs/{id}`. Replaced with a delimiter-specific,
+escape-aware pattern (`"(?:\\.|[^"\\])*"` / the single-quote equivalent) and
+added regression tests covering both quote types, escaped quotes, and the
+persistence/API path directly, not just the redactor unit.
+
+A second follow-up found the JSON/dict-style rule still only matched when
+the dictionary key and value used the *same* quote style (e.g.
+`{"password": "secret"}` or `{'password': 'secret'}`); a mixed pair like
+`{"password": 'secret'}` matched neither that rule nor the bare key=value
+rule, so the value passed through completely unredacted - again confirmed
+persisted and returned from the API. The key's quote style is now matched
+independently of the value's, and a regression test was added for both
+mixed-style orderings.

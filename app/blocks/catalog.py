@@ -6,7 +6,17 @@ from app.blocks.contracts import BlockMetadata
 from app.blocks.registry import BlockRegistry
 from app.blocks.sample import AddConstantBlock
 from app.blocks.files import CsvSource, JsonSource, ParquetSource, CsvSink, ParquetSink
-from app.blocks.transforms import SelectColumns, RenameColumns, Filter, Cast
+from app.blocks.transforms import (
+    Aggregate,
+    Cast,
+    Filter,
+    Join,
+    RenameColumns,
+    SelectColumns,
+    Sort,
+)
+from app.blocks.quality import NullHandling, SchemaValidation, NullCheck, RowCount
+
 
 router = APIRouter(prefix="/api/v1/blocks", tags=["blocks"])
 registry = BlockRegistry()
@@ -19,6 +29,13 @@ for block in (
     RenameColumns(),
     Filter(),
     Cast(),
+    NullHandling(),
+    SchemaValidation(),
+    NullCheck(),
+    RowCount(),
+    Join(),
+    Aggregate(),
+    Sort(),
     CsvSink(),
     ParquetSink(),
 ):

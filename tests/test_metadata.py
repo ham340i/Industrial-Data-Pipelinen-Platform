@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Real file-backed SQLite, migration and portability boundary checks for #7."""
 
 import json
@@ -384,6 +385,102 @@ def test_migration_round_trip_and_schema_drift(database: Database):
         connection.exec_driver_sql("DROP TABLE unrelated")
     upgrade(database)
     check(database)
+
+
+def test_migration_preserves_populated_runs_and_associations(tmp_path: Path):
+    """0001 -> 0002 must not drop/rebuild `runs` while artifacts reference it (#27)."""
+    from alembic import command
+
+    from app.metadata.migrate import migration_config
+
+    database = Database(tmp_path / "populated.sqlite3")
+    try:
+        config = migration_config()
+        with database.engine.begin() as connection:
+            config.attributes["connection"] = connection
+            command.upgrade(config, "0001")
+
+        # Insert against the real 0001 schema (no telemetry columns yet) -
+        # the ORM models already describe the head schema, so they can't be
+        # used to seed a pre-migration database.
+        now = datetime.now()
+        with database.engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO projects (id, name, created_at) "
+                    "VALUES (:id, :name, :created_at)"
+                ),
+                {"id": "project", "name": "Example", "created_at": now},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO pipelines (id, project_id, name, created_at) "
+                    "VALUES (:id, :project_id, :name, :created_at)"
+                ),
+                {
+                    "id": "pipeline",
+                    "project_id": "project",
+                    "name": "Import",
+                    "created_at": now,
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO pipeline_revisions "
+                    "(id, pipeline_id, revision, definition, created_at) "
+                    "VALUES (:id, :pipeline_id, :revision, :definition, :created_at)"
+                ),
+                {
+                    "id": "revision",
+                    "pipeline_id": "pipeline",
+                    "revision": 1,
+                    "definition": json.dumps(GRAPH),
+                    "created_at": now,
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO runs "
+                    "(id, pipeline_revision_id, state, created_at) "
+                    "VALUES (:id, :pipeline_revision_id, :state, :created_at)"
+                ),
+                {
+                    "id": "run",
+                    "pipeline_revision_id": "revision",
+                    "state": "succeeded",
+                    "created_at": now,
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO output_endpoints "
+                    "(id, run_id, node_id, name, format, artifact_ref, created_at) "
+                    "VALUES (:id, :run_id, :node_id, :name, :format, "
+                    ":artifact_ref, :created_at)"
+                ),
+                {
+                    "id": "output",
+                    "run_id": "run",
+                    "node_id": "sink",
+                    "name": "result",
+                    "format": "csv",
+                    "artifact_ref": "artifacts/run/result.csv",
+                    "created_at": now,
+                },
+            )
+
+        upgrade(database)
+        check(database)
+
+        with database.transaction() as session:
+            run = session.get(Run, "run")
+            assert run is not None and run.state == "succeeded"
+            outputs = session.scalars(
+                select(OutputEndpoint).where(OutputEndpoint.run_id == "run")
+            ).all()
+            assert [output.id for output in outputs] == ["output"]
+    finally:
+        database.close()
 
 
 def test_failed_initial_migration_rolls_back_tables_and_version(
