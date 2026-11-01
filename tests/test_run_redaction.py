@@ -55,6 +55,9 @@ def test_secrets_and_machine_paths_are_masked(raw: str, leak: str, expected: str
         ("password='synthetic\\' secret'", ["synthetic", "secret"]),
         # Whitespace alone, inside matching quotes, must not short-circuit.
         ('token="a b c"', ["a b c"]),
+        # Key and value use different quote styles (#27 second follow-up).
+        ("{\"password\": 'synthetic-secret'}", ["synthetic-secret"]),
+        ("{'password': \"synthetic-secret\"}", ["synthetic-secret"]),
     ],
 )
 def test_quoted_values_with_embedded_or_escaped_quotes_are_fully_masked(

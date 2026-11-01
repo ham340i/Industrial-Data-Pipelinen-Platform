@@ -23,9 +23,13 @@ _RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/\s@]+@"), rf"\1{REDACTED}@"),
     # JSON/dict-style quoted keys, e.g. {"password": "secret"} or 'token': 'x'.
     # Kept delimiter-specific (not a shared [\"'] class) so quotes of the
-    # *other* kind, and escaped quotes, stay inside the matched value.
-    (re.compile(rf'(?i)"({_KEY})"(\s*:\s*){_DQ}'), rf'"\1"\2"{REDACTED}"'),
-    (re.compile(rf"(?i)'({_KEY})'(\s*:\s*){_SQ}"), rf"'\1'\2'{REDACTED}'"),
+    # *other* kind, and escaped quotes, stay inside the matched value - and
+    # the key's quote style is matched independently of the value's, so a
+    # mixed pair like {"password": 'secret'} is still fully redacted.
+    (
+        re.compile(rf'(?i)("(?:{_KEY})"|\'(?:{_KEY})\')(\s*:\s*)(?:{_DQ}|{_SQ})'),
+        rf'\1\2"{REDACTED}"',
+    ),
     # Bare key=value / key: value, where the value may be quoted (so it can
     # contain whitespace, the other quote type, or escaped quotes) or a
     # plain unquoted token.

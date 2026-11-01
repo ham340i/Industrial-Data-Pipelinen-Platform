@@ -103,6 +103,8 @@ def test_failed_run_exposes_structured_redacted_error(client: TestClient):
         ('password="synthetic\' secret"', ["synthetic' secret", "secret"]),
         # Whitespace inside matching quotes.
         ('token="a b c" failed', ["a b c"]),
+        # Key and value use different quote styles.
+        ("{\"password\": 'synthetic-secret'}", ["synthetic-secret"]),
     ],
 )
 def test_quoted_credential_edge_cases_never_reach_db_or_api(

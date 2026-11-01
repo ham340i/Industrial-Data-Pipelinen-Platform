@@ -105,3 +105,12 @@ from `GET /api/v1/runs/{id}`. Replaced with a delimiter-specific,
 escape-aware pattern (`"(?:\\.|[^"\\])*"` / the single-quote equivalent) and
 added regression tests covering both quote types, escaped quotes, and the
 persistence/API path directly, not just the redactor unit.
+
+A second follow-up found the JSON/dict-style rule still only matched when
+the dictionary key and value used the *same* quote style (e.g.
+`{"password": "secret"}` or `{'password': 'secret'}`); a mixed pair like
+`{"password": 'secret'}` matched neither that rule nor the bare key=value
+rule, so the value passed through completely unredacted - again confirmed
+persisted and returned from the API. The key's quote style is now matched
+independently of the value's, and a regression test was added for both
+mixed-style orderings.
