@@ -6,19 +6,31 @@ import re
 MAX_LENGTH = 512
 REDACTED = "[REDACTED]"
 
+
+def _quoted(delimiter: str) -> str:
+    """A <delimiter>-quoted string: escaped chars and the *other* quote are
+    content, not terminators - only an unescaped matching delimiter closes it.
+    """
+    return rf"{delimiter}(?:\\.|[^{delimiter}\\])*{delimiter}"
+
+
+_DQ = _quoted('"')
+_SQ = _quoted("'")
+
 # Order matters: URL credentials before key=value pairs, both before paths.
 _KEY = r"password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key"
 _RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/\s@]+@"), rf"\1{REDACTED}@"),
     # JSON/dict-style quoted keys, e.g. {"password": "secret"} or 'token': 'x'.
-    (
-        re.compile(rf"(?i)([\"'])({_KEY})\1(\s*:\s*)([\"'])[^\"']*\4"),
-        rf"\1\2\1\3\4{REDACTED}\4",
-    ),
+    # Kept delimiter-specific (not a shared [\"'] class) so quotes of the
+    # *other* kind, and escaped quotes, stay inside the matched value.
+    (re.compile(rf'(?i)"({_KEY})"(\s*:\s*){_DQ}'), rf'"\1"\2"{REDACTED}"'),
+    (re.compile(rf"(?i)'({_KEY})'(\s*:\s*){_SQ}"), rf"'\1'\2'{REDACTED}'"),
     # Bare key=value / key: value, where the value may be quoted (so it can
-    # contain whitespace) or a plain unquoted token.
+    # contain whitespace, the other quote type, or escaped quotes) or a
+    # plain unquoted token.
     (
-        re.compile(rf"(?i)\b({_KEY})(\s*[=:]\s*)(?:([\"'])[^\"']*\3|\S+)"),
+        re.compile(rf"(?i)\b({_KEY})(\s*[=:]\s*)(?:{_DQ}|{_SQ}|\S+)"),
         rf"\1\2{REDACTED}",
     ),
     (re.compile(r"(?i)\bbearer\s+\S+"), f"Bearer {REDACTED}"),

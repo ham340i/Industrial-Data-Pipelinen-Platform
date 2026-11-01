@@ -7,13 +7,14 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.config import settings
 from app.main import app
 from app.metadata.database import Database
-from app.metadata.models import OutputEndpoint, Run
+from app.metadata.models import OutputEndpoint, Run, RunBlock
 from app.runs import execute_revision
-from tests.run_support import chain, executor, seed_revision
+from tests.run_support import Fail, chain, executor, seed_revision
 
 SUMMARY_KEYS = {
     "schema_version",
@@ -89,6 +90,47 @@ def test_failed_run_exposes_structured_redacted_error(client: TestClient):
     assert body["error"]["code"] == "source_unreadable"
     assert body["blocks"][1]["error"]["code"] == "source_unreadable"
     assert "hunter2" not in response.text and "/home/alice" not in response.text
+
+
+@pytest.mark.parametrize(
+    "reason,fragments",
+    [
+        # Opposite quote type embedded in a JSON-style quoted value.
+        ('{"password": "synthetic\'secret"}', ["synthetic'secret", "secret"]),
+        # Escaped matching quote embedded in a JSON-style quoted value.
+        ('{"password": "synthetic\\" secret"}', ["synthetic", "secret"]),
+        # Opposite quote type embedded in a bare key=value quoted value.
+        ('password="synthetic\' secret"', ["synthetic' secret", "secret"]),
+        # Whitespace inside matching quotes.
+        ('token="a b c" failed', ["a b c"]),
+    ],
+)
+def test_quoted_credential_edge_cases_never_reach_db_or_api(
+    client: TestClient, reason: str, fragments: list[str]
+):
+    """Credentials with embedded/escaped quotes must not survive persistence
+    or the HTTP detail response (#27 follow-up review)."""
+    db = db_of(client)
+    revision_id = seed_revision(db, chain("test.source", "test.fail"))
+    run_id = execute_revision(
+        db, executor(fail=Fail(reason=reason)), revision_id
+    ).run_id
+
+    with db.transaction() as session:
+        run = session.get(Run, run_id)
+        assert run is not None
+        block = session.scalars(
+            select(RunBlock).where(RunBlock.run_id == run_id, RunBlock.node_id == "n1")
+        ).one()
+        for text in (run.error_reason, block.error_reason):
+            assert text is not None
+            for fragment in fragments:
+                assert fragment not in text
+
+    response = client.get(f"/api/v1/runs/{run_id}")
+    assert response.status_code == 200
+    for fragment in fragments:
+        assert fragment not in response.text
 
 
 def test_list_filters_paginates_and_orders_newest_first(client: TestClient):

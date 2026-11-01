@@ -43,6 +43,29 @@ def test_secrets_and_machine_paths_are_masked(raw: str, leak: str, expected: str
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "raw,leaks",
+    [
+        # The opposite quote type inside the quoted value (#27 follow-up).
+        ('{"password": "synthetic\'secret"}', ["synthetic'secret", "secret"]),
+        ('password="synthetic\' secret"', ["synthetic' secret", "secret"]),
+        ("{'password': 'synthetic\" secret'}", ['synthetic" secret', "secret"]),
+        # An escaped matching quote inside the quoted value.
+        ('{"password": "synthetic\\" secret"}', ["synthetic", "secret"]),
+        ("password='synthetic\\' secret'", ["synthetic", "secret"]),
+        # Whitespace alone, inside matching quotes, must not short-circuit.
+        ('token="a b c"', ["a b c"]),
+    ],
+)
+def test_quoted_values_with_embedded_or_escaped_quotes_are_fully_masked(
+    raw: str, leaks: list[str]
+):
+    result = redact(raw)
+    for leak in leaks:
+        assert leak not in result
+    assert "[REDACTED]" in result
+
+
 def test_relative_names_and_ordinary_text_are_kept():
     text = "Node join: column value missing in data/input.csv"
     assert redact(text) == text

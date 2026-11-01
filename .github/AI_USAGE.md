@@ -94,3 +94,14 @@ tabular data was measured" (e.g. a trigger emitting only a `ControlSignal`)
 into a reported `0`, indistinguishable from a genuinely empty table; it now
 preserves `None` for unmeasured counts while keeping the separate, intentional
 convention that a block with no input edges at all reports `rows_in=0`.
+
+A follow-up review on the same PR found the redaction fix above was still
+incomplete: its quoted-value regex excluded both quote characters
+universally (`[^"']`) instead of only the matching delimiter, so a credential
+containing the *other* quote character, or an escaped matching quote, either
+skipped the redaction rule entirely or had the match end early and leak the
+remainder - confirmed persisted in `Run`/`RunBlock.error_reason` and returned
+from `GET /api/v1/runs/{id}`. Replaced with a delimiter-specific,
+escape-aware pattern (`"(?:\\.|[^"\\])*"` / the single-quote equivalent) and
+added regression tests covering both quote types, escaped quotes, and the
+persistence/API path directly, not just the redactor unit.

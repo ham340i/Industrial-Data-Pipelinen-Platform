@@ -74,10 +74,13 @@ class Fail(Double):
 
     descriptor = descriptor("test.fail", "transform", inputs=TABLE, outputs=TABLE)
 
+    def __init__(self, reason: str = SECRET_REASON) -> None:
+        self.reason = reason
+
     def _execute(
         self, config: BlockConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
-        raise BlockError("source_unreadable", SECRET_REASON)
+        raise BlockError("source_unreadable", self.reason)
 
 
 class Trigger(Block[BlockConfig]):
@@ -116,13 +119,13 @@ class Cancel(Double):
         return super()._execute(config, inputs, context)
 
 
-def executor(cancel: Cancel | None = None) -> Executor:
+def executor(cancel: Cancel | None = None, fail: Fail | None = None) -> Executor:
     registry = BlockRegistry()
     for block in (
         Source(),
         EmptySource(),
         Double(),
-        Fail(),
+        fail or Fail(),
         Sink(),
         Trigger(),
         cancel or Cancel(),
