@@ -15,6 +15,8 @@ from app.blocks.transforms import (
     SelectColumns,
     Sort,
 )
+from app.blocks.quality import NullHandling, SchemaValidation, NullCheck, RowCount
+
 
 router = APIRouter(prefix="/api/v1/blocks", tags=["blocks"])
 registry = BlockRegistry()
@@ -27,6 +29,10 @@ for block in (
     RenameColumns(),
     Filter(),
     Cast(),
+    NullHandling(),
+    SchemaValidation(),
+    NullCheck(),
+    RowCount(),
     Join(),
     Aggregate(),
     Sort(),

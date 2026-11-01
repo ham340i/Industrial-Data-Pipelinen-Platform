@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Literal
 
 from app.blocks.contracts import Contract, NonBlank
-from app.blocks.errors import BlockError
+from app.blocks.errors import BlockError, QualityDiagnostic
 
-EventKind = Literal["started", "succeeded", "failed", "previewed"]
+EventKind = Literal["started", "succeeded", "failed", "previewed", "quality"]
 
 
 class BlockEvent(Contract):
@@ -19,6 +19,7 @@ class BlockEvent(Contract):
     event: EventKind
     # Fixed event codes only: no config, table values or exception text.
     error_code: NonBlank | None = None
+    diagnostics: tuple[QualityDiagnostic, ...] = ()
 
 
 @dataclass(frozen=True)
