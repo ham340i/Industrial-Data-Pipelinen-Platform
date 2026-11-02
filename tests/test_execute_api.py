@@ -11,6 +11,8 @@ from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.main import app
+from app.runs.scheduler import TimerStopTimedOut
+from app.runs.scheduler import scheduler as scheduler_dependency
 
 
 def manual_graph() -> dict[str, Any]:
@@ -159,6 +161,28 @@ def test_timer_ticks_create_isolated_runs_without_overlap(client: TestClient):
     runs = client.get("/api/v1/runs", params={"pipeline_id": pipeline_id}).json()
     assert 1 <= runs["total"] <= 3
     assert all(item["state"] == "succeeded" for item in runs["items"])
+
+
+def test_timer_stop_still_finishing_is_structured_409(client: TestClient):
+    """The API's mapping for TimerStopTimedOut (#29 review): a timer whose
+    block is still running must surface as a retryable 409, not a bare
+    exception, and must not be reported as stopped.
+    """
+    path = pipelines_path(client)
+    pipeline_id = create(client, path, timer_graph(30))
+
+    class StubScheduler:
+        def stop(self, pipeline_id: str) -> None:
+            raise TimerStopTimedOut(pipeline_id)
+
+    app.dependency_overrides[scheduler_dependency] = StubScheduler
+    try:
+        response = client.post(f"{path}/{pipeline_id}/timer/stop")
+    finally:
+        app.dependency_overrides.pop(scheduler_dependency, None)
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "timer_stop_timed_out"
 
 
 def test_shutdown_stops_every_running_timer_thread(

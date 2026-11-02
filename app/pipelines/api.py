@@ -23,6 +23,7 @@ from app.runs.scheduler import (
     TimerAlreadyRunning,
     TimerNotRunning,
     TimerScheduler,
+    TimerStopTimedOut,
     scheduler,
 )
 from app.schemas.execute import ExecuteResponse, TimerStatusResponse
@@ -381,6 +382,13 @@ def stop_timer(
     except TimerNotRunning:
         raise PipelineError(
             "timer_not_running", "No timer is running for this pipeline.", 404
+        ) from None
+    except TimerStopTimedOut:
+        raise PipelineError(
+            "timer_stop_timed_out",
+            "The timer's current run has not finished yet. It will stop "
+            "once that run completes; try again shortly.",
+            409,
         ) from None
     return TimerStatusResponse(running=False)
 

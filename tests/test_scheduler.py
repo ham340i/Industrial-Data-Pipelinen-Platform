@@ -22,7 +22,13 @@ from app.execution import Executor
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
 from app.metadata.models import Run
-from app.runs.scheduler import TimerAlreadyRunning, TimerNotRunning, TimerScheduler
+from app.runs.scheduler import (
+    TimerAlreadyRunning,
+    TimerNotRunning,
+    TimerScheduler,
+    TimerStopTimedOut,
+    _Timer,
+)
 from sqlalchemy import select
 from tests.run_support import chain, seed_revision
 
@@ -178,6 +184,86 @@ def test_stop_waits_for_an_in_flight_block_to_finish_rather_than_killing_it(
         assert runs[0].state == "succeeded"
 
 
+def test_stop_rejects_a_replacement_while_the_old_run_is_still_finishing(
+    db: Database,
+):
+    """Review finding (#29): a stop() that times out on an in-flight block
+    must not free the pipeline id for a replacement start() - that would let
+    two timers of the same pipeline run concurrently, which the single-
+    thread-per-timer design is meant to rule out entirely.
+    """
+    trigger = RecordingTrigger(delay=1.0)
+    revision_id = seed_revision(db, chain("test.trigger"))
+    scheduler = TimerScheduler(db, executor_for(trigger))
+    scheduler.start("pipeline", revision_id, interval_seconds=1)
+
+    assert trigger.started.wait(timeout=5)  # now mid-run
+    with pytest.raises(TimerStopTimedOut):
+        scheduler.stop("pipeline", join_timeout=0.05)  # far too short to finish
+
+    # The old thread is still running that block: a replacement must be
+    # rejected, not allowed to execute the same pipeline alongside it.
+    with pytest.raises(TimerAlreadyRunning):
+        scheduler.start("pipeline", revision_id, interval_seconds=1)
+
+    # Once the in-flight run genuinely finishes, the slot frees up again.
+    deadline = time.monotonic() + 5.0
+    while len(trigger.calls) < 1 and time.monotonic() < deadline:
+        time.sleep(0.05)
+    scheduler.stop("pipeline")
+    scheduler.start("pipeline", revision_id, interval_seconds=30)
+    scheduler.stop("pipeline")
+
+
+def test_stop_at_the_interval_boundary_never_lets_a_new_run_start(db: Database):
+    """Deterministic regression for the exact race flagged in review (#29):
+    a tick's wait() reporting "timed out" at the very instant stop() sets
+    the stop signal must still not let that tick start. The loop's own
+    lock-guarded re-check - serialized against stop() - is what has to catch
+    it, not the timing of wait()'s return.
+    """
+    trigger = RecordingTrigger()
+    revision_id = seed_revision(db, chain("test.trigger"))
+    scheduler = TimerScheduler(db, executor_for(trigger))
+
+    # Built directly, not via scheduler.start(): the patches below must be in
+    # place *before* the background thread makes its first wait() call, or
+    # that call resolves the original method and the race is never exercised.
+    timer = _Timer(  # noqa: SLF001 - white-box race test
+        db, executor_for(trigger), "pipeline", revision_id, interval_seconds=3600
+    )
+
+    woke = threading.Event()
+    release = threading.Event()
+    stop_called = threading.Event()
+    real_set = timer._stop_event.set  # noqa: SLF001
+
+    def patched_wait(timeout: float | None = None) -> bool:
+        woke.set()
+        assert release.wait(timeout=5)
+        return False  # pretend the interval elapsed, exactly as stop() races in
+
+    def patched_set() -> None:
+        stop_called.set()
+        real_set()
+
+    timer._stop_event.wait = patched_wait  # type: ignore[method-assign] # noqa: SLF001
+    timer._stop_event.set = patched_set  # type: ignore[method-assign] # noqa: SLF001
+
+    scheduler._timers["pipeline"] = timer  # noqa: SLF001 - white-box registration
+    timer.start()
+
+    assert woke.wait(timeout=5)  # the loop is now paused right where it matters
+
+    stop_thread = threading.Thread(target=scheduler.stop, args=("pipeline",))
+    stop_thread.start()
+    assert stop_called.wait(timeout=5)  # stop() has set the signal
+    release.set()  # only now let the tick's wait() report "timed out"
+    stop_thread.join(timeout=5)
+
+    assert trigger.calls == []  # no run ever started after stop() began
+
+
 def test_stop_all_cleans_up_every_running_timer(db: Database):
     trigger_a, trigger_b = RecordingTrigger(), RecordingTrigger()
     revision_a = seed_revision(db, chain("test.trigger"))
@@ -203,3 +289,33 @@ def test_stop_all_cleans_up_every_running_timer(db: Database):
     # A fresh start for the same pipeline id must succeed: nothing leaked.
     scheduler.start("pipeline-a", revision_a, 30)
     scheduler.stop("pipeline-a")
+
+
+def test_stop_all_waits_for_an_active_run_before_the_caller_closes_the_database(
+    db: Database,
+):
+    """Mirrors ``app.main``'s shutdown sequence exactly (#29 review): it calls
+    ``stop_all()`` and only then closes the database. This asserts that
+    ordering is actually safe - ``stop_all()`` must not return, and the run's
+    own thread must not still exist, while a block is still mid-execution,
+    or the in-flight run's write-back would race a database the caller is
+    about to close right after.
+    """
+    trigger = RecordingTrigger(delay=1.0)
+    revision_id = seed_revision(db, chain("test.trigger"))
+    scheduler = TimerScheduler(db, executor_for(trigger))
+    scheduler.start("pipeline", revision_id, interval_seconds=1)
+
+    assert trigger.started.wait(timeout=5)  # now mid-run, as at a real shutdown
+    scheduler.stop_all(join_timeout=0.05)  # too short to finish on its own
+
+    # No thread survives stop_all() returning, no matter how short
+    # join_timeout was - exactly what makes closing the database next safe.
+    assert not any(t.name == "timer-pipeline" for t in threading.enumerate())
+
+    db.close()  # the same step app.main takes right after stop_all()
+
+    with db.transaction() as session:
+        runs = list(session.scalars(select(Run)))
+    assert len(runs) == 1
+    assert runs[0].state == "succeeded"

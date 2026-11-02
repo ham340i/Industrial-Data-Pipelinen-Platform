@@ -134,3 +134,23 @@ assumption that stopping a timer mid-execution would mark a single-block run
 `cancelled` was wrong - cooperative cancellation cannot preempt a block
 already running, so it finishes and is correctly recorded as `succeeded`.
 The test and the design doc were corrected to document the real behavior.
+
+`adamoug`'s review of [PR #76](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/76)
+found four real concurrency gaps in the stop/shutdown path, all confirmed
+and fixed, not argued with: a timed-out `stop()` returned as if the timer
+were gone while its thread could still be running; that same timed-out
+`stop()` left the pipeline id free for a replacement timer to start
+concurrently with the old thread's still-finishing block; the loop's
+stop-check and `stop()`'s own signal/cancel step used separate locks,
+leaving a window where a tick could start at the exact instant `stop()`
+ran; and `stop_all()` (used right before the app closes the database at
+shutdown) had the same bounded-join gap, so a slow block could still be
+running under a database the shutdown path had already closed. Fixed by
+having `stop()` report whether the thread actually exited (raising a new
+`TimerStopTimedOut`, mapped to a structured 409, instead of lying), keeping
+a timed-out timer registered until it truly exits, merging the stop-check
+and signal/cancel onto one lock, and making `stop_all()` fall back to an
+unbounded join so it never returns early. See
+[the updated verification record](../docs/testing/issue-29-triggers-and-execute.md)
+for the four regression tests, including a deterministic one that drives
+the exact lock race instead of relying on timing.
