@@ -1,4 +1,4 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """Execute and timer start/stop/status HTTP APIs (#29)."""
 
 import threading

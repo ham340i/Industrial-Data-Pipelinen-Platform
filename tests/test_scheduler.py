@@ -1,4 +1,4 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """Timer scheduler: start/stop, no-overlap and shutdown cleanup (#29)."""
 
 import threading

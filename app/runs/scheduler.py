@@ -1,4 +1,4 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """Single-process, in-memory interval timer for Timer-triggered pipelines (#29).
 
 Deliberately minimal, per the Release 1 design notes: no cron, no durable or

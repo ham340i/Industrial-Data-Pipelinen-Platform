@@ -1,4 +1,4 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """Manual and Timer trigger block contracts (#29)."""
 
 import pytest

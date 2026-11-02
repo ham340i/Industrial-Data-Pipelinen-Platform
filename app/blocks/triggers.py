@@ -1,4 +1,4 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """Manual and bounded Timer trigger contracts (#29).
 
 Triggers start a run; they never emit tabular data. ``BlockDescriptor``

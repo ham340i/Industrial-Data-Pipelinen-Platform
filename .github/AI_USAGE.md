@@ -117,6 +117,7 @@ mixed-style orderings.
 
 ## Issue #29 Manual and Timer triggers, execute API
 
+AI contribution: below 50%.
 Tool: Claude Code. Assisted with the Manual/Timer trigger block contracts,
 the execute and timer start/stop/status APIs, the single-process no-overlap
 interval scheduler, and their tests
