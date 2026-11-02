@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Project-scoped authoring persistence with atomic, optimistic revisions (#14)."""
 
 import json
@@ -5,17 +6,26 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.blocks.catalog import registry
+from app.blocks.catalog import executor, registry
+from app.blocks.triggers import TimerTriggerConfig
 from app.metadata.database import Database
 from app.metadata.models import Pipeline, PipelineRevision, Project
-from app.pipelines.models import GraphDraft, PipelineDefinition
+from app.pipelines.models import GraphDraft, Node, PipelineDefinition
 from app.pipelines.validation import ValidationReport, validate
 from app.projects import ProjectNotFound, database
+from app.runs import RevisionNotFound, execute_revision
+from app.runs.scheduler import (
+    TimerAlreadyRunning,
+    TimerNotRunning,
+    TimerScheduler,
+    scheduler,
+)
+from app.schemas.execute import ExecuteResponse, TimerStatusResponse
 from app.schemas.projects import ProjectCreate
 
 router = APIRouter(prefix="/api/v1/projects/{project_id}/pipelines", tags=["pipelines"])
@@ -90,6 +100,25 @@ class PipelinePage(BaseModel):
 def require_project(session: Session, project_id: UUID) -> None:
     if session.get(Project, str(project_id)) is None:
         raise ProjectNotFound()
+
+
+def latest_revision(
+    session: Session, project_id: UUID, pipeline_id: UUID
+) -> PipelineRevision:
+    """The latest saved revision row, for execute/timer (#29): needs the
+    revision's own id, which ``load``'s ``PipelineResponse`` does not carry.
+    """
+    require_project(session, project_id)
+    revision = session.scalar(
+        select(PipelineRevision)
+        .join(Pipeline)
+        .where(Pipeline.id == str(pipeline_id), Pipeline.project_id == str(project_id))
+        .order_by(PipelineRevision.revision.desc())
+        .limit(1)
+    )
+    if revision is None:
+        raise PipelineError("pipeline_not_found", "Pipeline was not found.", 404)
+    return revision
 
 
 def load(session: Session, project_id: UUID, pipeline_id: UUID) -> PipelineResponse:
@@ -248,3 +277,128 @@ def rename_pipeline(
     db: Annotated[Database, Depends(database)],
 ) -> PipelineResponse:
     return update(db, project_id, pipeline_id, payload)
+
+
+def load_latest_definition(
+    db: Database, project_id: UUID, pipeline_id: UUID
+) -> tuple[str, PipelineDefinition]:
+    """The latest revision's id and parsed definition, for execute/timer (#29)."""
+    with db.transaction() as session:
+        revision = latest_revision(session, project_id, pipeline_id)
+        revision_id, stored = revision.id, revision.definition
+    return revision_id, PipelineDefinition.from_json(json.dumps(stored))
+
+
+def find_trigger(definition: PipelineDefinition, block_id: str) -> Node | None:
+    """The first node using the given trigger block, if any (#29).
+
+    A pipeline is expected to have at most one trigger node; a second one is
+    simply ignored here rather than specially rejected, since the structural
+    graph rules (#21) already do not require a trigger at all.
+    """
+    return next((node for node in definition.nodes if node.block_id == block_id), None)
+
+
+@router.post("/{pipeline_id}/execute", response_model=ExecuteResponse, status_code=201)
+def execute_pipeline(
+    project_id: UUID,
+    pipeline_id: UUID,
+    db: Annotated[Database, Depends(database)],
+) -> ExecuteResponse:
+    """Run the latest saved revision now and return its run ID (#29).
+
+    Invalid pipelines (unavailable blocks, missing required input, etc.) are
+    refused with a structured ``invalid_pipeline`` error and create no run,
+    exactly like a direct ``execute_revision`` call.
+    """
+    revision_id, _ = load_latest_definition(db, project_id, pipeline_id)
+    try:
+        outcome = execute_revision(db, executor, revision_id)
+    except RevisionNotFound:
+        raise PipelineError(
+            "pipeline_not_found", "Pipeline was not found.", 404
+        ) from None
+    return ExecuteResponse(
+        run_id=outcome.run_id,
+        state=outcome.state,  # type: ignore[arg-type]  # recorder only sets terminal states
+    )
+
+
+@router.post(
+    "/{pipeline_id}/timer/start", response_model=TimerStatusResponse, status_code=201
+)
+def start_timer(
+    project_id: UUID,
+    pipeline_id: UUID,
+    db: Annotated[Database, Depends(database)],
+    sched: Annotated[TimerScheduler, Depends(scheduler)],
+) -> TimerStatusResponse:
+    """Start the bounded interval timer for this pipeline's Timer trigger (#29).
+
+    The interval comes from the saved ``trigger.timer`` node's own config, not
+    the request, so the same saved definition can be started without edits.
+    """
+    revision_id, definition = load_latest_definition(db, project_id, pipeline_id)
+    node = find_trigger(definition, "trigger.timer")
+    if node is None:
+        raise PipelineError(
+            "timer_trigger_missing",
+            "This pipeline has no Timer trigger node. Add one before starting a timer.",
+            422,
+        )
+    try:
+        config = TimerTriggerConfig.model_validate(node.config)
+    except ValidationError:
+        raise PipelineError(
+            "invalid_trigger_config",
+            "The Timer trigger's configuration is invalid.",
+            422,
+        ) from None
+    try:
+        sched.start(str(pipeline_id), revision_id, config.interval_seconds)
+    except TimerAlreadyRunning:
+        raise PipelineError(
+            "timer_already_running",
+            "A timer is already running for this pipeline. Stop it first.",
+            409,
+        ) from None
+    return TimerStatusResponse(
+        running=True, revision_id=revision_id, interval_seconds=config.interval_seconds
+    )
+
+
+@router.post("/{pipeline_id}/timer/stop", response_model=TimerStatusResponse)
+def stop_timer(
+    project_id: UUID,
+    pipeline_id: UUID,
+    db: Annotated[Database, Depends(database)],
+    sched: Annotated[TimerScheduler, Depends(scheduler)],
+) -> TimerStatusResponse:
+    with db.transaction() as session:
+        latest_revision(session, project_id, pipeline_id)
+    try:
+        sched.stop(str(pipeline_id))
+    except TimerNotRunning:
+        raise PipelineError(
+            "timer_not_running", "No timer is running for this pipeline.", 404
+        ) from None
+    return TimerStatusResponse(running=False)
+
+
+@router.get("/{pipeline_id}/timer", response_model=TimerStatusResponse)
+def get_timer_status(
+    project_id: UUID,
+    pipeline_id: UUID,
+    db: Annotated[Database, Depends(database)],
+    sched: Annotated[TimerScheduler, Depends(scheduler)],
+) -> TimerStatusResponse:
+    with db.transaction() as session:
+        latest_revision(session, project_id, pipeline_id)
+    status = sched.status(str(pipeline_id))
+    if status is None:
+        return TimerStatusResponse(running=False)
+    return TimerStatusResponse(
+        running=True,
+        revision_id=status.revision_id,
+        interval_seconds=status.interval_seconds,
+    )

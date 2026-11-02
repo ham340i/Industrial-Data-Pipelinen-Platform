@@ -12,8 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.blocks.catalog import router as blocks_router
+from app.blocks.catalog import executor, router as blocks_router
 from app.config import settings
+from app.execution import InvalidPipeline
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
 from app.pipelines.api import (
@@ -24,6 +25,7 @@ from app.pipelines.api import (
 from app.projects import ProjectNotFound, router as projects_router
 from app.runs import recover_interrupted
 from app.runs.api import RunNotFound, router as runs_router
+from app.runs.scheduler import TimerScheduler
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
@@ -82,14 +84,21 @@ class CorrelationIdMiddleware:
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.database = None
+    application.state.scheduler = None
     database = Database(settings.metadata_path)
     try:
         upgrade(database)
         # Runs a previous process left queued/running can never finish (#27).
         recover_interrupted(database)
         application.state.database = database
+        application.state.scheduler = TimerScheduler(database, executor)
         yield
     finally:
+        # Stop every timer thread (#29) before closing the database it uses.
+        scheduler = application.state.scheduler
+        if scheduler is not None:
+            scheduler.stop_all()
+        application.state.scheduler = None
         database.close()
         application.state.database = None
 
@@ -195,6 +204,21 @@ async def run_not_found_handler(request: Request, exc: RunNotFound) -> JSONRespo
         code="run_not_found",
         message="Run was not found.",
         status_code=404,
+    )
+
+
+@app.exception_handler(InvalidPipeline)
+async def invalid_pipeline_handler(
+    request: Request, exc: InvalidPipeline
+) -> JSONResponse:
+    """Surface the first diagnostic (#21) the same way ``validate_registry`` does."""
+    first = exc.diagnostics[0]
+    return error_response(
+        request=request,
+        code=first.code,
+        message=first.message,
+        status_code=422,
+        node_context=first.node_id,
     )
 
 

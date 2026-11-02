@@ -114,3 +114,22 @@ rule, so the value passed through completely unredacted - again confirmed
 persisted and returned from the API. The key's quote style is now matched
 independently of the value's, and a regression test was added for both
 mixed-style orderings.
+
+## Issue #29 Manual and Timer triggers, execute API
+
+Tool: Claude Code. Assisted with the Manual/Timer trigger block contracts,
+the execute and timer start/stop/status APIs, the single-process no-overlap
+interval scheduler, and their tests
+([design](../docs/architecture/triggers-and-execute.md),
+[verification](../docs/testing/issue-29-triggers-and-execute.md)).
+Verified by 24 new automated tests (702 passing overall), run twice to rule
+out timing flakiness, plus manual smoke tests of every execute/timer HTTP
+path against a real SQLite database before the automated tests were written.
+
+Two mistakes were caught and corrected during development, not after:
+a `zip(..., strict=True)` in a test helper's deliberately length-offset
+pairwise comparison always raised (fixed to `strict=False`), and an initial
+assumption that stopping a timer mid-execution would mark a single-block run
+`cancelled` was wrong - cooperative cancellation cannot preempt a block
+already running, so it finishes and is correctly recorded as `succeeded`.
+The test and the design doc were corrected to document the real behavior.
