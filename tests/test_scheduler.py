@@ -45,12 +45,14 @@ class RecordingTrigger(Block[BlockConfig]):
     def __init__(self, delay: float = 0.0) -> None:
         self.delay = delay
         self.calls: list[tuple[float, float]] = []
+        self.started = threading.Event()
         self._lock = threading.Lock()
 
     def _execute(
         self, config: BlockConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
         start = time.monotonic()
+        self.started.set()
         time.sleep(self.delay)
         end = time.monotonic()
         with self._lock:
@@ -135,7 +137,12 @@ def test_runs_from_a_slow_timer_never_overlap(db: Database):
     scheduler = TimerScheduler(db, executor_for(trigger))
 
     scheduler.start("pipeline", revision_id, interval_seconds=1)
-    time.sleep(3.2)
+    # Poll for two completed ticks instead of a fixed sleep: a slow or
+    # loaded CI runner can delay thread scheduling well past the ~2.6s a
+    # fast machine needs for two 1s-interval, 0.6s-delay ticks.
+    deadline = time.monotonic() + 10.0
+    while len(trigger.calls) < 2 and time.monotonic() < deadline:
+        time.sleep(0.1)
     scheduler.stop("pipeline")
 
     assert len(trigger.calls) >= 2
@@ -155,7 +162,11 @@ def test_stop_waits_for_an_in_flight_block_to_finish_rather_than_killing_it(
     scheduler = TimerScheduler(db, executor_for(trigger))
     scheduler.start("pipeline", revision_id, interval_seconds=1)
 
-    time.sleep(1.2)  # the first tick is now running
+    # Wait for the block to actually start, rather than guessing a sleep
+    # duration: a loaded CI runner can delay thread scheduling enough that a
+    # fixed sleep sometimes lands before the tick starts, which would cancel
+    # it before it ever ran instead of mid-run.
+    assert trigger.started.wait(timeout=5)
     started = time.monotonic()
     scheduler.stop("pipeline", join_timeout=5)
     elapsed = time.monotonic() - started
