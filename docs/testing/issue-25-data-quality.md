@@ -1,8 +1,20 @@
 # Issue #25 verification
 
-Environment: Windows, Python 3.12, repository development dependencies. Initial
+## Current completion status
+
+Verified against GitHub on November 2, 2026:
+[issue #25](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/25)
+is closed as completed. MarcElHaddad1 approved
+[PR #71](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/71)
+on October 31 at 19:46 UTC; it merged at 20:08 UTC as
+[`35ed771`](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/35ed771ff888ad5e7cdf89e577476f0e66215878).
+The November 2 recheck below verifies the merged implementation on current
+`main`. Earlier dated results are preserved as historical evidence.
+
+Environment for the initial checks: Windows, Python 3.12, repository development
+dependencies. Initial
 verification used executor PR #70 revision `00b02e7`. That prerequisite merged
-into `main` on October 25, 2026 as `00d2c91`; PR #71 now targets `main`. Exact
+into `main` on October 25, 2026 as `00d2c91`; PR #71 subsequently merged. Exact
 feature revisions are recorded in this PR's commits. Fixtures are synthetic.
 Codex executed the checks below;
 this is a separate checking method, not an independent student review.
@@ -21,7 +33,7 @@ this is a separate checking method, not an independent student review.
 | Repository quality checks | Ruff, mypy, full backend suite, docs/repository tooling | PASS |
 | UI acceptance | Iteration 4 integration required by issue | UNVERIFIED |
 | Executor prerequisite | PR #70 merged into main as `00d2c91` | PASS |
-| PR #71 merge / follow-up student approval | MarcElHaddad1 reviewed on October 26; approval and merge remain pending | UNVERIFIED |
+| PR #71 merge / follow-up student approval | MarcElHaddad1 approved October 31; merged as `35ed771` | PASS |
 
 ## Commands and results
 
@@ -60,6 +72,9 @@ No exception expectation or behavioral coverage was removed. After these edits:
 updated PR's hosted checks verify the complete suite at its latest revision.
 
 ## PR #71 review follow-up - October 28, 2026
+
+Historical snapshot: the pending states in this section describe October 28.
+The current completion status above supersedes them.
 
 Based on PR head `ff4e1e919d20bd590bae0f0ab94e251b637b1f57`, with the review
 fixes in this change. Windows/Python 3.12.10; existing development environment
@@ -104,3 +119,51 @@ column instead of the intended value column, and its test typing was corrected
 before the final runs. Input-table copies and transformed outputs are outside
 the auxiliary diagnostic-scan memory measurement; no whole-run memory bound or
 throughput improvement is claimed.
+
+## November 2, 2026 current-main recheck
+
+Revision: `e03177334f7a89b1d6ca4560e849884a8a22e532`, verified to contain
+merge `35ed771`. Windows, Python 3.12.10, fresh isolated environment installed
+with `pip install --only-binary :all: --require-hashes -r requirements.lock`.
+Polars 1.44.2 and PyArrow 25.0.1. Codex executed these checks using synthetic
+fixtures; no student manual execution is inferred.
+
+The separate correctness pass compared the five issue criteria to the actual
+implementation and assertions. Literal expected rows preserve zero, duplicates
+and unselected nulls; fill/drop have distinct expected contents. Thresholds
+include both endpoints. Empty tables still check declared type/nullability.
+Every required validator is exercised through the real CSV source, executor
+and sink, both with no previous artifact and with a previous file that must
+remain unchanged. Optional failures warn and publish unchanged data. Strict
+invalid configuration and numeric precision/overflow are rejected; diagnostics
+remain bounded/redacted. These checks establish the coverage rows above, not
+whole-release UI acceptance.
+
+| Check | Actual result |
+| --- | --- |
+| `python -m pytest -q --basetemp=../verification/pytest-main --junitxml=../verification/backend-main.xml` | 677 passed, 1 existing Windows symlink skip, 47 existing deprecation warnings; 24.42 seconds |
+| Quality cases within that full run | 71 in `tests/test_quality.py`; 13 in `tests/test_quality_execution.py`; all 84 passed |
+| `python -m ruff check` / `python -m ruff format --check` | Passed; 69 files already formatted |
+| `python -m mypy` | Passed; 69 source files checked |
+| `python scripts/demo_data_quality.py` | Required: failed run, skipped sink, no output. Optional: completed run/sink, output present and warning. Both: one null, maximum zero, row index zero |
+| Documentation and repository checks after evidence updates | Passed: 155 Markdown files, 350 repository files, 34 planned items, 16 repository-tool tests and `git diff --check` |
+
+An initial demonstration under restricted sandbox file access failed its
+optional-publication assertion. The unchanged script passed with normal local
+file access, matching the environment used for the full suite. The restricted
+attempt is not counted as a passing run. No application change was needed.
+
+### Hosted checks and acceptance boundaries
+
+The pre-merge head `79bfb312a21fc286bd9d30fef0956941091ca068` has successful
+[CI run 41213983037](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/41213983037)
+and [documentation run 41213983049](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/41213983049),
+re-read through GitHub on November 2. The six CI jobs passed: backend,
+frontend, repository, Compose, Linux standalone and Windows standalone.
+The documentation job passed separately. This recheck does not assert a new
+current-main hosted run or reproduce Compose/browser testing locally.
+
+Implementation, allocated review and main integration are PASS. Iteration 4
+UI/E2E acceptance, stakeholder signoff, whole-iteration demonstration/tag and
+academic delivery remain UNVERIFIED; neither issue closure nor this audit
+supplies those states.

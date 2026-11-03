@@ -2,8 +2,10 @@
 
 Design recorded before implementation, October 22, 2026. Initially stacked on
 executor PR #70; that prerequisite merged into `main` on October 25 as `00d2c91`.
-PR #71 now targets `main`. MarcElHaddad1 submitted review comments on October 26;
-follow-up student approval remains pending.
+[PR #71](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/71)
+received MarcElHaddad1's follow-up approval on October 31, 2026 at 19:46 UTC and
+merged into `main` at 20:08 UTC as
+[`35ed771`](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/35ed771ff888ad5e7cdf89e577476f0e66215878).
 
 ## Decisions
 
@@ -51,7 +53,8 @@ mandatory graph wiring to every quality node, so events/failures are used.
 | Public discovery and strict configuration | catalog API | four metadata entries, JSON schema and closed config |
 | Developer/operator/provenance docs | docs/data-quality.md and contribution/testing records | reconcile final behavior and actual results |
 
-UI acceptance is deferred to Iteration 4, as required by the issue. Integration
-on main now depends on PR #71's follow-up student approval, passing checks and
-merge; the executor prerequisite is already merged. No customer or student
-acceptance is claimed by automated checks.
+UI acceptance is deferred to Iteration 4, as required by the issue. Both the
+executor prerequisite and the reviewed quality implementation are on `main`.
+The [verification record](../testing/issue-25-data-quality.md) distinguishes
+the passing pre-merge hosted checks, the November 2 current-main checks and
+pending UI/stakeholder acceptance. Automated checks do not supply that acceptance.
