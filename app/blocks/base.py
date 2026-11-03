@@ -97,6 +97,34 @@ class Block[ConfigT: BlockConfig](ABC):
             descriptor.inputs, inputs, "invalid_inputs"
         )
 
+    def validate_append_control_signal(item, code: str, validated: list[Payload], name):
+        if not isinstance(item, ControlSignal):
+            raise BlockError(code, "Expected a control signal.", field=name)
+        try:
+            signal = ControlSignal.model_validate(item.model_dump())
+        except ValidationError:
+            raise BlockError(
+                code, "Control signal is invalid.", field=name
+            ) from None
+        return validated.append(signal)
+
+    def validate_append_table(item, code: str, validated: list[Payload], name):
+        if not isinstance(item, Table):
+            raise BlockError(code, "Expected a table.", field=name)
+        try:
+            # Recheck and detach nested dictionaries at the boundary.
+            table = Table.model_validate(item.model_dump())
+        except ValidationError:
+            raise BlockError(
+                code, "Table data is invalid.", field=name
+                ) from None
+        assert port.data_schema is not None
+        if not schemas_compatible(table.data_schema, port.data_schema):
+            raise BlockError(
+                code, "Table schema is incompatible.", field=name
+            )
+        return validated.append(table)
+    
     def _check_ports(
         self, ports: tuple[Port, ...], values: PortValues, code: str
     ) -> PortValues:
@@ -115,31 +143,9 @@ class Block[ConfigT: BlockConfig](ABC):
             validated: list[Payload] = []
             for item in items:
                 if port.kind == "control":
-                    if not isinstance(item, ControlSignal):
-                        raise BlockError(code, "Expected a control signal.", field=name)
-                    try:
-                        signal = ControlSignal.model_validate(item.model_dump())
-                    except ValidationError:
-                        raise BlockError(
-                            code, "Control signal is invalid.", field=name
-                        ) from None
-                    validated.append(signal)
+                    validated = self.validate_append_control_signal(item, code, validated, name)
                 else:
-                    if not isinstance(item, Table):
-                        raise BlockError(code, "Expected a table.", field=name)
-                    try:
-                        # Recheck and detach nested dictionaries at the boundary.
-                        table = Table.model_validate(item.model_dump())
-                    except ValidationError:
-                        raise BlockError(
-                            code, "Table data is invalid.", field=name
-                        ) from None
-                    assert port.data_schema is not None
-                    if not schemas_compatible(table.data_schema, port.data_schema):
-                        raise BlockError(
-                            code, "Table schema is incompatible.", field=name
-                        )
-                    validated.append(table)
+                    validated = self.validate_append_table(item, code, validated, name)
             checked[name] = tuple(validated)
         return checked
 
