@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Public discovery endpoint; adding blocks requires explicit registration."""
 
 from fastapi import APIRouter
@@ -16,12 +17,16 @@ from app.blocks.transforms import (
     Sort,
 )
 from app.blocks.quality import NullHandling, SchemaValidation, NullCheck, RowCount
+from app.blocks.triggers import ManualTrigger, TimerTrigger
+from app.execution import Executor
 
 
 router = APIRouter(prefix="/api/v1/blocks", tags=["blocks"])
 registry = BlockRegistry()
 registry.register(AddConstantBlock())
 for block in (
+    ManualTrigger(),
+    TimerTrigger(),
     CsvSource(),
     JsonSource(),
     ParquetSource(),
@@ -40,6 +45,10 @@ for block in (
     ParquetSink(),
 ):
     registry.register(block)
+
+# Shared, stateless executor (#29): the registry above is read-only once the
+# app has started, so one instance is safe to reuse across requests/timers.
+executor = Executor(registry)
 
 
 @router.get("", response_model=list[BlockMetadata])
