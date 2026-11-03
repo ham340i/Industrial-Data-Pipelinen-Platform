@@ -97,7 +97,7 @@ class Block[ConfigT: BlockConfig](ABC):
             descriptor.inputs, inputs, "invalid_inputs"
         )
 
-    def validate_append_control_signal(item, code: str, validated: list[Payload], name):
+    def validate_append_control_signal(item:Payload, code: str, validated: list[Payload], name):
         if not isinstance(item, ControlSignal):
             raise BlockError(code, "Expected a control signal.", field=name)
         try:
@@ -108,7 +108,7 @@ class Block[ConfigT: BlockConfig](ABC):
             ) from None
         return validated.append(signal)
 
-    def validate_append_table(item, code: str, validated: list[Payload], name):
+    def validate_append_table(item:Payload, code: str, validated: list[Payload], name,data):
         if not isinstance(item, Table):
             raise BlockError(code, "Expected a table.", field=name)
         try:
@@ -118,8 +118,8 @@ class Block[ConfigT: BlockConfig](ABC):
             raise BlockError(
                 code, "Table data is invalid.", field=name
                 ) from None
-        assert port.data_schema is not None
-        if not schemas_compatible(table.data_schema, port.data_schema):
+        assert data is not None
+        if not schemas_compatible(table.data_schema, data):
             raise BlockError(
                 code, "Table schema is incompatible.", field=name
             )
@@ -145,7 +145,7 @@ class Block[ConfigT: BlockConfig](ABC):
                 if port.kind == "control":
                     validated = self.validate_append_control_signal(item, code, validated, name)
                 else:
-                    validated = self.validate_append_table(item, code, validated, name)
+                    validated = self.validate_append_table(item, code, validated, name,port.data_schema)
             checked[name] = tuple(validated)
         return checked
 
