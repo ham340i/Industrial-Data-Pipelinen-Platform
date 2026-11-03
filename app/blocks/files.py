@@ -269,6 +269,25 @@ class JsonSource(FileSource[JsonConfig]):
         outputs=(TABLE_PORT,),
     )
 
+    def read_column_generator(names)->list:
+        columns = []
+        for name in names:
+            kind: DType
+            values = [row[name] for row in rows if name in row]
+            kinds = {type(value) for value in values if value is not None}
+            if kinds <= {int, float} and kinds:
+                kind = "number" if float in kinds else "integer"
+            elif kinds <= {str}:
+                kind = "string"
+            elif kinds == {bool}:
+                kind = "boolean"
+            else:
+                raise BlockError(
+                    "unsupported_type", "JSON columns require consistent scalar types."
+                )
+            columns.append(Column(name=name, dtype=kind, nullable=None in values))
+        return columns
+        
     def _read(
         self, path: Path, config: JsonConfig
     ) -> tuple[pl.DataFrame, DataSchema | None]:
@@ -302,22 +321,7 @@ class JsonSource(FileSource[JsonConfig]):
             raise BlockError(
                 "table_limit", "Input exceeds the configured table limits."
             )
-        columns = []
-        for name in names:
-            kind: DType
-            values = [row[name] for row in rows if name in row]
-            kinds = {type(value) for value in values if value is not None}
-            if kinds <= {int, float} and kinds:
-                kind = "number" if float in kinds else "integer"
-            elif kinds <= {str}:
-                kind = "string"
-            elif kinds == {bool}:
-                kind = "boolean"
-            else:
-                raise BlockError(
-                    "unsupported_type", "JSON columns require consistent scalar types."
-                )
-            columns.append(Column(name=name, dtype=kind, nullable=None in values))
+        columns = self.read_column_generator(names)
         table = Table(data_schema=DataSchema(columns=tuple(columns)), rows=tuple(rows))
         return to_frame(table), table.data_schema
 
