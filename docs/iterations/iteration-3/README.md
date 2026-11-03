@@ -1,6 +1,8 @@
 # Iteration 3
 
-Status: Planned. Demonstration: Not Yet Demonstrated.
+Status: In progress; issue #25 is approved and merged. Whole-iteration
+acceptance and team demonstration are not recorded. A scoped local #25
+demonstration was rechecked on November 2; see [demo evidence](demo.md).
 
 ## Dates
 
@@ -27,7 +29,13 @@ Assignments verified against GitHub on October 1, 2026. Existing assignments rem
 
 ## Completed Issues
 
-Not recorded. Add accepted issue scope and merged PR evidence when available.
+Verified for Al-Yousef's allocation on November 2, 2026:
+[issue #25](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/25)
+is closed as completed after MarcElHaddad1's approval and
+[PR #71](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/71)'s
+October 31 merge into `main` as `35ed771`. Its five backend acceptance criteria
+are mapped in [verification](../../testing/issue-25-data-quality.md).
+This scoped audit does not certify other owners' stories or Release 1 acceptance.
 
 ## Slipped Issues
 
@@ -35,11 +43,17 @@ Not recorded. Do not infer slippage before the iteration review.
 
 ## Demonstrated Functionality
 
-Not Yet Demonstrated. Complete the [demo record](demo.md) from observed behavior.
+The [demo record](demo.md) contains the November 2 local synthetic #25 gate
+demonstration and its expected/observed outcomes. A live whole-iteration
+demonstration is not recorded.
 
 ## Architecture Changes
 
-Not recorded for the iteration review. Link actual design decisions and changes; the [target architecture](../../architecture/release-1-target.md) remains a plan.
+Issue #25 adds explicit fill/drop and required quality gates to the existing
+SDK/executor, with bounded structural diagnostics and no duplicate schema
+validator. See [design](../../architecture/data-quality.md). Other owners'
+iteration-review summaries remain their responsibility; the
+[target architecture](../../architecture/release-1-target.md) remains a target.
 
 ## Testing Summary
 
@@ -66,7 +80,11 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 
 ## Individual Contributions
 
-Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Actual personal record links: Not recorded. Assignment is not contribution evidence.
+Use the [contribution registry](../../individual-contributions/README.md) and
+[template](../../individual-contributions/TEMPLATE.md).
+[Al-Yousef's record](../../individual-contributions/Al-Yousef-iteration-3.md)
+links #25 implementation, Marc's approval, merge, executed checks and the
+allocated #22 review. Assignment alone is not contribution evidence.
 
 ## Retrospective
 
@@ -92,10 +110,29 @@ Planned: `v0.3.0-iteration3`. Not created. Follow the [tag strategy](../README.m
 
 ## Issue #22 implementation preparation
 
-The local executor implementation is on `feature/22-local-dag-executor`.
+The local executor implementation merged through
+[PR #70](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/70)
+on October 25, 2026 (UTC), as `00d2c91`. Al-Yousef's allocated review and
+Codex-assisted approval are recorded on that PR.
 See the [execution guide](../../execution.md),
 [design](../../architecture/local-executor.md),
 [verification](../../testing/issue-22-local-executor.md) and
 [AI-assisted owner record](../../individual-contributions/ham340i-iteration-3.md).
-Production catalog integration, designated review and hosted CI remain pending;
-this is not an iteration completion claim.
+This establishes the prerequisite for #25; it does not establish whole-iteration
+or UI/API acceptance.
+
+## Issue #25 quality blocks
+
+Implementation merged through
+[PR #71](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/71)
+on October 31, 2026 at 20:08 UTC, as `35ed771`, after executor PR #70.
+See [design](../../architecture/data-quality.md), [usage](../../data-quality.md),
+[verification](../../testing/issue-25-data-quality.md) and
+[AI-assisted contribution evidence](../../individual-contributions/Al-Yousef-iteration-3.md).
+MarcElHaddad1 submitted feedback on October 26 and approved the fixes on
+October 31 at 19:46 UTC. The November 2 current-main recheck passed 677 backend
+tests (including all 84 quality cases), with one existing Windows symlink skip.
+Iteration 4 UI/E2E and stakeholder acceptance remain unverified. Issue #33 and
+the individual Release 1 `[LLL]` issue are separate from #25's completed
+Iteration 3 implementation. No team completion tag or academic delivery is
+asserted.
