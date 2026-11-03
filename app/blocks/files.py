@@ -47,6 +47,8 @@ ARROW_TYPES = {
     "boolean": pa.bool_(),
 }
 
+byte_limit_error_message="Input exceeds the configured byte limit."
+table_limit_error_message="Input exceeds the configured table limits."
 
 class ResourceConfig(BlockConfig):
     resource_ref: NonBlank = Field(
@@ -175,7 +177,7 @@ class FileSource[SourceT: SourceConfig](Block[SourceT]):
                 )
             if path.stat().st_size > config.max_bytes:
                 raise BlockError(
-                    "file_limit", "Input exceeds the configured byte limit."
+                    "file_limit", byte_limit_error_message
                 )
             frame, schema = self._read(path, config)
             if (
@@ -184,7 +186,7 @@ class FileSource[SourceT: SourceConfig](Block[SourceT]):
                 or len(frame) * frame.width > config.max_cells
             ):
                 raise BlockError(
-                    "table_limit", "Input exceeds the configured table limits."
+                    "table_limit", table_limit_error_message
                 )
             if config.columns:
                 if frame.columns != config.columns:
@@ -224,7 +226,7 @@ class CsvSource(FileSource[CsvConfig]):
         # Harden the proof's strict csv.reader rather than trusting inferred rows.
         data = path.read_bytes()
         if len(data) > config.max_bytes:
-            raise BlockError("file_limit", "Input exceeds the configured byte limit.")
+            raise BlockError("file_limit", byte_limit_error_message)
         reader = csv.reader(
             io.StringIO(data.decode(config.encoding), newline=""), strict=True
         )
@@ -256,7 +258,7 @@ class CsvSource(FileSource[CsvConfig]):
                 or len(rows) * len(header) > config.max_cells
             ):
                 raise BlockError(
-                    "table_limit", "Input exceeds the configured table limits."
+                    "table_limit", table_limit_error_message
                 )
         return pl.DataFrame(rows, schema={name: pl.String for name in header}), None
 
@@ -293,7 +295,7 @@ class JsonSource(FileSource[JsonConfig]):
     ) -> tuple[pl.DataFrame, DataSchema | None]:
         data = path.read_bytes()
         if len(data) > config.max_bytes:
-            raise BlockError("file_limit", "Input exceeds the configured byte limit.")
+            raise BlockError("file_limit", byte_limit_error_message)
         rows = json.loads(data.decode(config.encoding), object_pairs_hook=unique_object)
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
             raise ValueError("JSON requires an array of record objects")
@@ -319,7 +321,7 @@ class JsonSource(FileSource[JsonConfig]):
             or len(names) * len(rows) > config.max_cells
         ):
             raise BlockError(
-                "table_limit", "Input exceeds the configured table limits."
+                "table_limit", table_limit_error_message
             )
         columns = self.read_column_generator(names)
         table = Table(data_schema=DataSchema(columns=tuple(columns)), rows=tuple(rows))

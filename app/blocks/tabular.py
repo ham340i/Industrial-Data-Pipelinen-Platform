@@ -70,6 +70,14 @@ def from_frame(frame: pl.DataFrame, schema: DataSchema | None = None) -> Table:
             "schema_mismatch", "Data does not match the declared scalar schema."
         ) from None
 
+def bad_value_finder(original, converted):
+    bad: list[bool] = []
+    for source, target in zip(original, converted, strict=True):
+        bad.append(
+            source is not None and target is not None and int(target) != source
+        )
+    return bad
+        
 
 def cast_column(
     frame: pl.DataFrame, name: str, kind: DType, failure: str = "error"
@@ -93,11 +101,7 @@ def cast_column(
             invalid = invalid | (~converted.is_finite()).fill_null(False)
         # Converting large integers to float must not silently lose precision.
         if kind == "number" and original.dtype.is_integer():
-            bad: list[bool] = []
-            for source, target in zip(original, converted, strict=True):
-                bad.append(
-                    source is not None and target is not None and int(target) != source
-                )
+            bad = bad_value_finder(original, converted)
             invalid = invalid | pl.Series(bad, dtype=pl.Boolean)
         if invalid.any():
             if failure == "error":

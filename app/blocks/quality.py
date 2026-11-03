@@ -200,6 +200,9 @@ class SchemaValidation(Block[SchemaValidationConfig]):
     config_model = SchemaValidationConfig
     descriptor = descriptor("quality.schema_validation", "Validate Schema")
 
+    # due to the append calls at the end of each branch and the sheer number of situations, 
+    # in addition to the fact each case could happen simultanously or sometimes not,
+    # it may not be possible to reduce the cognitive complexity of this function.
     def _execute(
         self, config: SchemaValidationConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:

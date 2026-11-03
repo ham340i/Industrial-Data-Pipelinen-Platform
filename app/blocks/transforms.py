@@ -172,6 +172,7 @@ class FilterConfig(BlockConfig):
     )
 
 
+
 class Filter(Block[FilterConfig]):
     config_model = FilterConfig
     descriptor = BlockDescriptor(
@@ -180,6 +181,29 @@ class Filter(Block[FilterConfig]):
         outputs=(TABLE_PORT,),
     )
 
+    def exceute_checks(value: str|Any, expected):
+        if (
+            type(value) not in expected
+            or isinstance(value, float)
+            and not math.isfinite(value)
+        ):
+            raise ValueError("Type mismatch")
+        
+        if column.dtype == "integer" and (
+            not isinstance(value, int) or not -(2**63) <= value < 2**63
+        ):
+            raise ValueError("Integer out of range")
+    
+        if column.dtype == "boolean" and config.operator not in ("eq", "ne"):
+            raise ValueError("Booleans support equality only")
+        
+        if (
+            column.dtype == "number"
+            and type(value) is int
+            and int(float(value)) != value
+        ):
+            raise ValueError("Filter integer loses Float64 precision")
+    
     def _execute(
         self, config: FilterConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
@@ -207,27 +231,7 @@ class Filter(Block[FilterConfig]):
                     "boolean": (bool,),
                 }[column.dtype]
 
-                if (
-                    type(value) not in expected
-                    or isinstance(value, float)
-                    and not math.isfinite(value)
-                ):
-                    raise ValueError("Type mismatch")
-
-                if column.dtype == "integer" and (
-                    not isinstance(value, int) or not -(2**63) <= value < 2**63
-                ):
-                    raise ValueError("Integer out of range")
-
-                if column.dtype == "boolean" and config.operator not in ("eq", "ne"):
-                    raise ValueError("Booleans support equality only")
-
-                if (
-                    column.dtype == "number"
-                    and type(value) is int
-                    and int(float(value)) != value
-                ):
-                    raise ValueError("Filter integer loses Float64 precision")
+                self.exceute_checks(value,expected)
 
                 operations = {
                     "eq": expr.eq,
