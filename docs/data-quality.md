@@ -62,6 +62,9 @@ python -m pytest tests/test_quality.py tests/test_quality_execution.py -q
 ```
 
 UI/E2E integration remains planned for Iteration 4. Executor PR #70 merged into
-`main` on October 25, 2026 as `00d2c91`; PR #71 now targets `main`. PR #71 remains
-pending follow-up student approval and merge; no stakeholder approval is implied.
-See [verification](testing/issue-25-data-quality.md).
+`main` on October 25, 2026 as `00d2c91` (UTC).
+[PR #71](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/71)
+received MarcElHaddad1's approval and merged on October 31 as `35ed771`;
+[issue #25](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/25)
+is closed as completed. See [verification](testing/issue-25-data-quality.md)
+for the November 2 current-main recheck. Stakeholder acceptance remains unverified.

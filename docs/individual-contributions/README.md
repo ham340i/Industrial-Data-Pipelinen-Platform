@@ -18,5 +18,8 @@ Issue #17 local implementation evidence: [Al-Yousef, Iteration 2 configuration](
 Independent review and acceptance remain pending.
 
 Issue #25 implementation evidence: [Al-Yousef, Iteration 3 data quality](Al-Yousef-iteration-3.md).
-Review feedback was submitted on PR #71; follow-up student approval and its merge
-remain pending. Executor PR #70 is already merged into `main`.
+[PR #71](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/71)
+received MarcElHaddad1's approval and merged into `main` on October 31, 2026.
+The record also links Al-Yousef's allocated review of merged executor PR #70
+and the November 2 current-main verification. UI/stakeholder acceptance remains
+unverified.
