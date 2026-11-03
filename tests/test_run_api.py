@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.config import settings
+from app.blocks.sample import VALUE_SCHEMA
 from app.main import app
 from app.metadata.database import Database
 from app.metadata.models import OutputEndpoint, Run, RunBlock
@@ -64,6 +65,7 @@ def test_detail_has_a_stable_schema_and_links_artifacts(client: TestClient):
                 format="parquet",
                 artifact_ref="artifact-1",
                 row_count=2,
+                schema_json=VALUE_SCHEMA.model_dump(mode="json"),
             )
         )
 

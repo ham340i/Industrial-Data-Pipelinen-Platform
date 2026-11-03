@@ -7,3 +7,4 @@ sqlalchemy>=2.0,<2.1
 alembic>=1.13,<2
 polars==1.44.2
 pyarrow==25.0.1
+duckdb>=1.5.6,<2

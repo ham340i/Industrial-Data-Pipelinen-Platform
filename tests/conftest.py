@@ -14,5 +14,6 @@ from app.config import settings
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """API client that returns error responses instead of re-raising server errors."""
     monkeypatch.setattr(settings, "metadata_path", tmp_path / "api.sqlite3")
+    monkeypatch.setattr(settings, "workspace_root", tmp_path / "workspace")
     with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client

@@ -72,6 +72,8 @@ def main():
                 "if os.getuid() == 0:\n    raise RuntimeError('API must be non-root')\n"
                 "if settings.metadata_path != Path('/var/lib/lps/metadata.sqlite3'):\n"
                 "    raise RuntimeError('API metadata path does not use the volume')\n"
+                "if settings.workspace_root != Path('/var/lib/lps/workspace'):\n"
+                "    raise RuntimeError('API workspace path does not use the volume')\n"
                 "database = Database(settings.metadata_path)\n"
                 "try:\n"
                 "    with database.transaction() as session:\n"
