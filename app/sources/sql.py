@@ -146,6 +146,9 @@ def execute_read_only_sqlite(
     connection: sqlite3.Connection,
     query: str,
     parameters: dict[str, Any] | None = None,
+    *,
+    max_rows: int | None = None,
+    max_bytes: int | None = None,
 ) -> SqlQueryResult:
     """Execute a constrained read query using SQLite-bound parameters."""
     try:
@@ -165,7 +168,25 @@ def execute_read_only_sqlite(
             raise SqlSourceError(
                 "SQL result column names must be unique; use explicit aliases"
             )
-        rows = [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
+
+        rows: list[dict[str, Any]] = []
+        result_bytes = 0
+        for row in cursor:
+            if max_rows is not None and len(rows) >= max_rows:
+                raise SqlSourceError("SQL result exceeds the row budget")
+            result_bytes += sum(
+                len(value.encode("utf-8"))
+                if isinstance(value, str)
+                else len(value)
+                if isinstance(value, bytes)
+                else 8
+                for value in row
+            )
+            if max_bytes is not None and result_bytes > max_bytes:
+                raise SqlSourceError("SQL result exceeds the byte budget")
+            if len(row) != len(columns):
+                raise SqlSourceError("SQLite returned an unexpected column count")
+            rows.append(dict(zip(columns, row, strict=False)))
 
         return SqlQueryResult(
             columns=columns,

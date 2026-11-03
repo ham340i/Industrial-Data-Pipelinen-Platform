@@ -9,6 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { PipelineControls } from "./PipelineControls";
+import { RunControls } from "./RunControls";
 import { Canvas } from "./Canvas";
 import { ValidationPanel } from "./ValidationPanel";
 import { ConfigurationPanel } from "./configuration/ConfigurationPanel";
@@ -25,6 +26,7 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
   const setProject = useEditorStore((state) => state.setProject);
   const nodes = useEditorStore((state) => state.nodes);
   const edges = useEditorStore((state) => state.edges);
+  const generation = useEditorStore((state) => state.generation);
   const validation = usePipelineValidation(nodes, edges);
   useEffect(() => setProject(projectId), [projectId, setProject]);
   return (
@@ -66,6 +68,12 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
       </Paper>
       {projectId && <PipelineControls key={projectId} projectId={projectId} />}
       <ValidationPanel validation={validation} />
+      {projectId && (
+        <RunControls
+          key={`${projectId}-${generation}`}
+          canRun={validation.canRun}
+        />
+      )}
       <Box
         inert={busy}
         sx={{

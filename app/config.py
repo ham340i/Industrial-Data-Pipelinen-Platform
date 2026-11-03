@@ -5,6 +5,11 @@ from pydantic import BaseModel, Field
 
 
 class Settings(BaseModel):
+    workspace_root: Path = Field(
+        default_factory=lambda: Path(
+            os.environ.get("LPS_WORKSPACE_ROOT", "local-data/workspaces")
+        )
+    )
     app_name: str = "Local Pipeline Studio API"
     api_version: str = "0.1.0"
     host: str = "127.0.0.1"

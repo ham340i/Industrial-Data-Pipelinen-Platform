@@ -136,3 +136,12 @@ Iteration 4 UI/E2E and stakeholder acceptance remain unverified. Issue #33 and
 the individual Release 1 `[LLL]` issue are separate from #25's completed
 Iteration 3 implementation. No team completion tag or academic delivery is
 asserted.
+
+## Issue #23 local preparation
+
+The [SQL source guide](../../sql-source.md),
+[verification record](../../testing/issue-23-31-sql-workflow.md) and
+[AI-assisted owner record](../../individual-contributions/aboudka2003-iteration-3.md)
+record the local SQLite implementation and actual tests. PR/CI, independent
+review and stakeholder acceptance remain pending; no iteration completion is
+asserted.

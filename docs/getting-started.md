@@ -2,7 +2,7 @@
 
 ## Current capability
 
-The React workbench, FastAPI and SQLite metadata are implemented. Issue #19 adds [project create/list/open and selection restoration](projects.md). The [visual canvas](frontend/canvas.md) supports block discovery, graph editing and project-scoped pipeline save/open/rename. ETL execution remains separate work. To start both services, follow the [Compose workspace guide](local-workspace.md). See the [frontend guide](frontend/workbench.md) for configuration, architecture, usage and troubleshooting.
+The React workbench, FastAPI and SQLite metadata are implemented. Issue #19 adds [project create/list/open and selection restoration](projects.md). The [visual canvas](frontend/canvas.md) supports block discovery, graph editing and project-scoped pipeline save/open/rename. Saved, validated pipelines can be run manually with project-scoped runtime files; see [SQL source setup](sql-source.md). Selected-node preview and artifact inspection remain separate work. To start both services, follow the [Compose workspace guide](local-workspace.md). See the [frontend guide](frontend/workbench.md) for configuration, architecture, usage and troubleshooting.
 
 ## Compose startup
 
