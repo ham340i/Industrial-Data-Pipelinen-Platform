@@ -272,9 +272,9 @@ class SchemaValidation(Block[SchemaValidationConfig]):
                     )
         if not config.allow_extra_columns:
             diagnostics=self.extra_columns_diagnostics(diagnostics,
-                                                    sorted(actual.keys() - expected.keys()),
-                                                    actual[name].dtype,
-                                                    bad)
+                                                sorted(actual.keys() - expected.keys()),
+                                                actual[name].dtype,
+                                                bad)
         if not diagnostics:
             diagnostics.append(QualityDiagnostic(code="schema_valid", status="pass"))
         report(self.descriptor, context, tuple(diagnostics), config.required)
