@@ -266,7 +266,9 @@ class JsonSource(FileSource[JsonConfig]):
         outputs=(TABLE_PORT,),
     )
 
-    def read_column_generator(self, source_names, rows) -> list:
+    def read_column_generator(
+        self, source_names: list[Any], rows: list[Any]
+    ) -> list[Any]:
         columns = []
         for name in source_names:
             kind: DType

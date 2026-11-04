@@ -71,7 +71,7 @@ def from_frame(frame: pl.DataFrame, schema: DataSchema | None = None) -> Table:
         ) from None
 
 
-def bad_value_finder(original, converted):
+def bad_value_finder(original: Any, converted: Any) -> list[bool]:
     bad: list[bool] = []
     for source, target in zip(original, converted, strict=True):
         bad.append(source is not None and target is not None and int(target) != source)

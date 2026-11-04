@@ -200,23 +200,6 @@ class SchemaValidation(Block[SchemaValidationConfig]):
     config_model = SchemaValidationConfig
     descriptor = descriptor("quality.schema_validation", "Validate Schema")
 
-    def extra_columns_diagnostics(
-        self,
-        diagnostics_update: list[QualityDiagnostic],
-        sorted_keys: list,
-        a_dtype: str,
-        bad
-    ):
-        for name in sorted_keys:
-            diagnostics_update.append(
-                QualityDiagnostic(
-                    code="extra_column",
-                    status=bad,
-                    column=name,
-                    actual_type=a_dtype,
-                )
-            )
-        return diagnostics_update
 
     def _execute(
         self, config: SchemaValidationConfig, inputs: PortValues, context: BlockContext
@@ -271,11 +254,13 @@ class SchemaValidation(Block[SchemaValidationConfig]):
                         )
                     )
         if not config.allow_extra_columns:
-            diagnostics=self.extra_columns_diagnostics(
-                diagnostics,
-                sorted(actual.keys() - expected.keys()),
-                actual[name].dtype,
-                bad
+            diagnostics.append(
+                QualityDiagnostic(
+                    code="extra_column",
+                    status=bad,
+                    column=name,
+                    actual_type=actual[name].dtype,
+                )
             )
         if not diagnostics:
             diagnostics.append(QualityDiagnostic(code="schema_valid", status="pass"))

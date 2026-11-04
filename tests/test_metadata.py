@@ -111,10 +111,11 @@ def test_complete_metadata_survives_reopening(seeded: Database):
 
 def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
     invaild_query = Pipeline(project_id="missing-parent", name="Invalid")
-    database.transaction().add(Project(id="should-rollback", name="Valid"))
-    database.transaction().flush()
-    with pytest.raises(IntegrityError), database.transaction() as session:
-        session.add(invaild_query)
+    with database.transaction() as session:
+        session.add(Project(id="should-rollback", name="Valid"))
+        session.flush()
+        with pytest.raises(IntegrityError):
+            session.add(invaild_query)
     with database.transaction() as session:
         assert session.get(Project, "should-rollback") is None
         session.add(Project(id="next-transaction", name="Still usable"))
@@ -123,11 +124,12 @@ def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
 
 
 def test_exception_rolls_back_session_and_ddl(database: Database):
-    database.transaction().add(Project(id="rollback", name="Rollback"))
-    database.transaction().flush()
-    database.transaction().execute(text("CREATE TABLE temporary_ddl (id INTEGER)"))
-    with pytest.raises(RuntimeError), database.transaction() as session:
-        raise RuntimeError("synthetic failure")
+    with database.transaction() as session:
+        session.add(Project(id="rollback", name="Rollback"))
+        session.flush()
+        session.execute(text("CREATE TABLE temporary_ddl (id INTEGER)"))
+        with pytest.raises(RuntimeError):
+            raise RuntimeError("synthetic failure")
     assert "temporary_ddl" not in inspect(database.engine).get_table_names()
     with database.transaction() as session:
         assert session.get(Project, "rollback") is None
@@ -273,7 +275,6 @@ def test_run_updates_allow_normal_execution_lifecycle(seeded: Database):
 def test_referenced_history_cannot_be_deleted(
     seeded: Database, model: type[Base], identity: str
 ):
-    attempt_history_deletion_query = delete(model).where(model.id == identity)
     if model is Run:
         with seeded.transaction() as session:
             session.add(
@@ -286,7 +287,7 @@ def test_referenced_history_cannot_be_deleted(
                 )
             )
     with pytest.raises(IntegrityError), seeded.transaction() as session:
-        session.execute(attempt_history_deletion_query)  # type: ignore[attr-defined]
+        session.execute(delete(model).where(model.id == identity))  # type: ignore[attr-defined]
 
 
 def test_revision_history_is_immutable_and_runs_keep_original(seeded: Database):

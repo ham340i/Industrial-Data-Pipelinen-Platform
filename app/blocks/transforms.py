@@ -180,7 +180,9 @@ class Filter(Block[FilterConfig]):
         outputs=(TABLE_PORT,),
     )
 
-    def filter_columndtype_checks(self, filter_config: FilterConfig, value, dtype):
+    def filter_columndtype_checks(
+        self, filter_config: FilterConfig, value: Any, dtype: str
+    ) -> None:
         if dtype == "integer" and (
             not isinstance(value, int) or not -(2**63) <= value < 2**63
         ):
@@ -341,8 +343,8 @@ class Join(Block[JoinConfig]):
         return {column.name: column for column in table.data_schema.columns}
 
     def key_type_mismatch_check(
-        self, mismatch_left, mismatch_left_name, mismatch_right
-    ):
+        self, mismatch_left: str, mismatch_left_name: Any, mismatch_right: str
+    ) -> None:
         if mismatch_left != mismatch_right:
             raise BlockError(
                 "join_key_type_mismatch",
@@ -350,7 +352,12 @@ class Join(Block[JoinConfig]):
                 field=mismatch_left_name,
             )
 
-    def config_carinality_checks(self, config_cardinality, config_left, config_right):
+    def config_carinality_checks(
+        self,
+        config_cardinality: str,
+        config_left: set[tuple[object, ...]],
+        config_right: set[tuple[object, ...]]
+    ) -> None:
         if config_cardinality == "one_to_one" and (config_left or config_right):
             raise BlockError(
                 "invalid_cardinality",
@@ -371,7 +378,7 @@ class Join(Block[JoinConfig]):
 
     def join_failure_check(
         self, check_right_joined_name: str, check_columns: list[str], check_right: str
-    ):
+    ) -> None:
         if check_right_joined_name not in check_columns:
             raise BlockError(
                 "join_failed",
@@ -385,7 +392,7 @@ class Join(Block[JoinConfig]):
         prep_right_names: list[str],
         prep_right_columns: dict[str, Column],
         prep_config: JoinConfig
-    ):
+    ) -> list[Column]:
         output_columns: list[Column] = []
         for column in prep_left_data:
             output_columns.append(
@@ -664,7 +671,7 @@ class Aggregate(Block[AggregateConfig]):
 
     def aggregate_duplicate_check(
         self, dup_group: set[NonBlank], dup_output: list[NonBlank]
-    ):
+    ) -> None:
         if dup_group.intersection(dup_output):
             raise BlockError(
                 "duplicate_column",
@@ -676,7 +683,7 @@ class Aggregate(Block[AggregateConfig]):
         self,
         vailidator_dtype: Literal["string", "integer", "number", "boolean"],
         vailidator_operation: AggregateOperation
-    ):
+    ) -> None:
         if vailidator_dtype not in ("integer", "number"):
             raise BlockError(
                 "invalid_aggregate",

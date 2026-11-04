@@ -64,7 +64,7 @@ def visit_early_return_check(item: object, path: tuple[str, ...]) -> bool:
     return False
 
 
-def public_value_error_check(key):
+def public_value_error_check(key: Any) -> None:
     if not isinstance(key, str):
         raise PublicValueError()
 
@@ -193,7 +193,9 @@ class Table(Contract):
     data_schema: DataSchema
     rows: tuple[dict[str, Scalar], ...]
 
-    def column_check(self, dict_matches: dict[str, bool], value, column: Column):
+    def column_check(
+        self, dict_matches: dict[str, bool], value: Scalar, column: Column
+    ) -> None:
         if not dict_matches[column.dtype]:
             raise ValueError("Value does not match its declared type")
         if isinstance(value, float) and not math.isfinite(value):
