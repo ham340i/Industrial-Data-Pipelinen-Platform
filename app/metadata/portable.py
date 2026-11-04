@@ -28,7 +28,27 @@ _RUNTIME_KEYS = {
     "connectionstring",
     "dsn",
 }
-_ABSOLUTE_PATH = re.compile(r"^(?:[/\\]|[A-Za-z]:|file:)", re.IGNORECASE)
+_ABSOLUTE_PATH = re.compile(r"^(?:[/\\]|[A-Z]:|file:)", re.IGNORECASE)
+
+
+def portable_definition_validator(value: Any) -> None:
+    if not isinstance(value, dict):
+        raise ValueError("A portable definition must be a JSON object")
+
+
+def check_key_is_string(key: Any) -> None:
+    if not isinstance(key, str):
+        raise ValueError("JSON object keys must be strings")
+
+
+def check_runtime_location(keys: str) -> None:
+    if keys in _RUNTIME_KEYS:
+        raise ValueError("Runtime bindings do not belong in definitions")
+
+
+def check_absolute_path_in_path(item: str) -> None:
+    if _ABSOLUTE_PATH.match(item):
+        raise ValueError("Absolute paths do not belong in definitions")
 
 
 def portable_definition(value: dict[str, Any]) -> dict[str, Any]:
@@ -37,24 +57,20 @@ def portable_definition(value: dict[str, Any]) -> dict[str, Any]:
     This does not validate graph topology or detect arbitrary secret strings.
     Logical resource IDs belong in definitions; local bindings are separate.
     """
-    if not isinstance(value, dict):
-        raise ValueError("A portable definition must be a JSON object")
+    portable_definition_validator(value)
 
     def visit(item: object) -> None:
         if isinstance(item, dict):
             for key, child in item.items():
-                if not isinstance(key, str):
-                    raise ValueError("JSON object keys must be strings")
+                check_key_is_string(key)
                 normalized = re.sub(r"[^a-z0-9]", "", key.lower())
-                if normalized in _RUNTIME_KEYS:
-                    raise ValueError("Runtime bindings do not belong in definitions")
+                check_runtime_location(normalized)
                 visit(child)
         elif isinstance(item, list):
             for child in item:
                 visit(child)
         elif isinstance(item, str):
-            if _ABSOLUTE_PATH.match(item):
-                raise ValueError("Absolute paths do not belong in definitions")
+            check_absolute_path_in_path(item)
         elif item is not None and not isinstance(item, (bool, int, float)):
             raise ValueError("Definitions accept only JSON values")
 
