@@ -98,6 +98,7 @@ class Block[ConfigT: BlockConfig](ABC):
         )
 
     def validate_append_control_signal(
+            self,
             iterated_item:Payload, 
             code: str, 
             validated: list[Payload], 
@@ -113,7 +114,7 @@ class Block[ConfigT: BlockConfig](ABC):
             ) from None
         return validated.append(signal)
 
-    def validate_append_table(iterated_item:Payload, code: str, validated: list[Payload], name,data):
+    def validate_append_table(self,iterated_item:Payload, code: str, validated: list[Payload], name,data):
         if not isinstance(iterated_item, Table):
             raise BlockError(code, "Expected a table.", field=name)
         try:

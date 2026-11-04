@@ -272,6 +272,7 @@ class JsonSource(FileSource[JsonConfig]):
     )
 
     def read_column_generator(
+        self,
         source_names,
         rows
         )->list:

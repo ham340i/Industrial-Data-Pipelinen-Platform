@@ -181,7 +181,7 @@ class Filter(Block[FilterConfig]):
         outputs=(TABLE_PORT,),
     )
 
-    def filter_columndtype_checks(filter_config: FilterConfig, value, dtype):
+    def filter_columndtype_checks(self,filter_config: FilterConfig, value, dtype):
         if dtype == "integer" and (
             not isinstance(value, int) or not -(2**63) <= value < 2**63
         ):
@@ -347,6 +347,7 @@ class Join(Block[JoinConfig]):
         return {column.name: column for column in table.data_schema.columns}
 
     def key_type_mismatch_check(
+        self,
         mismatch_left, 
         mismatch_left_name,
         mismatch_right
@@ -359,6 +360,7 @@ class Join(Block[JoinConfig]):
             )
 
     def config_carinality_checks(
+        self,
         config_cardinality,
         config_left,
         config_right
@@ -382,6 +384,7 @@ class Join(Block[JoinConfig]):
             )
 
     def join_failure_check(
+        self,
         check_right_joined_name: str, 
         check_columns: list[str], 
         check_right: str
@@ -394,6 +397,7 @@ class Join(Block[JoinConfig]):
             )
 
     def join_prepare_output_columns(
+        self,
         prep_left_data: tuple[Column, ...], 
         prep_right_names:list[str], 
         prep_right_columns:dict[str,Column], 
@@ -668,6 +672,7 @@ class Aggregate(Block[AggregateConfig]):
         return source.nullable or not has_group_by
 
     def aggregate_duplicate_check(
+        self,
         dup_group:set[NonBlank], 
         dup_output:list[NonBlank]
     ):
@@ -679,14 +684,15 @@ class Aggregate(Block[AggregateConfig]):
             )
 
     def aggregate_type_vailidator(
+        self,
         vailidator_dtype: Literal['string', 'integer', 'number', 'boolean'], 
         vailidator_operation: AggregateOperation
     ):
-        if dtype not in ("integer", "number"):
+        if vailidator_dtype not in ("integer", "number"):
             raise BlockError(
                 "invalid_aggregate",
-                operation.function.capitalize()+" requires an integer or number column.",
-                field=operation.column,
+                vailidator_operation.function.capitalize()+" requires an integer or number column.",
+                field=vailidator_operation.column,
             )
         
     def _execute(

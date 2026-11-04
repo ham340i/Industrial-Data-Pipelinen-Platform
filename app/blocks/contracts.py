@@ -191,11 +191,12 @@ class Table(Contract):
     rows: tuple[dict[str, Scalar], ...]
 
     def column_check(
+            self,
             dict_matches: dict[str, bool], 
             value, 
             column: Column
         ):
-        if not matches[column.dtype]:
+        if not dict_matches[column.dtype]:
             raise ValueError("Value does not match its declared type")
         if isinstance(value, float) and not math.isfinite(value):
             raise ValueError("Non-finite numbers are unsupported")
