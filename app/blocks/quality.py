@@ -201,6 +201,7 @@ class SchemaValidation(Block[SchemaValidationConfig]):
     descriptor = descriptor("quality.schema_validation", "Validate Schema")
 
     def extra_columns_diagnostics(
+        self,
         diagnostics_update: list[QualityDiagnostic], 
         sorted_keys:list,
         a_dtype:str,
