@@ -53,7 +53,8 @@ class PublicValueError(ValueError):
         self.field = field
         super().__init__("Public values must be finite, credential-free JSON.")
 
-def visit_early_return_check(item: object, path: tuple[str, ...])-> bool:
+
+def visit_early_return_check(item: object, path: tuple[str, ...]) -> bool:
     if item is None or type(item) in (str, bool, int):
         return True
     if type(item) is float:
@@ -62,9 +63,11 @@ def visit_early_return_check(item: object, path: tuple[str, ...])-> bool:
         return True
     return False
 
+
 def public_value_error_check(key):
     if not isinstance(key, str):
         raise PublicValueError()
+
 
 def require_public_json(value: object) -> None:
     """Check original Python values: JSON serialization alone coerces some types.
@@ -75,7 +78,7 @@ def require_public_json(value: object) -> None:
     active: set[int] = set()
 
     def visit(item: object, path: tuple[str, ...]) -> None:
-        if visit_early_return_check(item,path):
+        if visit_early_return_check(item, path):
             return
         if isinstance(item, (dict, list)):
             identity = id(item)
@@ -190,12 +193,7 @@ class Table(Contract):
     data_schema: DataSchema
     rows: tuple[dict[str, Scalar], ...]
 
-    def column_check(
-            self,
-            dict_matches: dict[str, bool],
-            value,
-            column: Column
-        ):
+    def column_check(self, dict_matches: dict[str, bool], value, column: Column):
         if not dict_matches[column.dtype]:
             raise ValueError("Value does not match its declared type")
         if isinstance(value, float) and not math.isfinite(value):
@@ -219,7 +217,7 @@ class Table(Contract):
                     "number": type(value) in (int, float),
                     "boolean": type(value) is bool,
                 }
-                self.column_check(matches,value,column)
+                self.column_check(matches, value, column)
         return self
 
 

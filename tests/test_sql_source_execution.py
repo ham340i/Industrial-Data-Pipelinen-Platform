@@ -140,7 +140,7 @@ def test_duplicate_result_names_are_rejected(
     query = "SELECT asset_id AS value, measurement_value AS value FROM measurements"
     if empty:
         query += " WHERE 0"
-    config= make_config(synthetic_sqlite_db, query)
+    config = make_config(synthetic_sqlite_db, query)
     with pytest.raises(SqlSourceError, match="unique.*aliases"):
         read_sqlite_source(config)
 

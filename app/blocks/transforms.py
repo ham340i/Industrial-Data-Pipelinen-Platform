@@ -172,7 +172,6 @@ class FilterConfig(BlockConfig):
     )
 
 
-
 class Filter(Block[FilterConfig]):
     config_model = FilterConfig
     descriptor = BlockDescriptor(
@@ -181,7 +180,7 @@ class Filter(Block[FilterConfig]):
         outputs=(TABLE_PORT,),
     )
 
-    def filter_columndtype_checks(self,filter_config: FilterConfig, value, dtype):
+    def filter_columndtype_checks(self, filter_config: FilterConfig, value, dtype):
         if dtype == "integer" and (
             not isinstance(value, int) or not -(2**63) <= value < 2**63
         ):
@@ -190,11 +189,7 @@ class Filter(Block[FilterConfig]):
         if dtype == "boolean" and filter_config.operator not in ("eq", "ne"):
             raise ValueError("Booleans support equality only")
 
-        if (
-            dtype == "number"
-            and type(value) is int
-            and int(float(value)) != value
-        ):
+        if dtype == "number" and type(value) is int and int(float(value)) != value:
             raise ValueError("Filter integer loses Float64 precision")
 
     def _execute(
@@ -346,10 +341,7 @@ class Join(Block[JoinConfig]):
         return {column.name: column for column in table.data_schema.columns}
 
     def key_type_mismatch_check(
-        self,
-        mismatch_left,
-        mismatch_left_name,
-        mismatch_right
+        self, mismatch_left, mismatch_left_name, mismatch_right
     ):
         if mismatch_left != mismatch_right:
             raise BlockError(
@@ -358,12 +350,7 @@ class Join(Block[JoinConfig]):
                 field=mismatch_left_name,
             )
 
-    def config_carinality_checks(
-        self,
-        config_cardinality,
-        config_left,
-        config_right
-    ):
+    def config_carinality_checks(self, config_cardinality, config_left, config_right):
         if config_cardinality == "one_to_one" and (config_left or config_right):
             raise BlockError(
                 "invalid_cardinality",
@@ -383,10 +370,7 @@ class Join(Block[JoinConfig]):
             )
 
     def join_failure_check(
-        self,
-        check_right_joined_name: str,
-        check_columns: list[str],
-        check_right: str
+        self, check_right_joined_name: str, check_columns: list[str], check_right: str
     ):
         if check_right_joined_name not in check_columns:
             raise BlockError(
@@ -398,8 +382,8 @@ class Join(Block[JoinConfig]):
     def join_prepare_output_columns(
         self,
         prep_left_data: tuple[Column, ...],
-        prep_right_names:list[str],
-        prep_right_columns:dict[str,Column],
+        prep_right_names: list[str],
+        prep_right_columns: dict[str, Column],
         prep_config: JoinConfig
     ):
         output_columns: list[Column] = []
@@ -445,9 +429,11 @@ class Join(Block[JoinConfig]):
             config.right_on,
             strict=True,
         ):
-            self.key_type_mismatch_check(left_columns[left_name].dtype,
-                                         left_name,
-                                         right_columns[right_name].dtype)
+            self.key_type_mismatch_check(
+                left_columns[left_name].dtype,
+                left_name,
+                right_columns[right_name].dtype
+            )
 
         right_key_names = set(config.right_on)
         left_names = set(left_columns)
@@ -463,7 +449,9 @@ class Join(Block[JoinConfig]):
         left_duplicates = self._duplicate_keys(left, config.left_on)
         right_duplicates = self._duplicate_keys(right, config.right_on)
 
-        self.config_carinality_checks(config.cardinality,left_duplicates,right_duplicates)
+        self.config_carinality_checks(
+            config.cardinality, left_duplicates, right_duplicates
+        )
 
         join_how = "full" if config.how == "outer" else config.how
 
@@ -497,7 +485,7 @@ class Join(Block[JoinConfig]):
                     f"{right_name}__right" if right_name in left_columns else right_name
                 )
 
-                self.join_failure_check(right_joined_name, frame.columns,right_name)
+                self.join_failure_check(right_joined_name, frame.columns, right_name)
 
                 coalesced_key_expressions.append(
                     pl.coalesce(
@@ -530,10 +518,9 @@ class Join(Block[JoinConfig]):
                 "The join output columns could not be constructed.",
             ) from None
 
-        output_columns=self.join_prepare_output_columns(
-            left.data_schema.columns,
-            right_value_names,
-            right_columns,config)
+        output_columns = self.join_prepare_output_columns(
+            left.data_schema.columns, right_value_names, right_columns, config
+        )
 
         schema = DataSchema(columns=tuple(output_columns))
         return {"table": (from_frame(frame, schema),)}
@@ -676,9 +663,7 @@ class Aggregate(Block[AggregateConfig]):
         return source.nullable or not has_group_by
 
     def aggregate_duplicate_check(
-        self,
-        dup_group:set[NonBlank],
-        dup_output:list[NonBlank]
+        self, dup_group: set[NonBlank], dup_output: list[NonBlank]
     ):
         if dup_group.intersection(dup_output):
             raise BlockError(
@@ -689,14 +674,14 @@ class Aggregate(Block[AggregateConfig]):
 
     def aggregate_type_vailidator(
         self,
-        vailidator_dtype: Literal['string', 'integer', 'number', 'boolean'],
+        vailidator_dtype: Literal["string", "integer", "number", "boolean"],
         vailidator_operation: AggregateOperation
     ):
         if vailidator_dtype not in ("integer", "number"):
             raise BlockError(
                 "invalid_aggregate",
-                vailidator_operation.function.capitalize()+
-                " requires an integer or number column.",
+                vailidator_operation.function.capitalize()
+                + " requires an integer or number column.",
                 field=vailidator_operation.column,
             )
 
@@ -728,7 +713,7 @@ class Aggregate(Block[AggregateConfig]):
             if operation.function == "count":
                 expression = pl.col(operation.column).count()
             elif operation.function == "sum":
-                self.aggregate_type_vailidator(source.dtype,operation)
+                self.aggregate_type_vailidator(source.dtype, operation)
                 if source.dtype == "integer":
                     check_integer_sum_overflow(
                         table,
@@ -743,7 +728,7 @@ class Aggregate(Block[AggregateConfig]):
             elif operation.function == "max":
                 expression = pl.col(operation.column).max()
             elif operation.function == "mean":
-                self.aggregate_type_vailidator(source.dtype,operation)
+                self.aggregate_type_vailidator(source.dtype, operation)
                 expression = pl.col(operation.column).mean()
             else:
                 raise BlockError(

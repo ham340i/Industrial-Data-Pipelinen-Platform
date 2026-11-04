@@ -70,13 +70,13 @@ def from_frame(frame: pl.DataFrame, schema: DataSchema | None = None) -> Table:
             "schema_mismatch", "Data does not match the declared scalar schema."
         ) from None
 
+
 def bad_value_finder(original, converted):
     bad: list[bool] = []
     for source, target in zip(original, converted, strict=True):
-        bad.append(
-            source is not None and target is not None and int(target) != source
-        )
+        bad.append(source is not None and target is not None and int(target) != source)
     return bad
+
 
 def cast_column(
     frame: pl.DataFrame, name: str, kind: DType, failure: str = "error"

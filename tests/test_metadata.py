@@ -110,7 +110,7 @@ def test_complete_metadata_survives_reopening(seeded: Database):
 
 
 def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
-    invaild_query=Pipeline(project_id="missing-parent", name="Invalid")
+    invaild_query = Pipeline(project_id="missing-parent", name="Invalid")
     database.transaction().add(Project(id="should-rollback", name="Valid"))
     database.transaction().flush()
     with pytest.raises(IntegrityError), database.transaction() as session:
@@ -135,7 +135,7 @@ def test_exception_rolls_back_session_and_ddl(database: Database):
 
 @pytest.mark.parametrize("reconnect", [False, True])
 def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bool):
-    missing_piprline_revision_id_query=Run(pipeline_revision_id="nonexistent")
+    missing_piprline_revision_id_query = Run(pipeline_revision_id="nonexistent")
     if reconnect:
         database.engine.dispose()
     with database.engine.connect() as first, database.engine.connect() as second:
@@ -212,7 +212,7 @@ def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bo
 def test_database_constraints(
     seeded: Database, model: type[Base], values: dict[str, Any]
 ):
-    random_set_of_strings_query=model(**values)
+    random_set_of_strings_query = model(**values)
     with pytest.raises(IntegrityError), seeded.transaction() as session:
         session.add(random_set_of_strings_query)
 
@@ -273,7 +273,7 @@ def test_run_updates_allow_normal_execution_lifecycle(seeded: Database):
 def test_referenced_history_cannot_be_deleted(
     seeded: Database, model: type[Base], identity: str
 ):
-    attempt_history_deletion_query=delete(model).where(model.id == identity)
+    attempt_history_deletion_query = delete(model).where(model.id == identity)
     if model is Run:
         with seeded.transaction() as session:
             session.add(
@@ -353,12 +353,12 @@ def test_portable_definition_is_detached_and_json_only():
 
 @pytest.mark.parametrize("definition", [{"path": "relative.csv"}, None])
 def test_core_insert_also_enforces_portability(seeded: Database, definition: Any):
-    insert_to_test_portability_query=insert(Base.metadata.tables["pipeline_revisions"]).values(
-                    id="core", pipeline_id="pipeline", revision=2, definition=definition
-                )
+    insert_to_test_portability_query = insert(
+        Base.metadata.tables["pipeline_revisions"]
+    ).values(id="core", pipeline_id="pipeline", revision=2, definition=definition)
     with pytest.raises(StatementError), seeded.transaction() as session:
-        session.execute(insert_to_test_portability_query
-        )
+        session.execute(insert_to_test_portability_query)
+
 
 def test_migration_round_trip_and_schema_drift(database: Database):
     expected = set(Base.metadata.tables)
