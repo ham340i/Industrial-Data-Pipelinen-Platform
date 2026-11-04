@@ -271,9 +271,12 @@ class JsonSource(FileSource[JsonConfig]):
         outputs=(TABLE_PORT,),
     )
 
-    def read_column_generator(names)->list:
+    def read_column_generator(
+        source_names,
+        rows
+        )->list:
         columns = []
-        for name in names:
+        for name in source_names:
             kind: DType
             values = [row[name] for row in rows if name in row]
             kinds = {type(value) for value in values if value is not None}
@@ -323,7 +326,7 @@ class JsonSource(FileSource[JsonConfig]):
             raise BlockError(
                 "table_limit", table_limit_error_message
             )
-        columns = self.read_column_generator(names)
+        columns = self.read_column_generator(names,rows)
         table = Table(data_schema=DataSchema(columns=tuple(columns)), rows=tuple(rows))
         return to_frame(table), table.data_schema
 

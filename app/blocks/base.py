@@ -97,23 +97,28 @@ class Block[ConfigT: BlockConfig](ABC):
             descriptor.inputs, inputs, "invalid_inputs"
         )
 
-    def validate_append_control_signal(item:Payload, code: str, validated: list[Payload], name):
-        if not isinstance(item, ControlSignal):
+    def validate_append_control_signal(
+            iterated_item:Payload, 
+            code: str, 
+            validated: list[Payload], 
+            name
+        ):
+        if not isinstance(iterated_item, ControlSignal):
             raise BlockError(code, "Expected a control signal.", field=name)
         try:
-            signal = ControlSignal.model_validate(item.model_dump())
+            signal = ControlSignal.model_validate(iterated_item.model_dump())
         except ValidationError:
             raise BlockError(
                 code, "Control signal is invalid.", field=name
             ) from None
         return validated.append(signal)
 
-    def validate_append_table(item:Payload, code: str, validated: list[Payload], name,data):
-        if not isinstance(item, Table):
+    def validate_append_table(iterated_item:Payload, code: str, validated: list[Payload], name,data):
+        if not isinstance(iterated_item, Table):
             raise BlockError(code, "Expected a table.", field=name)
         try:
             # Recheck and detach nested dictionaries at the boundary.
-            table = Table.model_validate(item.model_dump())
+            table = Table.model_validate(iterated_item.model_dump())
         except ValidationError:
             raise BlockError(
                 code, "Table data is invalid.", field=name

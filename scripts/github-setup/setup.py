@@ -36,7 +36,7 @@ def existing_records(repo, kind):
             return records
         page += 1
 
-def set_Differs(o, k, r):
+def set_differs(o, k, r):
     return any(
                 (str(o.get(field, ''))[:10] != value[:10]
                  if k == 'milestones' and field == 'due_on'
@@ -65,7 +65,7 @@ def reconcile(repo, kind, desired, existing, apply=False):
 
 
 def kind_validator (a: list[str]):
-    if not a[0]=='labels' and a[1]=='milestones':
+    if a[0]!='labels' and a[1]=='milestones':
         return False
     else:
         return True

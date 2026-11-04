@@ -189,7 +189,12 @@ class Table(Contract):
 
     data_schema: DataSchema
     rows: tuple[dict[str, Scalar], ...]
-    def column_check(matches, value, column):
+
+    def column_check(
+            dict_matches: dict[str, bool], 
+            value, 
+            column: Column
+        ):
         if not matches[column.dtype]:
             raise ValueError("Value does not match its declared type")
         if isinstance(value, float) and not math.isfinite(value):
