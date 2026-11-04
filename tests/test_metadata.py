@@ -110,7 +110,7 @@ def test_complete_metadata_survives_reopening(seeded: Database):
 
 
 def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
-    with pytest.raises(IntegrityError),database.transaction() as session:
+    with pytest.raises(IntegrityError), database.transaction() as session:
         session.add(Project(id="should-rollback", name="Valid"))
         session.flush()
         session.add(Pipeline(project_id="missing-parent", name="Invalid"))
