@@ -36,12 +36,12 @@ def existing_records(repo, kind):
             return records
         page += 1
 
-def set_differs(o, k, r):
+def set_differs(old_key, differ_kind, current_reccord):
     return any(
-                (str(o.get(field, ''))[:10] != value[:10]
-                 if k == 'milestones' and field == 'due_on'
-                 else o.get(field) != value)
-                for field, value in r.items()
+                (str(old_key.get(field, ''))[:10] != value[:10]
+                 if differ_kind == 'milestones' and field == 'due_on'
+                 else old_key.get(field) != value)
+                for field, value in current_reccord.items()
             )
 
 def reconcile(repo, kind, desired, existing, apply=False):
@@ -53,7 +53,7 @@ def reconcile(repo, kind, desired, existing, apply=False):
         if old is not None:
             # GitHub normalizes milestone due times to midnight UTC. The
             # course catalog specifies calendar dates, not submission times.
-            differs =set_Differs(old,kind,record)
+            differs =set_differs(old,kind,record)
             drift |= differs
             print(('DRIFT (unchanged): ' if differs else 'Exists: ') + record[key])
             continue
