@@ -110,12 +110,10 @@ def test_complete_metadata_survives_reopening(seeded: Database):
 
 
 def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
-    invaild_query = Pipeline(project_id="missing-parent", name="Invalid")
-    with database.transaction() as session:
+    with pytest.raises(IntegrityError),database.transaction() as session:
         session.add(Project(id="should-rollback", name="Valid"))
         session.flush()
-        with pytest.raises(IntegrityError):
-            session.add(invaild_query)
+        session.add(Pipeline(project_id="missing-parent", name="Invalid"))
     with database.transaction() as session:
         assert session.get(Project, "should-rollback") is None
         session.add(Project(id="next-transaction", name="Still usable"))
@@ -124,12 +122,11 @@ def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
 
 
 def test_exception_rolls_back_session_and_ddl(database: Database):
-    with database.transaction() as session:
+    with pytest.raises(RuntimeError), database.transaction() as session:
         session.add(Project(id="rollback", name="Rollback"))
         session.flush()
         session.execute(text("CREATE TABLE temporary_ddl (id INTEGER)"))
-        with pytest.raises(RuntimeError):
-            raise RuntimeError("synthetic failure")
+        raise RuntimeError("synthetic failure")
     assert "temporary_ddl" not in inspect(database.engine).get_table_names()
     with database.transaction() as session:
         assert session.get(Project, "rollback") is None

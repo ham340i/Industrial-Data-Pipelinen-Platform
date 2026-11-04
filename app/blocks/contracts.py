@@ -54,21 +54,6 @@ class PublicValueError(ValueError):
         super().__init__("Public values must be finite, credential-free JSON.")
 
 
-def visit_early_return_check(item: object, path: tuple[str, ...]) -> bool:
-    if item is None or type(item) in (str, bool, int):
-        return True
-    if type(item) is float:
-        if not math.isfinite(item):
-            raise PublicValueError(".".join(path) or None)
-        return True
-    return False
-
-
-def public_value_error_check(key: Any) -> None:
-    if not isinstance(key, str):
-        raise PublicValueError()
-
-
 def require_public_json(value: object) -> None:
     """Check original Python values: JSON serialization alone coerces some types.
 
@@ -78,7 +63,11 @@ def require_public_json(value: object) -> None:
     active: set[int] = set()
 
     def visit(item: object, path: tuple[str, ...]) -> None:
-        if visit_early_return_check(item, path):
+        if item is None or type(item) in (str, bool, int):
+            return
+        if type(item) is float:
+            if not math.isfinite(item):
+                raise PublicValueError(".".join(path) or None)
             return
         if isinstance(item, (dict, list)):
             identity = id(item)
@@ -88,7 +77,8 @@ def require_public_json(value: object) -> None:
             try:
                 if isinstance(item, dict):
                     for key, child in item.items():
-                        public_value_error_check(key)
+                        if not isinstance(key, str):
+                            raise PublicValueError()
                         child_path = (*path, key)
                         normalized = re.sub(r"[^a-z0-9]", "", key.lower())
                         if normalized in _CREDENTIAL_FIELDS:
@@ -193,14 +183,6 @@ class Table(Contract):
     data_schema: DataSchema
     rows: tuple[dict[str, Scalar], ...]
 
-    def column_check(
-        self, dict_matches: dict[str, bool], value: Scalar, column: Column
-    ) -> None:
-        if not dict_matches[column.dtype]:
-            raise ValueError("Value does not match its declared type")
-        if isinstance(value, float) and not math.isfinite(value):
-            raise ValueError("Non-finite numbers are unsupported")
-
     @model_validator(mode="after")
     def validate_rows(self) -> Table:
         names = {column.name for column in self.data_schema.columns}
@@ -219,7 +201,10 @@ class Table(Contract):
                     "number": type(value) in (int, float),
                     "boolean": type(value) is bool,
                 }
-                self.column_check(matches, value, column)
+                if not matches[column.dtype]:
+                    raise ValueError("Value does not match its declared type")
+                if isinstance(value, float) and not math.isfinite(value):
+                    raise ValueError("Non-finite numbers are unsupported")
         return self
 
 

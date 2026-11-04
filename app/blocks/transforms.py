@@ -180,20 +180,6 @@ class Filter(Block[FilterConfig]):
         outputs=(TABLE_PORT,),
     )
 
-    def filter_columndtype_checks(
-        self, filter_config: FilterConfig, value: Any, dtype: str
-    ) -> None:
-        if dtype == "integer" and (
-            not isinstance(value, int) or not -(2**63) <= value < 2**63
-        ):
-            raise ValueError("Integer out of range")
-
-        if dtype == "boolean" and filter_config.operator not in ("eq", "ne"):
-            raise ValueError("Booleans support equality only")
-
-        if dtype == "number" and type(value) is int and int(float(value)) != value:
-            raise ValueError("Filter integer loses Float64 precision")
-
     def _execute(
         self, config: FilterConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
@@ -342,78 +328,6 @@ class Join(Block[JoinConfig]):
     def _column_map(table: Table) -> dict[str, Column]:
         return {column.name: column for column in table.data_schema.columns}
 
-    def key_type_mismatch_check(
-        self, mismatch_left: str, mismatch_left_name: Any, mismatch_right: str
-    ) -> None:
-        if mismatch_left != mismatch_right:
-            raise BlockError(
-                "join_key_type_mismatch",
-                "Join key types must match.",
-                field=mismatch_left_name,
-            )
-
-    def config_carinality_checks(
-        self,
-        config_cardinality: str,
-        config_left: set[tuple[object, ...]],
-        config_right: set[tuple[object, ...]]
-    ) -> None:
-        if config_cardinality == "one_to_one" and (config_left or config_right):
-            raise BlockError(
-                "invalid_cardinality",
-                "The join configuration requires unique keys on both inputs.",
-            )
-
-        if config_cardinality == "one_to_many" and config_left:
-            raise BlockError(
-                "invalid_cardinality",
-                "The left input contains duplicate join keys.",
-            )
-
-        if config_cardinality == "many_to_one" and config_right:
-            raise BlockError(
-                "invalid_cardinality",
-                "The right input contains duplicate join keys.",
-            )
-
-    def join_failure_check(
-        self, check_right_joined_name: str, check_columns: list[str], check_right: str
-    ) -> None:
-        if check_right_joined_name not in check_columns:
-            raise BlockError(
-                "join_failed",
-                "The joined key columns could not be constructed.",
-                field=check_right,
-            )
-
-    def join_prepare_output_columns(
-        self,
-        prep_left_data: tuple[Column, ...],
-        prep_right_names: list[str],
-        prep_right_columns: dict[str, Column],
-        prep_config: JoinConfig
-    ) -> list[Column]:
-        output_columns: list[Column] = []
-        for column in prep_left_data:
-            output_columns.append(
-                Column(
-                    name=column.name,
-                    dtype=column.dtype,
-                    nullable=column.nullable or prep_config.how == "outer",
-                )
-            )
-
-        for name in prep_right_names:
-            column = prep_right_columns[name]
-            output_columns.append(
-                Column(
-                    name=name,
-                    dtype=column.dtype,
-                    nullable=column.nullable or prep_config.how in ("left", "outer"),
-                )
-            )
-        return output_columns
-
     def _execute(
         self,
         config: JoinConfig,
@@ -436,11 +350,12 @@ class Join(Block[JoinConfig]):
             config.right_on,
             strict=True,
         ):
-            self.key_type_mismatch_check(
-                left_columns[left_name].dtype,
-                left_name,
-                right_columns[right_name].dtype
-            )
+            if left_columns[left_name].dtype != right_columns[right_name].dtype:
+                raise BlockError(
+                    "join_key_type_mismatch",
+                    "Join key types must match.",
+                    field=left_name,
+                )
 
         right_key_names = set(config.right_on)
         left_names = set(left_columns)
@@ -456,9 +371,23 @@ class Join(Block[JoinConfig]):
         left_duplicates = self._duplicate_keys(left, config.left_on)
         right_duplicates = self._duplicate_keys(right, config.right_on)
 
-        self.config_carinality_checks(
-            config.cardinality, left_duplicates, right_duplicates
-        )
+        if config.cardinality == "one_to_one" and (left_duplicates or right_duplicates):
+            raise BlockError(
+                "invalid_cardinality",
+                "The join configuration requires unique keys on both inputs.",
+            )
+
+        if config.cardinality == "one_to_many" and left_duplicates:
+            raise BlockError(
+                "invalid_cardinality",
+                "The left input contains duplicate join keys.",
+            )
+
+        if config.cardinality == "many_to_one" and right_duplicates:
+            raise BlockError(
+                "invalid_cardinality",
+                "The right input contains duplicate join keys.",
+            )
 
         join_how = "full" if config.how == "outer" else config.how
 
@@ -492,7 +421,12 @@ class Join(Block[JoinConfig]):
                     f"{right_name}__right" if right_name in left_columns else right_name
                 )
 
-                self.join_failure_check(right_joined_name, frame.columns, right_name)
+                if right_joined_name not in frame.columns:
+                    raise BlockError(
+                        "join_failed",
+                        "The joined key columns could not be constructed.",
+                        field=right_name,
+                    )
 
                 coalesced_key_expressions.append(
                     pl.coalesce(
@@ -525,9 +459,26 @@ class Join(Block[JoinConfig]):
                 "The join output columns could not be constructed.",
             ) from None
 
-        output_columns = self.join_prepare_output_columns(
-            left.data_schema.columns, right_value_names, right_columns, config
-        )
+        output_columns: list[Column] = []
+
+        for column in left.data_schema.columns:
+            output_columns.append(
+                Column(
+                    name=column.name,
+                    dtype=column.dtype,
+                    nullable=column.nullable or config.how == "outer",
+                )
+            )
+
+        for name in right_value_names:
+            column = right_columns[name]
+            output_columns.append(
+                Column(
+                    name=name,
+                    dtype=column.dtype,
+                    nullable=column.nullable or config.how in ("left", "outer"),
+                )
+            )
 
         schema = DataSchema(columns=tuple(output_columns))
         return {"table": (from_frame(frame, schema),)}
@@ -669,29 +620,6 @@ class Aggregate(Block[AggregateConfig]):
 
         return source.nullable or not has_group_by
 
-    def aggregate_duplicate_check(
-        self, dup_group: set[NonBlank], dup_output: list[NonBlank]
-    ) -> None:
-        if dup_group.intersection(dup_output):
-            raise BlockError(
-                "duplicate_column",
-                "Aggregate output names cannot match group columns.",
-                field="operations",
-            )
-
-    def aggregate_type_vailidator(
-        self,
-        vailidator_dtype: Literal["string", "integer", "number", "boolean"],
-        vailidator_operation: AggregateOperation
-    ) -> None:
-        if vailidator_dtype not in ("integer", "number"):
-            raise BlockError(
-                "invalid_aggregate",
-                vailidator_operation.function.capitalize()
-                + " requires an integer or number column.",
-                field=vailidator_operation.column,
-            )
-
     def _execute(
         self,
         config: AggregateConfig,
@@ -710,7 +638,12 @@ class Aggregate(Block[AggregateConfig]):
         group_names = set(config.group_by)
         output_names = [operation.output_name for operation in config.operations]
 
-        self.aggregate_duplicate_check(group_names, output_names)
+        if group_names.intersection(output_names):
+            raise BlockError(
+                "duplicate_column",
+                "Aggregate output names cannot match group columns.",
+                field="operations",
+            )
 
         expressions: list[pl.Expr] = []
 
@@ -720,7 +653,13 @@ class Aggregate(Block[AggregateConfig]):
             if operation.function == "count":
                 expression = pl.col(operation.column).count()
             elif operation.function == "sum":
-                self.aggregate_type_vailidator(source.dtype, operation)
+                if source.dtype not in ("integer", "number"):
+                    raise BlockError(
+                        "invalid_aggregate",
+                        "Sum requires an integer or number column.",
+                        field=operation.column,
+                    )
+
                 if source.dtype == "integer":
                     check_integer_sum_overflow(
                         table,
@@ -735,7 +674,12 @@ class Aggregate(Block[AggregateConfig]):
             elif operation.function == "max":
                 expression = pl.col(operation.column).max()
             elif operation.function == "mean":
-                self.aggregate_type_vailidator(source.dtype, operation)
+                if source.dtype not in ("integer", "number"):
+                    raise BlockError(
+                        "invalid_aggregate",
+                        "Mean requires an integer or number column.",
+                        field=operation.column,
+                    )
                 expression = pl.col(operation.column).mean()
             else:
                 raise BlockError(
