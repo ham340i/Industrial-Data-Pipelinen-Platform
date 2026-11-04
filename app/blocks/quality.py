@@ -200,6 +200,27 @@ class SchemaValidation(Block[SchemaValidationConfig]):
     config_model = SchemaValidationConfig
     descriptor = descriptor("quality.schema_validation", "Validate Schema")
 
+    def null_rows_check(
+        self,
+        table: Table,
+        name: NonBlank,
+        bad: Literal["pass", "fail", "warning"],
+        diagnostic: list[QualityDiagnostic],
+    ) -> list[QualityDiagnostic]:
+        count, row_indices = null_rows(table, [name])
+        if count:
+            diagnostic.append(
+                QualityDiagnostic(
+                    code="unexpected_null",
+                    status=bad,
+                    column=name,
+                    observed=count,
+                    maximum=0,
+                    row_indices=row_indices,
+                )
+            )
+        return diagnostic
+
     def _execute(
         self, config: SchemaValidationConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
@@ -240,18 +261,7 @@ class SchemaValidation(Block[SchemaValidationConfig]):
                     )
                 )
             if not column.nullable:
-                count, row_indices = null_rows(table, [name])
-                if count:
-                    diagnostics.append(
-                        QualityDiagnostic(
-                            code="unexpected_null",
-                            status=bad,
-                            column=name,
-                            observed=count,
-                            maximum=0,
-                            row_indices=row_indices,
-                        )
-                    )
+                diagnostics = self.null_rows_check(table, name, bad, diagnostics)
         if not config.allow_extra_columns:
             for name in sorted(actual.keys() - expected.keys()):
                 diagnostics.append(
