@@ -110,10 +110,16 @@ def test_complete_metadata_survives_reopening(seeded: Database):
 
 
 def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
-    with pytest.raises(IntegrityError), database.transaction() as session:
-        session.add(Project(id="should-rollback", name="Valid"))
-        session.flush()
-        session.add(Pipeline(project_id="missing-parent", name="Invalid"))
+
+    def rollback_setup() -> None:
+        with database.transaction() as session:
+            session.add(Project(id="should-rollback", name="Valid"))
+            session.flush()
+            session.add(Pipeline(project_id="missing-parent", name="Invalid"))
+
+    with pytest.raises(IntegrityError):
+        rollback_setup()
+
     with database.transaction() as session:
         assert session.get(Project, "should-rollback") is None
         session.add(Project(id="next-transaction", name="Still usable"))
@@ -122,11 +128,16 @@ def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
 
 
 def test_exception_rolls_back_session_and_ddl(database: Database):
-    with pytest.raises(RuntimeError), database.transaction() as session:
-        session.add(Project(id="rollback", name="Rollback"))
-        session.flush()
-        session.execute(text("CREATE TABLE temporary_ddl (id INTEGER)"))
-        raise RuntimeError("synthetic failure")
+
+    def simulate_run_time_error() -> None:
+        with database.transaction() as session:
+            session.add(Project(id="rollback", name="Rollback"))
+            session.flush()
+            session.execute(text("CREATE TABLE temporary_ddl (id INTEGER)"))
+            raise RuntimeError("synthetic failure")
+
+    with pytest.raises(RuntimeError):
+        simulate_run_time_error()
     assert "temporary_ddl" not in inspect(database.engine).get_table_names()
     with database.transaction() as session:
         assert session.get(Project, "rollback") is None
