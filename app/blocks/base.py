@@ -99,9 +99,9 @@ class Block[ConfigT: BlockConfig](ABC):
 
     def validate_append_control_signal(
             self,
-            iterated_item:Payload, 
-            code: str, 
-            validated: list[Payload], 
+            iterated_item:Payload,
+            code: str,
+            validated: list[Payload],
             name
         ):
         if not isinstance(iterated_item, ControlSignal):
@@ -114,7 +114,14 @@ class Block[ConfigT: BlockConfig](ABC):
             ) from None
         return validated.append(signal)
 
-    def validate_append_table(self,iterated_item:Payload, code: str, validated: list[Payload], name,data):
+    def validate_append_table(self,
+        iterated_item:Payload,
+        code: str,
+        validated:
+        list[Payload],
+        name,
+        data
+    ):
         if not isinstance(iterated_item, Table):
             raise BlockError(code, "Expected a table.", field=name)
         try:
@@ -130,7 +137,7 @@ class Block[ConfigT: BlockConfig](ABC):
                 code, "Table schema is incompatible.", field=name
             )
         return validated.append(table)
-    
+
     def _check_ports(
         self, ports: tuple[Port, ...], values: PortValues, code: str
     ) -> PortValues:
@@ -149,9 +156,16 @@ class Block[ConfigT: BlockConfig](ABC):
             validated: list[Payload] = []
             for item in items:
                 if port.kind == "control":
-                    validated = self.validate_append_control_signal(item, code, validated, name)
+                    validated = self.validate_append_control_signal(item,
+                                                                    code,
+                                                                    validated,
+                                                                    name)
                 else:
-                    validated = self.validate_append_table(item, code, validated, name,port.data_schema)
+                    validated = self.validate_append_table(item,
+                                                           code,
+                                                           validated,
+                                                           name,
+                                                           port.data_schema)
             checked[name] = tuple(validated)
         return checked
 

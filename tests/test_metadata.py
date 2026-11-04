@@ -93,14 +93,14 @@ def test_complete_metadata_survives_reopening(seeded: Database):
         with reopened.transaction() as session:
             run = session.get(Run, "run")
             assert run is not None
-            assert run.state == "queued" 
+            assert run.state == "queued"
             assert run.row_count is None
             revision = run.pipeline_revision
             assert revision.pipeline.project.name == "Example"
             assert revision.definition == GRAPH
             assert revision.created_at.tzinfo is None
             exported = json.dumps(revision.definition)
-            assert "private" not in exported 
+            assert "private" not in exported
             assert "os-keyring" not in exported
             assert run.outputs[0].row_count == 0
             assert revision.pipeline.project.bindings[0].secret_reference is not None
@@ -358,9 +358,7 @@ def test_core_insert_also_enforces_portability(seeded: Database, definition: Any
                 )
     with pytest.raises(StatementError), seeded.transaction() as session:
         session.execute(insert_to_test_portability_query
-            
         )
-
 
 def test_migration_round_trip_and_schema_drift(database: Database):
     expected = set(Base.metadata.tables)

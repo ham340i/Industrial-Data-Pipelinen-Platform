@@ -186,17 +186,17 @@ class Filter(Block[FilterConfig]):
             not isinstance(value, int) or not -(2**63) <= value < 2**63
         ):
             raise ValueError("Integer out of range")
-            
+
         if dtype == "boolean" and filter_config.operator not in ("eq", "ne"):
             raise ValueError("Booleans support equality only")
-                
+
         if (
             dtype == "number"
             and type(value) is int
             and int(float(value)) != value
         ):
             raise ValueError("Filter integer loses Float64 precision")
-        
+
     def _execute(
         self, config: FilterConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
@@ -230,22 +230,21 @@ class Filter(Block[FilterConfig]):
                     and not math.isfinite(value)
                 ):
                     raise ValueError("Type mismatch")
-        
+
                 if column.dtype == "integer" and (
                     not isinstance(value, int) or not -(2**63) <= value < 2**63
                 ):
                     raise ValueError("Integer out of range")
-    
+
                 if column.dtype == "boolean" and config.operator not in ("eq", "ne"):
                     raise ValueError("Booleans support equality only")
-        
+
                 if (
                     column.dtype == "number"
                     and type(value) is int
                     and int(float(value)) != value
                 ):
                     raise ValueError("Filter integer loses Float64 precision")
-    
 
                 operations = {
                     "eq": expr.eq,
@@ -348,7 +347,7 @@ class Join(Block[JoinConfig]):
 
     def key_type_mismatch_check(
         self,
-        mismatch_left, 
+        mismatch_left,
         mismatch_left_name,
         mismatch_right
     ):
@@ -385,8 +384,8 @@ class Join(Block[JoinConfig]):
 
     def join_failure_check(
         self,
-        check_right_joined_name: str, 
-        check_columns: list[str], 
+        check_right_joined_name: str,
+        check_columns: list[str],
         check_right: str
     ):
         if check_right_joined_name not in check_columns:
@@ -398,9 +397,9 @@ class Join(Block[JoinConfig]):
 
     def join_prepare_output_columns(
         self,
-        prep_left_data: tuple[Column, ...], 
-        prep_right_names:list[str], 
-        prep_right_columns:dict[str,Column], 
+        prep_left_data: tuple[Column, ...],
+        prep_right_names:list[str],
+        prep_right_columns:dict[str,Column],
         prep_config: JoinConfig
     ):
         output_columns: list[Column] = []
@@ -446,7 +445,9 @@ class Join(Block[JoinConfig]):
             config.right_on,
             strict=True,
         ):
-            self.key_type_mismatch_check(left_columns[left_name].dtype, left_name, right_columns[right_name].dtype)
+            self.key_type_mismatch_check(left_columns[left_name].dtype,
+                                         left_name,
+                                         right_columns[right_name].dtype)
 
         right_key_names = set(config.right_on)
         left_names = set(left_columns)
@@ -529,7 +530,10 @@ class Join(Block[JoinConfig]):
                 "The join output columns could not be constructed.",
             ) from None
 
-        output_columns= self.join_prepare_output_columns(left.data_schema.columns, right_value_names,right_columns,config)
+        output_columns=self.join_prepare_output_columns(
+            left.data_schema.columns,
+            right_value_names,
+            right_columns,config)
 
         schema = DataSchema(columns=tuple(output_columns))
         return {"table": (from_frame(frame, schema),)}
@@ -673,7 +677,7 @@ class Aggregate(Block[AggregateConfig]):
 
     def aggregate_duplicate_check(
         self,
-        dup_group:set[NonBlank], 
+        dup_group:set[NonBlank],
         dup_output:list[NonBlank]
     ):
         if dup_group.intersection(dup_output):
@@ -685,16 +689,17 @@ class Aggregate(Block[AggregateConfig]):
 
     def aggregate_type_vailidator(
         self,
-        vailidator_dtype: Literal['string', 'integer', 'number', 'boolean'], 
+        vailidator_dtype: Literal['string', 'integer', 'number', 'boolean'],
         vailidator_operation: AggregateOperation
     ):
         if vailidator_dtype not in ("integer", "number"):
             raise BlockError(
                 "invalid_aggregate",
-                vailidator_operation.function.capitalize()+" requires an integer or number column.",
+                vailidator_operation.function.capitalize()+
+                " requires an integer or number column.",
                 field=vailidator_operation.column,
             )
-        
+
     def _execute(
         self,
         config: AggregateConfig,

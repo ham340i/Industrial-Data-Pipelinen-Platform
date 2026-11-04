@@ -192,15 +192,15 @@ class Table(Contract):
 
     def column_check(
             self,
-            dict_matches: dict[str, bool], 
-            value, 
+            dict_matches: dict[str, bool],
+            value,
             column: Column
         ):
         if not dict_matches[column.dtype]:
             raise ValueError("Value does not match its declared type")
         if isinstance(value, float) and not math.isfinite(value):
             raise ValueError("Non-finite numbers are unsupported")
-        
+
     @model_validator(mode="after")
     def validate_rows(self) -> Table:
         names = {column.name for column in self.data_schema.columns}

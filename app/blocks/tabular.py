@@ -77,7 +77,6 @@ def bad_value_finder(original, converted):
             source is not None and target is not None and int(target) != source
         )
     return bad
-        
 
 def cast_column(
     frame: pl.DataFrame, name: str, kind: DType, failure: str = "error"

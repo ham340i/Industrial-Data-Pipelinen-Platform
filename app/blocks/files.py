@@ -293,7 +293,7 @@ class JsonSource(FileSource[JsonConfig]):
                 )
             columns.append(Column(name=name, dtype=kind, nullable=None in values))
         return columns
-        
+
     def _read(
         self, path: Path, config: JsonConfig
     ) -> tuple[pl.DataFrame, DataSchema | None]:
