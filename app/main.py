@@ -237,7 +237,6 @@ async def unhandled_exception_handler(
 
 @app.get(
     "/api/v1/health",
-    response_model=HealthResponse,
     tags=["health"],
 )
 async def health() -> HealthResponse:
@@ -250,7 +249,6 @@ async def health() -> HealthResponse:
 
 @app.post(
     "/api/v1/example",
-    response_model=ExampleResponse,
     tags=["example"],
 )
 async def example(payload: ExampleRequest) -> ExampleResponse:

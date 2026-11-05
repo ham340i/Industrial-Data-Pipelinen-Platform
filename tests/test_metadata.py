@@ -93,13 +93,15 @@ def test_complete_metadata_survives_reopening(seeded: Database):
         with reopened.transaction() as session:
             run = session.get(Run, "run")
             assert run is not None
-            assert run.state == "queued" and run.row_count is None
+            assert run.state == "queued"
+            assert run.row_count is None
             revision = run.pipeline_revision
             assert revision.pipeline.project.name == "Example"
             assert revision.definition == GRAPH
             assert revision.created_at.tzinfo is None
             exported = json.dumps(revision.definition)
-            assert "private" not in exported and "os-keyring" not in exported
+            assert "private" not in exported
+            assert "os-keyring" not in exported
             assert run.outputs[0].row_count == 0
             assert revision.pipeline.project.bindings[0].secret_reference is not None
             assert session.get(BlockRegistryEntry, ("csv.read", "1")) is not None
@@ -108,10 +110,16 @@ def test_complete_metadata_survives_reopening(seeded: Database):
 
 
 def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
-    with pytest.raises(IntegrityError), database.transaction() as session:
-        session.add(Project(id="should-rollback", name="Valid"))
-        session.flush()
-        session.add(Pipeline(project_id="missing-parent", name="Invalid"))
+
+    def rollback_setup() -> None:
+        with database.transaction() as session:
+            session.add(Project(id="should-rollback", name="Valid"))
+            session.flush()
+            session.add(Pipeline(project_id="missing-parent", name="Invalid"))
+
+    with pytest.raises(IntegrityError):
+        rollback_setup()
+
     with database.transaction() as session:
         assert session.get(Project, "should-rollback") is None
         session.add(Project(id="next-transaction", name="Still usable"))
@@ -120,11 +128,16 @@ def test_transaction_rolls_back_earlier_flushed_writes(database: Database):
 
 
 def test_exception_rolls_back_session_and_ddl(database: Database):
-    with pytest.raises(RuntimeError), database.transaction() as session:
-        session.add(Project(id="rollback", name="Rollback"))
-        session.flush()
-        session.execute(text("CREATE TABLE temporary_ddl (id INTEGER)"))
-        raise RuntimeError("synthetic failure")
+
+    def simulate_run_time_error() -> None:
+        with database.transaction() as session:
+            session.add(Project(id="rollback", name="Rollback"))
+            session.flush()
+            session.execute(text("CREATE TABLE temporary_ddl (id INTEGER)"))
+            raise RuntimeError("synthetic failure")
+
+    with pytest.raises(RuntimeError):
+        simulate_run_time_error()
     assert "temporary_ddl" not in inspect(database.engine).get_table_names()
     with database.transaction() as session:
         assert session.get(Project, "rollback") is None
@@ -132,6 +145,7 @@ def test_exception_rolls_back_session_and_ddl(database: Database):
 
 @pytest.mark.parametrize("reconnect", [False, True])
 def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bool):
+    missing_piprline_revision_id_query = Run(pipeline_revision_id="nonexistent")
     if reconnect:
         database.engine.dispose()
     with database.engine.connect() as first, database.engine.connect() as second:
@@ -139,7 +153,7 @@ def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bo
             assert connection.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
             assert connection.exec_driver_sql("PRAGMA busy_timeout").scalar() == 5000
     with pytest.raises(IntegrityError), database.transaction() as session:
-        session.add(Run(pipeline_revision_id="nonexistent"))
+        session.add(missing_piprline_revision_id_query)
 
 
 @pytest.mark.parametrize(
@@ -208,8 +222,9 @@ def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bo
 def test_database_constraints(
     seeded: Database, model: type[Base], values: dict[str, Any]
 ):
+    random_set_of_strings_query = model(**values)
     with pytest.raises(IntegrityError), seeded.transaction() as session:
-        session.add(model(**values))
+        session.add(random_set_of_strings_query)
 
 
 def test_binding_registry_and_output_unique_identities(seeded: Database):
@@ -235,8 +250,10 @@ def test_binding_registry_and_output_unique_identities(seeded: Database):
     for factory in factories:
         with seeded.transaction() as session:
             session.add(factory())
-        with pytest.raises(IntegrityError), seeded.transaction() as session:
+            session.flush()
             session.add(factory())
+            with pytest.raises(IntegrityError):
+                session.flush()
 
 
 def test_run_updates_allow_normal_execution_lifecycle(seeded: Database):
@@ -345,12 +362,11 @@ def test_portable_definition_is_detached_and_json_only():
 
 @pytest.mark.parametrize("definition", [{"path": "relative.csv"}, None])
 def test_core_insert_also_enforces_portability(seeded: Database, definition: Any):
+    insert_to_test_portability_query = insert(
+        Base.metadata.tables["pipeline_revisions"]
+    ).values(id="core", pipeline_id="pipeline", revision=2, definition=definition)
     with pytest.raises(StatementError), seeded.transaction() as session:
-        session.execute(
-            insert(Base.metadata.tables["pipeline_revisions"]).values(
-                id="core", pipeline_id="pipeline", revision=2, definition=definition
-            )
-        )
+        session.execute(insert_to_test_portability_query)
 
 
 def test_migration_round_trip_and_schema_drift(database: Database):

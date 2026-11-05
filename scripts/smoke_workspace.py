@@ -13,6 +13,14 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 HEALTH_PATH = '/api/v1/health'
 
+def get(url):
+    with urlopen(url, timeout=10) as response:
+        return response.read().decode()
+
+def verify_health(url):
+    health = json.loads(get(url))
+    if health.get('status') != 'ok' or health.get('service') != 'local-pipeline-studio':
+        raise RuntimeError('Unexpected real API health response')
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -39,14 +47,7 @@ def main():
         # Synthetic local smoke traffic never leaves loopback.
         return f'http://127.0.0.1:{port}'
 
-    def get(url):
-        with urlopen(url, timeout=10) as response:
-            return response.read().decode()
 
-    def verify_health(url):
-        health = json.loads(get(url))
-        if health.get('status') != 'ok' or health.get('service') != 'local-pipeline-studio':
-            raise RuntimeError('Unexpected real API health response')
 
     try:
         compose('up', '--build', '--detach', '--wait', '--wait-timeout', '120')

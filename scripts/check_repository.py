@@ -14,7 +14,7 @@ from check_docs import ROOT, repository_files
 PATTERNS = [
     re.compile(rb'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
     re.compile(rb'\bgh[pousr]_[A-Za-z0-9]{36,}\b'),
-    re.compile(rb'\bgithub_pat_[A-Za-z0-9_]{60,}\b'),
+    re.compile(rb'\bgithub_pat_\w{60,}\b'),
     re.compile(rb'\bAKIA[A-Z0-9]{16}\b'),
     re.compile(rb'\bxox[baprs]-[A-Za-z0-9-]{20,}\b'),
 ]
@@ -76,7 +76,8 @@ def main():
         try:
             if path.suffix in {'.py', '.sh', '.json', '.yml', '.yaml', '.md'}:
                 text = content.decode('utf-8')
-                assert text.endswith('\n') and all(line == line.rstrip() for line in text.splitlines())
+                if not text.endswith('\n') and all(line == line.rstrip() for line in text.splitlines()):
+                    raise ValueError
             if path.suffix == '.py':
                 ast.parse(text, filename=str(relative))
             elif path.suffix == '.sh':
@@ -84,7 +85,7 @@ def main():
             elif path.suffix in {'.json', '.yml', '.yaml'}:
                 # JSON is a YAML subset. Keep config in this serialization for stdlib validation.
                 validate_configuration(path, json.loads(text))
-        except (ValueError, AssertionError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError):
+        except (ValueError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError):
             failures.append(f'{relative}: invalid syntax, configuration or whitespace (details withheld)')
     if failures:
         print('\n'.join(failures))

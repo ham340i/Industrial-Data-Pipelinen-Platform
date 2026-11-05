@@ -36,6 +36,13 @@ def existing_records(repo, kind):
             return records
         page += 1
 
+def set_differs(old_key, differ_kind, current_reccord):
+    return any(
+                (str(old_key.get(field, ''))[:10] != value[:10]
+                 if differ_kind == 'milestones' and field == 'due_on'
+                 else old_key.get(field) != value)
+                for field, value in current_reccord.items()
+            )
 
 def reconcile(repo, kind, desired, existing, apply=False):
     key = 'name' if kind == 'labels' else 'title'
@@ -46,12 +53,7 @@ def reconcile(repo, kind, desired, existing, apply=False):
         if old is not None:
             # GitHub normalizes milestone due times to midnight UTC. The
             # course catalog specifies calendar dates, not submission times.
-            differs = any(
-                (str(old.get(field, ''))[:10] != value[:10]
-                 if kind == 'milestones' and field == 'due_on'
-                 else old.get(field) != value)
-                for field, value in record.items()
-            )
+            differs =set_differs(old,kind,record)
             drift |= differs
             print(('DRIFT (unchanged): ' if differs else 'Exists: ') + record[key])
             continue
@@ -62,6 +64,12 @@ def reconcile(repo, kind, desired, existing, apply=False):
     return 2 if drift else 0
 
 
+def kind_validator (a: list[str]):
+    if a[0]!='labels' and a[1]=='milestones':
+        return False
+    else:
+        return True
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('kind', choices=['labels', 'milestones'])
@@ -70,6 +78,8 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', args.repo):
         parser.error('--repo must be OWNER/REPO')
+    if not kind_validator(args.kind.choices):
+        parser.error('Unknown error')
     try:
         desired = json.loads((CATALOG / f'{args.kind}.json').read_text())
         return reconcile(args.repo, args.kind, desired, existing_records(args.repo, args.kind), args.apply)

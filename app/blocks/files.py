@@ -47,6 +47,9 @@ ARROW_TYPES = {
     "boolean": pa.bool_(),
 }
 
+byte_limit_error_message = "Input exceeds the configured byte limit."
+table_limit_error_message = "Input exceeds the configured table limits."
+
 
 class ResourceConfig(BlockConfig):
     resource_ref: NonBlank = Field(
@@ -174,18 +177,14 @@ class FileSource[SourceT: SourceConfig](Block[SourceT]):
                     field="resource_ref",
                 )
             if path.stat().st_size > config.max_bytes:
-                raise BlockError(
-                    "file_limit", "Input exceeds the configured byte limit."
-                )
+                raise BlockError("file_limit", byte_limit_error_message)
             frame, schema = self._read(path, config)
             if (
                 len(frame) > config.max_rows
                 or frame.width > config.max_columns
                 or len(frame) * frame.width > config.max_cells
             ):
-                raise BlockError(
-                    "table_limit", "Input exceeds the configured table limits."
-                )
+                raise BlockError("table_limit", table_limit_error_message)
             if config.columns:
                 if frame.columns != config.columns:
                     raise BlockError(
@@ -224,7 +223,7 @@ class CsvSource(FileSource[CsvConfig]):
         # Harden the proof's strict csv.reader rather than trusting inferred rows.
         data = path.read_bytes()
         if len(data) > config.max_bytes:
-            raise BlockError("file_limit", "Input exceeds the configured byte limit.")
+            raise BlockError("file_limit", byte_limit_error_message)
         reader = csv.reader(
             io.StringIO(data.decode(config.encoding), newline=""), strict=True
         )
@@ -255,9 +254,7 @@ class CsvSource(FileSource[CsvConfig]):
                 len(rows) > config.max_rows
                 or len(rows) * len(header) > config.max_cells
             ):
-                raise BlockError(
-                    "table_limit", "Input exceeds the configured table limits."
-                )
+                raise BlockError("table_limit", table_limit_error_message)
         return pl.DataFrame(rows, schema={name: pl.String for name in header}), None
 
 
@@ -269,12 +266,33 @@ class JsonSource(FileSource[JsonConfig]):
         outputs=(TABLE_PORT,),
     )
 
+    def read_column_generator(
+        self, source_names: list[Any], rows: list[Any]
+    ) -> list[Any]:
+        columns = []
+        for name in source_names:
+            kind: DType
+            values = [row[name] for row in rows if name in row]
+            kinds = {type(value) for value in values if value is not None}
+            if kinds <= {int, float} and kinds:
+                kind = "number" if float in kinds else "integer"
+            elif kinds <= {str}:
+                kind = "string"
+            elif kinds == {bool}:
+                kind = "boolean"
+            else:
+                raise BlockError(
+                    "unsupported_type", "JSON columns require consistent scalar types."
+                )
+            columns.append(Column(name=name, dtype=kind, nullable=None in values))
+        return columns
+
     def _read(
         self, path: Path, config: JsonConfig
     ) -> tuple[pl.DataFrame, DataSchema | None]:
         data = path.read_bytes()
         if len(data) > config.max_bytes:
-            raise BlockError("file_limit", "Input exceeds the configured byte limit.")
+            raise BlockError("file_limit", byte_limit_error_message)
         rows = json.loads(data.decode(config.encoding), object_pairs_hook=unique_object)
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
             raise ValueError("JSON requires an array of record objects")
@@ -299,25 +317,8 @@ class JsonSource(FileSource[JsonConfig]):
             or len(names) > config.max_columns
             or len(names) * len(rows) > config.max_cells
         ):
-            raise BlockError(
-                "table_limit", "Input exceeds the configured table limits."
-            )
-        columns = []
-        for name in names:
-            kind: DType
-            values = [row[name] for row in rows if name in row]
-            kinds = {type(value) for value in values if value is not None}
-            if kinds <= {int, float} and kinds:
-                kind = "number" if float in kinds else "integer"
-            elif kinds <= {str}:
-                kind = "string"
-            elif kinds == {bool}:
-                kind = "boolean"
-            else:
-                raise BlockError(
-                    "unsupported_type", "JSON columns require consistent scalar types."
-                )
-            columns.append(Column(name=name, dtype=kind, nullable=None in values))
+            raise BlockError("table_limit", table_limit_error_message)
+        columns = self.read_column_generator(names, rows)
         table = Table(data_schema=DataSchema(columns=tuple(columns)), rows=tuple(rows))
         return to_frame(table), table.data_schema
 
