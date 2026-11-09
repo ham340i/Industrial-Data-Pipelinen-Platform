@@ -81,9 +81,7 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
         <Box sx={{ minWidth: 0 }}>
           <Canvas diagnostics={validation.report?.diagnostics} />
         </Box>
-        <ConfigurationPanel
-          diagnostics={validation.current ? validation.report?.diagnostics : []}
-        />
+        <ConfigurationPanel diagnostics={validation.report?.diagnostics} />
       </Box>
     </Stack>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { Edge } from "@xyflow/react";
 import {
   validatePipeline,
@@ -80,7 +80,7 @@ export function fieldMessages(
   diagnostics: Diagnostic[],
   nodeId: string,
 ): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
+  const result: Record<string, string[]> = Object.create(null);
   for (const d of diagnostics)
     if (d.node_id === nodeId && d.field !== null)
       (result[d.field] ??= []).push(d.message);
@@ -94,6 +94,7 @@ export interface ValidationState {
   error: Error | null;
   /** Execution stays disabled until the current graph is known to be valid. */
   canRun: boolean;
+  retry: () => void;
 }
 
 /**
@@ -120,14 +121,18 @@ export function usePipelineValidation(
       validatePipeline(JSON.parse(checked) as SemanticDefinition, signal),
     retry: false,
     staleTime: Infinity,
-    placeholderData: keepPreviousData,
   });
-  const current =
-    checked === key && query.isSuccess && !query.isPlaceholderData;
+  const current = checked === key && query.isSuccess && !query.isFetching;
   return {
-    report: query.data,
+    report: current ? query.data : undefined,
     current,
-    error: checked === key && query.isError ? query.error : null,
+    error:
+      checked === key && query.isError && !query.isFetching
+        ? query.error
+        : null,
     canRun: current && query.data?.valid === true,
+    retry: () => {
+      if (checked === key && query.isError) void query.refetch();
+    },
   };
 }

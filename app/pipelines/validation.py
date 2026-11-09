@@ -9,8 +9,10 @@ quality checks happen at runtime and are out of scope.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import get_args
 
 from pydantic import Field, ValidationError
+from pydantic_core.core_schema import ErrorType
 
 from app.blocks.contracts import Contract, Port, ports_compatible
 from app.blocks.errors import BlockError
@@ -57,6 +59,13 @@ _RANK = {
         )
     )
     for code in codes
+}
+
+# Custom validators can interpolate rejected values into their exception text.
+# Keep useful built-in constraint messages without rendering arbitrary exceptions.
+_PUBLIC_CONFIG_ERROR_TYPES = frozenset(get_args(ErrorType)) - {
+    "assertion_error",
+    "value_error",
 }
 
 
@@ -303,9 +312,11 @@ def _config_diagnostics(
             code, message = "missing_config", f"Enter a value for {label}."
         elif error["type"] == "extra_forbidden":
             code, message = "unknown_config", f"Remove the unsupported setting {label}."
-        else:
-            # Pydantic messages describe the constraint, never the input value.
+        elif error["type"] in _PUBLIC_CONFIG_ERROR_TYPES:
             code, message = "invalid_config", f"Fix {label}: {error['msg']}."
+        else:
+            code = "invalid_config"
+            message = f"Review {label} against this block's configuration requirements."
         found.append(
             Diagnostic(code=code, message=message, node_id=node_id, field=field)
         )

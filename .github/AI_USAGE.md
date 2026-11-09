@@ -154,3 +154,11 @@ unbounded join so it never returns early. See
 [the updated verification record](../docs/testing/issue-29-triggers-and-execute.md)
 for the four regression tests, including a deterministic one that drives
 the exact lock race instead of relying on timing.
+
+## Issue #33 validation recovery
+
+OpenAI Codex implemented the validation recovery slice and its regression
+tests using the team's existing Builder, configuration and validation
+contracts. See the [verification record](../docs/testing/issue-33-validation-recovery.md)
+for checks and integration dependencies. The issue requirements came from
+the team. Independent teammate review and acceptance remain pending.

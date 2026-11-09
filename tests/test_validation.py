@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.blocks import BlockConfig, BlockContext, BlockRegistry, Column, DataSchema
 from app.blocks import Port, PortValues
@@ -39,6 +39,17 @@ class SourceBlock(NeverRuns):
     descriptor = AddConstantBlock.descriptor.model_copy(
         update={"block_id": "synthetic.source", "block_type": "source", "inputs": ()}
     )
+
+
+class RejectingSourceConfig(SourceConfig):
+    @field_validator("resource_id")
+    @classmethod
+    def validate_resource(cls, value: str) -> str:
+        raise ValueError(f"Rejected {value} using C:\\example\\private.db")
+
+
+class RejectingSourceBlock(SourceBlock):
+    config_model = RejectingSourceConfig
 
 
 class SinkBlock(NeverRuns):
@@ -158,6 +169,48 @@ def test_messages_explain_the_fix_without_echoing_config_values():
     assert "1000" in messages[("add", "amount")]
     assert "5000" not in " ".join(messages.values())
     assert "red" not in " ".join(messages.values())
+
+
+def test_validation_api_omits_private_custom_validator_details(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    catalog = BlockRegistry()
+    catalog.register(RejectingSourceBlock())
+    monkeypatch.setattr("app.pipelines.api.registry", catalog)
+    result = client.post(
+        URL,
+        json={
+            "definition": {
+                "schema_version": 1,
+                "nodes": [
+                    {
+                        "id": "source",
+                        "block_id": "synthetic.source",
+                        "block_version": "1.0.0",
+                        "config": {"resource_id": "synthetic-private-value"},
+                    }
+                ],
+                "edges": [],
+            }
+        },
+    )
+    assert result.status_code == 200
+    assert result.json() == {
+        "valid": False,
+        "diagnostics": [
+            {
+                "code": "invalid_config",
+                "message": (
+                    "Review 'resource_id' against this block's "
+                    "configuration requirements."
+                ),
+                "node_id": "source",
+                "edge_id": None,
+                "port": None,
+                "field": "resource_id",
+            }
+        ],
+    }
 
 
 def test_incompatible_ports_name_the_differing_column():

@@ -126,15 +126,12 @@ function ConfigForm({
       ) ?? [],
     );
     const field = focusRequest.field?.split(/[.[]/, 1)[0];
-    (
-      controls.find(
-        (input) => input.dataset.configField === focusRequest.field,
-      ) ??
-      controls.find((input) => input.dataset.configField === field) ??
-      controls.find((input) => input.getAttribute("aria-invalid") === "true") ??
-      controls[0] ??
-      formRef.current
-    )?.focus();
+    const input = field
+      ? (controls.find(
+          (input) => input.dataset.configField === focusRequest.field,
+        ) ?? controls.find((input) => input.dataset.configField === field))
+      : undefined;
+    (input ?? formRef.current)?.focus();
   }, [focusRequest, disabled]);
   let fields: ConfigField[];
   try {
@@ -279,7 +276,9 @@ function ConfigForm({
                   }
                   required={field.required}
                   error={Boolean(issue)}
-                  helperText={current === null ? "Explicit null value" : helper}
+                  helperText={
+                    issue ?? (current === null ? "Explicit null value" : helper)
+                  }
                   type={
                     field.type === "number" || field.type === "integer"
                       ? "number"

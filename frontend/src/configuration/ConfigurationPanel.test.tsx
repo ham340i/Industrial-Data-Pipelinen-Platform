@@ -125,7 +125,7 @@ it("identifies required, range and type problems without overwriting invalid inp
 
 it("shows only this node's backend field diagnostics and focuses the requested field", async () => {
   ready();
-  seed();
+  seed({ amount: null });
   mount([
     {
       code: "invalid_config",
@@ -145,7 +145,7 @@ it("shows only this node's backend field diagnostics and focuses the requested f
     },
   ]);
   await screen.findByRole("spinbutton", { name: "Amount" });
-  expect(screen.getByText("Server field constraint.")).toBeVisible();
+  expect(screen.getByText(/Server field constraint\./)).toBeVisible();
   expect(screen.queryByText("Other node problem.")).not.toBeInTheDocument();
   act(() => useEditorStore.getState().focusConfiguration("first", "amount"));
   expect(amount()).toHaveFocus();
