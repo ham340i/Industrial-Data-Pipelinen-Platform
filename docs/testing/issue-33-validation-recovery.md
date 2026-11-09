@@ -58,3 +58,68 @@ with Python 3.12, Node 24 and the installed Chrome.
 OpenAI Codex implemented and tested this validation slice against the team's
 existing contracts. Independent teammate review, preview and run integration,
 and stakeholder acceptance remain pending.
+
+## November 9 recovery audit
+
+The follow-up in [PR #81](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/81)
+starts from `daa9ed85f005b95f4aa47a2051feea8a326ebb52`. Main remains
+`5f0f811888e3e857ab9c5545b72710078f0d46ad`. It fixes two reproduced gaps:
+
+- A custom Pydantic error could reuse a built-in code and expose its arbitrary
+  exception text. Only native errors with safe error types keep their messages.
+  Native errors that embed rejected discriminator values or arbitrary exception
+  details use the same neutral, field-addressed recovery message. API tests
+  cover ordinary custom errors, a reused built-in code and discriminated unions.
+- Keyboard diagnostics previously did not move focus when a block version was
+  unavailable or its schema was unsupported. Recovery notices now receive
+  focus, retain the saved configuration and keep retry controls accessible.
+
+The new API and component regressions failed before their fixes. The existing
+numeric-bound diagnostic still names the limit and focuses the Amount input.
+No API fields, schema, dependencies or execution behavior changed.
+
+Final local checks on Windows, Python 3.12 and Node 24:
+
+- `npm run check --prefix frontend`: lint, formatting, types, all 99 component
+  and unit tests, and production build passed.
+- `python -m pytest -q --basetemp generated-data/pytest-nov9-normal`: 708 passed,
+  one existing host-dependent symbolic-link test skipped. Ruff lint/format and
+  mypy passed for all 75 source files.
+- `npm run test:standalone --prefix frontend`: all five real Chrome/FastAPI
+  scenarios passed in both development and production-preview modes, including
+  configuration save/reopen, file-block schemas,
+  pipeline persistence and keyboard validation recovery. The earlier restricted
+  focused test passed its case but stalled during process cleanup; the full run
+  with normal process access exited successfully.
+- Repository, documentation and Release 1 plan checks passed, as did all 16
+  repository-tool tests and `git diff --check`. Git Bash syntax checks used
+  normal process access; the restricted runner could not initialize MSYS.
+
+The first restricted backend run had seven failures: six synthetic atomic-file
+publication cases could not create hard links, and one SQLite URI fixture used
+a temporary path containing `#`. A stable temporary path resolved the URI case;
+a direct hard-link probe confirmed Windows access denied for the other six.
+The unchanged tests passed with normal filesystem access. No product security
+setting was changed. An early frontend type check caught a ref-type mismatch;
+the final aggregate check above includes its correction.
+
+The original head's eight hosted checks passed, including its Windows retry:
+[CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/42538687842)
+and [documentation](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/actions/runs/42538687822).
+Those runs do not cover this follow-up. Check the PR's current-head results
+before review or merge.
+
+## Design and remaining acceptance
+
+Reuse the existing diagnostic shape, editor store and configuration panel.
+Validation stays read-only. Avoid a second error framework or guessed preview
+and execution contracts. Using custom exception text would be more specific
+but can expose private input; a safe field-level message keeps navigation
+without that disclosure. Error notices remain keyboard targets even when no
+editable field exists. No performance improvement is claimed.
+
+As verified November 9, #17 and #27 are complete, but preview #26 and workflow
+integration #31 are open. The saved-revision choice and real preview/run failure
+cases above remain required. The validation slice is tested; issue #33 stays
+open until those paths and independent review are complete. The planned reviewer
+is `menaboulus`; this document does not assert a review request or approval.

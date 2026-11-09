@@ -174,6 +174,29 @@ it("retains configuration while registry metadata is loading", async () => {
   );
 });
 
+it.each([
+  { catalog: [] },
+  {
+    catalog: blocks({
+      type: "object",
+      properties: { unsafe: { type: "object" } },
+    }),
+  },
+])(
+  "focuses the recovery notice when a diagnostic has no editable form",
+  async ({ catalog }) => {
+    server.use(http.get(url, () => HttpResponse.json(catalog)));
+    seed({ amount: 42 });
+    mount();
+    const notice = await screen.findByRole("alert");
+    act(() => useEditorStore.getState().focusConfiguration("first", "amount"));
+    expect(notice).toHaveFocus();
+    expect(useEditorStore.getState().nodes[0].data.config).toEqual({
+      amount: 42,
+    });
+  },
+);
+
 it("recovers a registry failure through retry without reflecting the raw response", async () => {
   server.use(
     http.get(url, () =>

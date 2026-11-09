@@ -66,6 +66,11 @@ _RANK = {
 _PUBLIC_CONFIG_ERROR_TYPES = frozenset(get_args(ErrorType)) - {
     "assertion_error",
     "value_error",
+    "get_attribute_error",
+    "iteration_error",
+    "mapping_type",
+    "datetime_object_invalid",
+    "union_tag_invalid",
 }
 
 
@@ -290,7 +295,7 @@ def _config_diagnostics(
     try:
         block.config_model.model_validate(config)
     except ValidationError as exc:
-        errors = exc.errors(include_input=False, include_url=False)
+        errors = exc.errors(include_input=False)
     except (ValueError, TypeError):
         return [
             Diagnostic(
@@ -312,7 +317,9 @@ def _config_diagnostics(
             code, message = "missing_config", f"Enter a value for {label}."
         elif error["type"] == "extra_forbidden":
             code, message = "unknown_config", f"Remove the unsupported setting {label}."
-        elif error["type"] in _PUBLIC_CONFIG_ERROR_TYPES:
+        # PydanticCustomError can reuse a built-in code with arbitrary text.
+        # Only native errors have Pydantic's documentation URL; it is not sent.
+        elif error["type"] in _PUBLIC_CONFIG_ERROR_TYPES and "url" in error:
             code, message = "invalid_config", f"Fix {label}: {error['msg']}."
         else:
             code = "invalid_config"

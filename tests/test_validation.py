@@ -3,11 +3,12 @@
 import json
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.blocks import BlockConfig, BlockContext, BlockRegistry, Column, DataSchema
 from app.blocks import Port, PortValues
@@ -50,6 +51,37 @@ class RejectingSourceConfig(SourceConfig):
 
 class RejectingSourceBlock(SourceBlock):
     config_model = RejectingSourceConfig
+
+
+class CustomCodeSourceConfig(SourceConfig):
+    @field_validator("resource_id")
+    @classmethod
+    def validate_resource(cls, value: str) -> str:
+        raise PydanticCustomError(
+            "string_type",
+            "Rejected {value} using C:\\example\\private.db",
+            {"value": value},
+        )
+
+
+class CustomCodeSourceBlock(SourceBlock):
+    config_model = CustomCodeSourceConfig
+
+
+class FileChoice(BlockConfig):
+    kind: Literal["file"]
+
+
+class TableChoice(BlockConfig):
+    kind: Literal["table"]
+
+
+class ChoiceSourceConfig(BlockConfig):
+    source: FileChoice | TableChoice = Field(discriminator="kind")
+
+
+class ChoiceSourceBlock(SourceBlock):
+    config_model = ChoiceSourceConfig  # type: ignore[assignment]
 
 
 class SinkBlock(NeverRuns):
@@ -171,11 +203,31 @@ def test_messages_explain_the_fix_without_echoing_config_values():
     assert "red" not in " ".join(messages.values())
 
 
+@pytest.mark.parametrize(
+    "block_type,config,field",
+    [
+        (
+            RejectingSourceBlock,
+            {"resource_id": "synthetic-private-value"},
+            "resource_id",
+        ),
+        (
+            CustomCodeSourceBlock,
+            {"resource_id": "synthetic-private-value"},
+            "resource_id",
+        ),
+        (ChoiceSourceBlock, {"source": {"kind": "synthetic-private-value"}}, "source"),
+    ],
+)
 def test_validation_api_omits_private_custom_validator_details(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    block_type: type[SourceBlock],
+    config: dict[str, Any],
+    field: str,
 ):
     catalog = BlockRegistry()
-    catalog.register(RejectingSourceBlock())
+    catalog.register(block_type())
     monkeypatch.setattr("app.pipelines.api.registry", catalog)
     result = client.post(
         URL,
@@ -187,7 +239,7 @@ def test_validation_api_omits_private_custom_validator_details(
                         "id": "source",
                         "block_id": "synthetic.source",
                         "block_version": "1.0.0",
-                        "config": {"resource_id": "synthetic-private-value"},
+                        "config": config,
                     }
                 ],
                 "edges": [],
@@ -201,13 +253,12 @@ def test_validation_api_omits_private_custom_validator_details(
             {
                 "code": "invalid_config",
                 "message": (
-                    "Review 'resource_id' against this block's "
-                    "configuration requirements."
+                    f"Review '{field}' against this block's configuration requirements."
                 ),
                 "node_id": "source",
                 "edge_id": None,
                 "port": None,
-                "field": "resource_id",
+                "field": field,
             }
         ],
     }

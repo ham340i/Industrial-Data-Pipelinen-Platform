@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
   Button,
@@ -39,6 +39,31 @@ export interface BlockConfigPanelProps {
   serverErrors?: Record<string, string[]>;
   focusRequest?: { nodeId: string; field: string | null } | null;
   onRetry?: () => void;
+}
+
+function RecoveryNotice({
+  focusRequest,
+  disabled,
+  loading = false,
+  children,
+}: Pick<BlockConfigPanelProps, "focusRequest" | "disabled"> & {
+  loading?: boolean;
+  children: ReactNode;
+}) {
+  const noticeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focusRequest && !disabled) noticeRef.current?.focus();
+  }, [focusRequest, disabled]);
+  return (
+    <Alert
+      ref={noticeRef}
+      tabIndex={-1}
+      severity={loading ? "info" : "error"}
+      role={loading ? "status" : "alert"}
+    >
+      {children}
+    </Alert>
+  );
 }
 
 function ArrayField({
@@ -138,11 +163,11 @@ function ConfigForm({
     fields = fieldsFromSchema(block.config_schema);
   } catch {
     return (
-      <Alert severity="error">
+      <RecoveryNotice focusRequest={focusRequest} disabled={disabled}>
         This block has an unsupported or unsafe configuration schema. Existing
         values have been preserved. Ask the block owner to provide a supported
         public schema.
-      </Alert>
+      </RecoveryNotice>
     );
   }
   const effective = { ...defaultsFor(fields), ...value };
@@ -341,18 +366,25 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
     );
   if (props.registry.status === "loading")
     return (
-      <Alert severity="info" role="status">
+      <RecoveryNotice
+        focusRequest={props.focusRequest}
+        disabled={props.disabled}
+        loading
+      >
         Loading block definitions. Your configuration is preserved.
-      </Alert>
+      </RecoveryNotice>
     );
   if (props.registry.status === "error")
     return (
-      <Alert severity="error">
+      <RecoveryNotice
+        focusRequest={props.focusRequest}
+        disabled={props.disabled}
+      >
         Block definitions could not be loaded. Your configuration is preserved.
         {props.onRetry && (
           <Button onClick={props.onRetry}>Retry definitions</Button>
         )}
-      </Alert>
+      </RecoveryNotice>
     );
   const matches = props.registry.blocks.filter(
     (item) =>
@@ -361,10 +393,13 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
   );
   if (matches.length !== 1)
     return (
-      <Alert severity="error">
+      <RecoveryNotice
+        focusRequest={props.focusRequest}
+        disabled={props.disabled}
+      >
         The exact block version is unavailable or duplicated. Your configuration
         is preserved.
-      </Alert>
+      </RecoveryNotice>
     );
   return (
     <ConfigForm
