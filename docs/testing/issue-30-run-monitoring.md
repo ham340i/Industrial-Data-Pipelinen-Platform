@@ -51,3 +51,17 @@ Codex designed and implemented the client, monitor, tests and documentation,
 ran commands and inspected the browser output. The user requested issue #30 and
 repository/template compliance. No personal human implementation or review is
 claimed. Planned reviewer: @joedaswagger; review remains pending.
+
+## Final local verification
+
+Implementation revision: `8e9aa1c`. Full standalone suite: **6 passed** with the
+real API, including all previous configuration, connection, file-block,
+persistence and validation scenarios. Backend Ruff lint/format and mypy also
+passed (75 files). Frontend `check` passed with **109 tests**; backend pytest
+passed with **706 tests**. No implementation changes followed these checks.
+
+Exporting committed revision `8e9aa1c` with `git archive` into a temporary Git
+repository isolates the PR from unrelated untracked workspace material. On that
+exact tree, `check_repository.py` passed (365 files), `check_docs.py` passed
+(160 Markdown files), and `check_release_plan.py` passed. `git diff --check`
+also passed. These checks do not claim the unrelated audit files are fixed.
