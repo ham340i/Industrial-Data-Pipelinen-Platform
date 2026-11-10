@@ -154,3 +154,12 @@ unbounded join so it never returns early. See
 [the updated verification record](../docs/testing/issue-29-triggers-and-execute.md)
 for the four regression tests, including a deterministic one that drives
 the exact lock race instead of relying on timing.
+
+## Issue #30 run monitoring
+
+Codex designed and implemented the run API client, Builder monitoring panel,
+identity isolation, bounded logs, failure navigation and feature tests at the
+user's request. The user selected the issue and required repository/template
+compliance; human implementation, independent review and stakeholder acceptance
+are not asserted. See [verification](../docs/testing/issue-30-run-monitoring.md)
+and [contribution evidence](../docs/individual-contributions/ham340i-iteration-4.md).
