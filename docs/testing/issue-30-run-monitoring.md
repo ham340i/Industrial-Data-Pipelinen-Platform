@@ -5,7 +5,8 @@
 Issue: [#30](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/30).
 Branch: `feature/30-run-monitoring`, based on `5f0f811` (current main at start).
 Date: November 10, 2026. Design: [run monitoring](../frontend/run-monitoring.md).
-Final implementation revision and CI links are recorded in the linked PR.
+[PR #82](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/82)
+records the final revision, CI checks and independent review status.
 Synthetic data only; stakeholder and independent teammate review remain pending.
 
 ## Acceptance coverage

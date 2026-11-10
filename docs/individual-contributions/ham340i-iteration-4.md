@@ -26,14 +26,16 @@ Assigned story: [#30](https://github.com/ham340i/Industrial-Data-Pipelinen-Platf
 
 ## Pull Requests
 
-Issue-linked PR on `feature/30-run-monitoring`; link recorded in the issue and
-verification record after creation. Planned reviewer is @joedaswagger.
+[PR #82](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/82),
+implementation author via Codex on `feature/30-run-monitoring`. Planned reviewer
+is @joedaswagger; approval pending.
 
 ## Commits
 
-Issue-referencing implementation commit on `feature/30-run-monitoring` uses
-GitHub noreply attribution and an explicit AI assistance footer. Exact revision
-is recorded in the PR; historical authorship is unchanged.
+[Implementation 8e9aa1c](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/8e9aa1c)
+and [verification a38e69a](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/commit/a38e69a)
+use GitHub noreply attribution and explicit AI assistance footers. Historical
+authorship is unchanged.
 
 ## Tests
 
