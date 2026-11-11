@@ -15,6 +15,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.artifacts import register_published_artifacts, sink_format
 from app.execution import ExecutionContext, Frame, StateEvent
 from app.execution.frames import FrameValues
 from app.metadata.database import Database
@@ -173,6 +174,12 @@ class RunRecorder:
                     code=item.error_code,
                     message=f"Block {item.block_id}@{item.version} {item.event}",
                 )
+            register_published_artifacts(
+                session,
+                self.run_id,
+                {node.node_id: node.block_id for node in self._nodes},
+                context,
+            )
             self._finish_run(session, run, context, cancelled)
             return run.state
 
@@ -283,12 +290,18 @@ class RunRecorder:
         unknown rather than silently undercounting it as zero (#27).
         """
         total = 0
+        nodes = {node.node_id: node for node in self._nodes}
         for node_id in self._leaves:
             if context.node_states.get(node_id) != "completed":
                 return None
-            rows = count_rows(context.outputs.get(node_id))
-            if rows is None:
+            # File sinks emit a one-row artifact descriptor. Count the table
+            # they consumed, not that metadata row.
+            if sink_format(nodes[node_id].block_id) is not None:
                 rows = count_rows(context.inputs.get(node_id))
+            else:
+                rows = count_rows(context.outputs.get(node_id))
+                if rows is None:
+                    rows = count_rows(context.inputs.get(node_id))
             if rows is None:
                 return None
             total += rows

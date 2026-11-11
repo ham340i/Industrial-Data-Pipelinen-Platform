@@ -168,3 +168,19 @@ Codex audited the draft, reproduced and fixed private-error disclosure and
 missing keyboard-focus cases, added regressions, ran the recorded checks and
 updated iteration/contribution evidence. See the same verification record for
 failed attempts, final results and unresolved preview/run dependencies.
+
+On November 11 (UTC), Codex reconciled PR #81 with current main, retained both
+contributors' documentation, and reran the checks recorded above. The work
+updates the existing draft branch; it does not claim independent approval or
+completion of the remaining preview/run error-recovery acceptance cases.
+
+## SQL source and workflow preparation (#23, #31)
+
+Tool: OpenAI Codex. The user requested work on assignments for `aboudka2003`.
+Codex generated a registered SQLite source, bounded-query integration, saved-run
+controls, tests, design and operator documentation, and ran local verification.
+An existing SQL row-width-check edit was preserved. Human design/code review,
+CI and stakeholder acceptance remain pending. Issue #31 is dependency-blocked
+for preview and artifact inspection. See the
+[verification record](../docs/testing/issue-23-31-sql-workflow.md); this does not
+claim that the student manually authored or independently tested generated code.

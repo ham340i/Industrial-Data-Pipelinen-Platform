@@ -123,3 +123,52 @@ integration #31 are open. The saved-revision choice and real preview/run failure
 cases above remain required. The validation slice is tested; issue #33 stays
 open until those paths and independent review are complete. The planned reviewer
 is `menaboulus`; this document does not assert a review request or approval.
+
+## November 11 main reconciliation (UTC)
+
+Updated the existing PR branch from `4203174d00d86539b0328f7f7f4b1436d6986ecf`
+with main `ef1ac1a3c04adee43fd76e36e485364a01a26122`. The conflicts were
+additive entries in the AI disclosure and contribution registry; both owners'
+records were retained. Builder's automatic merge preserves main's saved-run
+controls and this PR's current-draft validation, retry and focus behavior.
+No additional application behavior, dependency or test expectations changed.
+
+Verification on Windows, Python 3.12.10, Node 24.19.0 and npm 11.17.0:
+
+- `npm run check --prefix frontend`: all 124 tests, lint, formatting, types
+  and production build passed.
+- `.venv/Scripts/python.exe -m ruff check`, `ruff format --check` and `mypy`
+  passed, with 89 source files checked by mypy.
+- `.venv/Scripts/python.exe -m pytest -q --basetemp generated-data/pytest-nov11-normal`:
+  749 passed and the existing Windows symbolic-link case skipped.
+- `npm run test:standalone --prefix frontend`: five real Chrome/FastAPI
+  scenarios passed in development and production-preview modes.
+- `npm run test:release --prefix frontend`: the real SQL author, validate,
+  save, execute, reopen, rerun and structured-failure workflow passed in
+  development and production-preview modes.
+- `npm run test:browser --prefix frontend`: all four production-shell
+  scenarios passed, including keyboard navigation, offline recovery and timeout.
+- Repository, documentation and release-plan checks, all 16 repository-tool
+  tests and diff whitespace checks passed.
+
+The first restricted backend run had six atomic-publication failures. A direct
+hard-link probe returned Windows access denied; the unchanged full suite passed
+with normal filesystem access. Git Bash syntax checks likewise needed normal
+process access. The Windows Python launcher alias could not start; the installed
+Python 3.12 interpreter and a fresh virtual environment were used instead.
+Compose and Linux verification require hosted CI because Docker is not installed
+on this test host. Check both CI and Documentation workflows and external
+statuses on the published commit; prior-head checks do not verify this merge.
+`npm ci` reported 14 audit findings in the unchanged frontend dependency lock;
+dependency remediation is outside this reconciliation.
+
+Main now supplies saved-run controls and artifact registration/query APIs.
+The old statement that no run controls exist is historical. Full preview/run
+error-navigation acceptance, independent teammate review and stakeholder
+acceptance are still not established by these regression checks. A separate
+read-only code review found no merge-induced regression. Main's existing
+placeholder Run button remains separate from the real saved-run control; this
+reconciliation does not redesign that inherited UI.
+
+OpenAI Codex resolved the conflicts and ran this verification at Yousef's request.
+No independent student approval, issue closure or merge to main is claimed.

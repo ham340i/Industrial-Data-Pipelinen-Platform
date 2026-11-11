@@ -12,7 +12,7 @@ from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, insert, inspect, select, text
+from sqlalchemy import String, delete, insert, inspect, select, text
 from sqlalchemy.exc import IntegrityError, StatementError
 
 from app.config import settings
@@ -38,6 +38,12 @@ GRAPH: dict[str, Any] = {
     "edges": [],
     "config": {"delimiter": ",", "columns": ["name", "value"], "limit": 10},
 }
+OUTPUT_SCHEMA: dict[str, Any] = {
+    "columns": [
+        {"name": "value", "dtype": "integer", "nullable": False},
+    ],
+    "allow_extra_columns": False,
+}
 
 
 @pytest.fixture
@@ -61,6 +67,7 @@ def seeded(database: Database) -> Database:
 
 
 def test_complete_metadata_survives_reopening(seeded: Database):
+    assert cast(String, OutputEndpoint.__table__.c.artifact_ref.type).length == 256
     with seeded.transaction() as session:
         session.add_all(
             [
@@ -84,6 +91,7 @@ def test_complete_metadata_survives_reopening(seeded: Database):
                     format="csv",
                     artifact_ref="output-resource",
                     row_count=0,
+                    schema_json=OUTPUT_SCHEMA,
                 ),
             ]
         )
@@ -101,6 +109,7 @@ def test_complete_metadata_survives_reopening(seeded: Database):
             exported = json.dumps(revision.definition)
             assert "private" not in exported and "os-keyring" not in exported
             assert run.outputs[0].row_count == 0
+            assert run.outputs[0].schema_json == OUTPUT_SCHEMA
             assert revision.pipeline.project.bindings[0].secret_reference is not None
             assert session.get(BlockRegistryEntry, ("csv.read", "1")) is not None
     finally:
@@ -180,6 +189,7 @@ def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bo
                 "name": "x",
                 "format": "invalid",
                 "artifact_ref": "resource",
+                "schema_json": OUTPUT_SCHEMA,
             },
         ),
         (
@@ -190,6 +200,7 @@ def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bo
                 "name": "x",
                 "format": "csv",
                 "artifact_ref": " ",
+                "schema_json": OUTPUT_SCHEMA,
             },
         ),
         (
@@ -201,6 +212,17 @@ def test_foreign_keys_apply_to_each_connection(database: Database, reconnect: bo
                 "format": "csv",
                 "artifact_ref": "resource",
                 "row_count": -1,
+                "schema_json": OUTPUT_SCHEMA,
+            },
+        ),
+        (
+            OutputEndpoint,
+            {
+                "run_id": "run",
+                "node_id": "n",
+                "name": "x",
+                "format": "csv",
+                "artifact_ref": "resource",
             },
         ),
     ],
@@ -230,6 +252,7 @@ def test_binding_registry_and_output_unique_identities(seeded: Database):
             name="table",
             format="csv",
             artifact_ref="resource",
+            schema_json=OUTPUT_SCHEMA,
         ),
     ]
     for factory in factories:
@@ -275,6 +298,7 @@ def test_referenced_history_cannot_be_deleted(
                     name="table",
                     format="csv",
                     artifact_ref="resource",
+                    schema_json=OUTPUT_SCHEMA,
                 )
             )
     with pytest.raises(IntegrityError), seeded.transaction() as session:
@@ -479,6 +503,7 @@ def test_migration_preserves_populated_runs_and_associations(tmp_path: Path):
                 select(OutputEndpoint).where(OutputEndpoint.run_id == "run")
             ).all()
             assert [output.id for output in outputs] == ["output"]
+            assert outputs[0].schema_json == {}
     finally:
         database.close()
 

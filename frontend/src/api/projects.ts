@@ -1,3 +1,5 @@
+// AI contribution: 50% or more AI-generated
+import { invalidResponse } from "./guards";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "./client";
 
@@ -15,12 +17,9 @@ export interface ProjectPage {
 export const isProjectId = (value: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
-function invalid(): never {
-  throw new ApiError(
-    "The local API returned an unsupported project response.",
-    "invalid-response",
-  );
-}
+const invalid = invalidResponse(
+  "The local API returned an unsupported project response.",
+);
 export function parseProject(value: unknown): Project {
   if (typeof value !== "object" || value === null) return invalid();
   const project = value as Record<string, unknown>;
