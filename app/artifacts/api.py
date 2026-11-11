@@ -12,7 +12,8 @@ from app.artifacts.query import (
     get_artifact,
     query_artifact,
 )
-from app.config import settings
+from app.artifacts import ArtifactUnavailable
+from app.workspace import effective_workspace_root
 from app.metadata.database import Database
 from app.projects import database
 from app.schemas.artifacts import ArtifactMetadataResponse, ArtifactQueryResponse
@@ -20,8 +21,11 @@ from app.schemas.artifacts import ArtifactMetadataResponse, ArtifactQueryRespons
 router = APIRouter(prefix="/api/v1/artifacts", tags=["artifacts"])
 
 
-def workspace_root() -> Path:
-    return settings.workspace_root
+def workspace_root(db: Annotated[Database, Depends(database)]) -> Path:
+    root = effective_workspace_root(db)
+    if root is None:
+        raise ArtifactUnavailable("Workspace is not configured.")
+    return root
 
 
 def metadata(artifact: RegisteredArtifact) -> ArtifactMetadataResponse:

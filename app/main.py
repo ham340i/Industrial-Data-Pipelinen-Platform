@@ -25,12 +25,14 @@ from app.pipelines.api import (
     validation_router,
 )
 from app.projects import ProjectNotFound, router as projects_router
+from app.preview.api import PreviewBoundaryMiddleware, router as preview_router
 from app.runs import recover_interrupted
 from app.runs.api import RunNotFound, router as runs_router
 from app.runs.scheduler import TimerScheduler
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
+from app.workspace import WorkspaceError, router as workspace_router
 
 
 _CORRELATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,100}$")
@@ -89,14 +91,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.scheduler = None
     database = Database(settings.metadata_path)
     try:
-        settings.workspace_root.mkdir(parents=True, exist_ok=True)
+        if settings.workspace_root is not None:
+            settings.workspace_root.mkdir(parents=True, exist_ok=True)
         upgrade(database)
         # Runs a previous process left queued/running can never finish (#27).
         recover_interrupted(database)
         application.state.database = database
-        application.state.scheduler = TimerScheduler(
-            database, executor, settings.workspace_root
-        )
+        application.state.scheduler = TimerScheduler(database, executor)
         yield
     finally:
         # Stop every timer thread (#29) before closing the database it uses.
@@ -115,6 +116,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(PreviewBoundaryMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 
 app.add_middleware(
@@ -127,10 +129,12 @@ app.add_middleware(
 
 app.include_router(projects_router)
 app.include_router(blocks_router)
+app.include_router(preview_router)
 app.include_router(pipelines_router)
 app.include_router(validation_router)
 app.include_router(runs_router)
 app.include_router(artifacts_router)
+app.include_router(workspace_router)
 
 
 def error_response(
@@ -152,10 +156,25 @@ def error_response(
         )
     )
 
+    headers = {"X-Correlation-ID": correlation_id}
+    # Unhandled dependency errors can bypass the preview send wrapper.
+    if request.url.path.endswith("/pipelines/preview") or request.url.path.startswith(
+        "/api/v1/settings/"
+    ):
+        headers["Cache-Control"] = "no-store"
     return JSONResponse(
         status_code=status_code,
         content=payload.model_dump(mode="json"),
-        headers={"X-Correlation-ID": correlation_id},
+        headers=headers,
+    )
+
+
+@app.exception_handler(WorkspaceError)
+async def workspace_exception_handler(
+    request: Request, exc: WorkspaceError
+) -> JSONResponse:
+    return error_response(
+        request=request, code=exc.code, message=exc.message, status_code=exc.status
     )
 
 
@@ -168,7 +187,12 @@ async def validation_exception_handler(
         request=request,
         code="validation_error",
         message=(
-            "Invalid validation request. Send a definition object with "
+            "Invalid preview request. Select a node and tabular output "
+            "in a semantic graph "
+            "of at most 100 nodes and 200 connections. Row limits are 1-1000 and cell "
+            "limits are 1-10000. Remove layout, credentials and machine paths."
+            if request.url.path.endswith("/pipelines/preview")
+            else "Invalid validation request. Send a definition object with "
             "schema_version 1 and well-formed nodes and edges. Remove "
             "credentials and machine paths from configuration."
             if request.url.path.endswith("/pipelines/validate")

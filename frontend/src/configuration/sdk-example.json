@@ -5,6 +5,7 @@
   "block_type": "transform",
   "name": "Synthetic Add Constant",
   "category": "synthetic",
+  "library_visible": false,
   "inputs": [
     {
       "name": "table",

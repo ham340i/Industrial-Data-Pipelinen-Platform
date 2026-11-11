@@ -12,6 +12,7 @@ from app.blocks.contracts import (
     Port,
     PortValues,
     PreviewLimits,
+    PreviewObservation,
     Table,
     ports_compatible,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "Port",
     "PortValues",
     "PreviewLimits",
+    "PreviewObservation",
     "Table",
     "ports_compatible",
 ]
