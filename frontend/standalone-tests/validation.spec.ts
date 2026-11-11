@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Real API, no mocks (#21). Use the synthetic transform's required input to
+// Real API, no mocks (#21). Use the Row Count block's required input to
 // exercise invalid graphs. File-source catalog coverage is in file-blocks.spec.
 test("real API diagnoses the draft, maps problems to nodes and gates running", async ({
   page,
@@ -14,7 +14,7 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   ).toBeVisible();
   await expect(run).toBeDisabled();
 
-  const add = page.getByRole("button", { name: "Add Synthetic Add Constant" });
+  const add = page.getByRole("button", { name: "Add Row Count" });
   await add.click();
   await add.click();
   const nodes = page.locator(".react-flow__node");
@@ -49,15 +49,17 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   ).toEqual(ids);
 
   await nodes.first().click();
-  const amount = page.getByRole("spinbutton", { name: "Amount" });
-  await amount.fill("1001");
+  const amount = page.getByRole("spinbutton", { name: "Min Rows" });
+  await amount.fill("-1");
   const problems = page.getByRole("list", { name: "Pipeline problems" });
-  const invalidAmount = problems.getByRole("button", { name: /Fix 'amount'/ });
+  const invalidAmount = problems.getByRole("button", {
+    name: /Fix 'min_rows'/,
+  });
   await expect(invalidAmount).toBeVisible();
   await invalidAmount.focus();
   await page.keyboard.press("Enter");
   await expect(amount).toBeFocused();
-  await expect(amount).toHaveValue("1001");
+  await expect(amount).toHaveValue("-1");
   await amount.fill("2");
   await expect(status).toHaveText("1 problem must be fixed before running.");
   await expect(invalidAmount).toHaveCount(0);

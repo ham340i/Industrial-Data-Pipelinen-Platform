@@ -42,7 +42,7 @@ from pathlib import Path
 from fastapi import Request
 from sqlalchemy import select
 
-from app.config import settings
+from app.workspace import effective_workspace_root
 from app.metadata.models import Pipeline, PipelineRevision
 
 from app.execution import Cancellation, Executor
@@ -157,12 +157,13 @@ class _Timer:
                     .join(PipelineRevision, PipelineRevision.pipeline_id == Pipeline.id)
                     .where(PipelineRevision.id == self.status.revision_id)
                 ).scalar_one()
+            root = self._workspace_root or effective_workspace_root(self._db)
             execute_revision(
                 self._db,
                 self._executor,
                 self.status.revision_id,
                 cancellation=token,
-                workspace_root=settings.workspace_root / project_id,
+                workspace_root=root / project_id if root is not None else None,
             )
         except Exception:
             # The run row itself already records a truthful failed/cancelled

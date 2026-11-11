@@ -89,8 +89,8 @@ Checks do not cascade: ports of unavailable blocks and edges to missing nodes ar
 
 ## Limitations
 
-- The Release 1 catalog only registers `synthetic.add_constant`, whose input is required, so no all-valid pipeline can yet be built in the real UI. A fully valid run waits for the source blocks in #16. The fixture matrix covers valid graphs with test-only source and sink blocks.
-- There is no configuration editor yet (#17), so configuration problems can be seen on nodes but only fixed by changing the definition.
+- The production catalog includes sources and downstream blocks. Synthetic Add Constant remains registered for saved-pipeline compatibility and SDK fixtures but is hidden from new library choices. Visibility does not change graph validation. The real API browser validation scenario uses Row Count's required input; the fixture matrix continues to exercise SDK examples and test-only sources/sinks.
+- Configuration problems can be corrected in the configuration panel (#17). Static graph/configuration checks do not establish that runtime resources are available or that data-dependent quality checks will pass.
 - Dangling-edge and duplicate-ID problems cannot be produced by the current editor; they come from imported or hand-edited JSON and are shown in the panel list.
 
 ## Code and tests

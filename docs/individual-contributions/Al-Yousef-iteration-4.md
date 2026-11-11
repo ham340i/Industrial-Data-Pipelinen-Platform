@@ -1,8 +1,8 @@
 # Yousef Bisharah - Iteration 4
 
 Scope: [issue #33](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/33),
-actionable validation, preview and execution errors. The implemented validation
-slice is in [draft PR #81](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/81)
+actionable validation, preview and execution errors. Validation, preview and saved-run recovery
+are implemented in [PR #81](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/81)
 on `feature/33-actionable-errors`. Issue completion, independent review, merge
 and stakeholder acceptance remain pending.
 
@@ -30,7 +30,11 @@ results must be read against the final PR head.
 
 ## Remaining work
 
-Preview depends on #26; run recovery needs #31's controls and saved-revision
-contract. The integrated preview/run failure cases, planned teammate review and
-stakeholder acceptance are not complete. No hours, personal learning account,
+Preview #83 has merged. The November 11 extension adds snapshot-bound preview
+recovery, matching-revision run configuration navigation, a transactional
+expected-revision guard, safe request errors and keyboard read retries. It builds
+on the existing controls and does not duplicate #30 monitoring. See the latest
+verification section for current tests rather than the historical counts above.
+Planned teammate review, human assistive-technology observations and stakeholder
+acceptance remain pending. No hours, personal learning account,
 review of another student's PR or whole-release completion is inferred.

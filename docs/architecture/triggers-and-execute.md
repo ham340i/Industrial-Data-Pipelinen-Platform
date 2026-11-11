@@ -25,7 +25,12 @@ POST .../timer/stop ───▶ TimerScheduler.stop ─▶ cancels + joins the 
 
 ## Design decisions
 
-- **Execute always runs the latest saved revision.** There is no separate
+- **Execute selects the latest saved revision, optionally guarded.** The body
+  may contain `{"expected_revision": 1}` (#33). It must be a positive integer;
+  omission or null preserves legacy behavior. If it differs from the latest
+  saved revision, the API returns `409 revision_conflict` without creating a
+  run. The check and immutable revision-ID capture use the same transaction;
+  a later save cannot silently change the selected execution. There is no separate
   "validate before execute" step: `Executor.execute` already validates (#21)
   before running anything, and an invalid pipeline creates no run row, same
   as calling `execute_revision` directly. The API only adds a structured
@@ -78,4 +83,5 @@ POST .../timer/stop ───▶ TimerScheduler.stop ─▶ cancels + joins the 
 - A single, long-running block cannot be stopped mid-execution; only the
   *next* tick is prevented.
 - `execute` always targets the latest revision; there is no way to execute
-  an older, specific revision through this API.
+  an older, specific revision through this API. `expected_revision` is a
+  precondition, not a historical-revision selector. See [error recovery](error-recovery.md).

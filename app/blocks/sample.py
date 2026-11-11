@@ -1,4 +1,9 @@
-"""Synthetic extension example; not one of the Release 1 production blocks."""
+"""SDK reference retained for authors, contract tests and saved pipelines.
+
+Hidden from the builder library. This deliberately small transform accepts only
+one non-nullable integer column named ``value``. Its preview demonstrates the SDK
+hook on supplied input; it does not implement bounded file or upstream reading.
+"""
 
 from typing import cast
 
@@ -32,6 +37,7 @@ class AddConstantBlock(Block[AddConstantConfig]):
         block_type="transform",
         name="Synthetic Add Constant",
         category="synthetic",
+        library_visible=False,
         inputs=(Port(name="table", data_schema=VALUE_SCHEMA),),
         outputs=(Port(name="table", data_schema=VALUE_SCHEMA),),
         supports_preview=True,

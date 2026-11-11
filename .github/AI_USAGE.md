@@ -174,6 +174,14 @@ contributors' documentation, and reran the checks recorded above. The work
 updates the existing draft branch; it does not claim independent approval or
 completion of the remaining preview/run error-recovery acceptance cases.
 
+After preview #83 merged on November 11, Yousef asked to complete the recovery
+work. Codex extended the existing preview and saved-run controls, added the
+transactional saved-revision precondition, wrote regressions and real-browser
+recovery cases, and ran the checks in the verification record. The work preserves
+the team's preview and telemetry implementation rather than claiming its authorship.
+Independent student review, human assistive-technology observations and stakeholder
+acceptance are separate and remain pending.
+
 ## SQL source and workflow preparation (#23, #31)
 
 Tool: OpenAI Codex. The user requested work on assignments for `aboudka2003`.

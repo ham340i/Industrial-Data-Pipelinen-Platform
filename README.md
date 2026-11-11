@@ -71,6 +71,13 @@ Repository checks require no configuration. Root `.env.example` documents safe C
 
 ## API Development
 
+For file previews, open **Settings** in the workbench and select an existing folder
+from the permitted paths shown there. To permit additional folders, configure
+`LPS_ALLOWED_WORKSPACE_ROOTS` on the API as a JSON list of absolute paths and restart
+the API. The app prepares project input folders and
+uses the saved setting immediately. `LPS_WORKSPACE_ROOT` remains the environment
+fallback. See [workspace settings](docs/architecture/workspace-settings.md).
+
 The headless DAG executor is available as a Python library; see the
 [execution guide](docs/execution.md) for Polars context, lifecycle, failure and
 cancellation behavior. API execution and UI integration remain separate work.

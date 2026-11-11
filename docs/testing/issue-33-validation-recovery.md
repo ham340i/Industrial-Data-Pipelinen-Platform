@@ -1,6 +1,12 @@
-# Issue 33 validation recovery
+# Issue 33 contextual error recovery
 
-This change covers the current Builder validation and configuration flow. It
+The sections before the November 11 preview/run extension are historical
+validation-only evidence. The current scope and remaining human acceptance
+are recorded in that final section.
+
+## Original validation slice
+
+This change covers the Builder validation and configuration flow. It
 uses the existing read-only `POST /api/v1/pipelines/validate` contract and the
 current draft in the editor store. A response for an older graph cannot mark
 or navigate the new one. The Run button remains gated by validation.
@@ -14,9 +20,9 @@ or navigate the new one. The Run button remains gated by validation.
 | Communicate and recover accessibly | Status and diagnostic text provide non-colour cues. The retry control keeps keyboard focus on the status region while the new check runs. Pipeline-wide notices are readable list entries. |
 | Keep internal details private | A failed HTTP check renders the normalized message. The API regression checks that a custom validator cannot expose its supplied value or filesystem path through exception text. Built-in constraint messages retain actionable limits. |
 
-For a manual check, add a Synthetic Add Constant block in Builder. Set Amount
-to `1001`, tab to its configuration diagnostic and press Enter. Focus should
-return to Amount with the value intact. Set it to `2` and check that the amount
+For a current manual check, add a Row Count block in Builder. Set Min Rows
+to `-1`, tab to its configuration diagnostic and press Enter. Focus should
+return to Min Rows with the value intact. Set it to `2` and check that the field
 diagnostic clears while any unconnected input remains reported. Disconnect the
 local API, edit a setting and let the check fail. Restart the API and use the
 Retry pipeline check button. The draft should remain in the editor throughout.
@@ -172,3 +178,91 @@ reconciliation does not redesign that inherited UI.
 
 OpenAI Codex resolved the conflicts and ran this verification at Yousef's request.
 No independent student approval, issue closure or merge to main is claimed.
+
+
+## November 11 preview/run extension (UTC)
+
+The same PR now extends merged preview #83, main
+`7540bf81d6194c41df551dbfa8f73f64119a9c3c`, on top of the earlier reconciliation
+`c77c219887ed9e44fc9945ea166a70bde745b96a`. The earlier dependency notes are
+historical: #26 is merged, and existing saved-run controls supply the execution
+path. #31 can integrate this recovery with #30's monitoring. No unmerged
+monitoring code is imported. See the [design](../architecture/error-recovery.md).
+
+### Implemented behavior
+
+- Preview errors use allowlisted public copy and snapshot-bound node targets.
+  Unknown nodes and pipeline-wide failures remain readable notices, without
+  invented configuration links. Typed upstream errors focus the matching input.
+- Preview retry, cancel and completion keep meaningful keyboard focus. Completion
+  restores focus from a disappearing Cancel control but does not steal focus
+  from a configuration field. Semantic edits, selection and context changes
+  discard late successes/failures without replacing edits.
+- Saved execution sends optional `expected_revision`. The server checks it and
+  captures the immutable revision ID in one transaction. A later save cannot
+  change the selected run. A mismatch returns 409 and creates no run. Existing
+  no-body clients and timer behavior remain compatible.
+- Failed run blocks offer configuration navigation only for the matching saved
+  snapshot. A newer draft/revision is retained with clearly separated historical
+  evidence and no misleading recovery action. Runtime errors currently provide
+  node context, not field context, so the block configuration region receives focus.
+- Failed run reads have explicit keyboard retry, repeating GET rather than POST.
+  Lost or malformed execute responses show an uncertainty warning; execution is
+  never automatically repeated. Request bodies and arbitrary exception text are
+  not reflected into error notices.
+
+### Verification and development findings
+
+Windows, Python 3.12.10, Node 24.19.0, npm 11.17.0 and installed Chrome; synthetic
+fixtures only. Checks use isolated metadata/workspace directories and a stable
+temporary path. Backend filesystem cases run with normal process access.
+
+- Backend Ruff, formatting and mypy passed for 100 source files. Full pytest:
+  858 passed, one existing Windows symbolic-link case skipped. The 24 execute
+  tests include malformed preconditions, legacy callers, refusal without a run
+  and a deterministic concurrent-save regression.
+- The first eight RunRecovery tests had seven failures against the pre-change
+  controls. The final focused file has 11 passing cases, including uncertain
+  transport/malformed responses and reopening the same pipeline before a late read.
+- Preview component/API focused checks: 34 passed, including keyboard success
+  and failure completion, repeated cancel/retry and stale response isolation.
+- Final `npm run check --prefix frontend`: 181 tests passed, plus ESLint,
+  Prettier, TypeScript and production build.
+- `npm run test:standalone --prefix frontend`: all 13 real Chrome/FastAPI
+  scenarios passed in development (53.7 s) and production-preview (31.4 s).
+  New recovery cases prove upstream field focus with unsaved columns intact,
+  failed execution to corrected revision 2 with actual CSV output, and a peer
+  save rejected with zero runs and the original local graph unchanged.
+- `npm run test:release --prefix frontend`: the real SQL workflow passed in
+  production-preview (9.4 s) and development (11.8 s).
+- `npm run test:browser --prefix frontend`: all four shell scenarios passed
+  (14.8 s), including keyboard behavior, offline recovery and transport timeout.
+- Repository/documentation/release-plan checks, 16 repository-tool tests and
+  diff whitespace checks passed. Docker is absent on this host; Compose and
+  Linux coverage must come from final-head hosted CI.
+- The #83 merge changed the real validation fixture to Row Count while the
+  older recovery assertions still expected Synthetic Add Constant's Amount.
+  The integrated test now uses Min Rows `-1`, the corresponding field error and
+  correction to `2`, retaining the same keyboard and graph-preservation checks.
+- The first new browser test attempted to export an unsaved draft, which the
+  existing UI deliberately disables. Its assertion was corrected to check
+  visible configuration retention, then verify the saved definition and output.
+  All three new real-API cases passed together before the full suites.
+- A TypeScript check rejected `Promise.withResolvers` in new test code because
+  the configured library does not include it. Explicit deferred promises fixed
+  the tests without changing the project's library target.
+- A separate automated read-only review found no actionable defects in revision
+  capture, snapshot matching, safe request messages or recovery behavior. This
+  is not the required independent student review.
+
+### Remaining acceptance
+
+Independent teammate review, human assistive-technology observations and
+stakeholder acceptance remain pending. Automated browser keyboard checks do not
+claim screen-reader or student acceptance. The existing no-project validation
+placeholder is not the saved-execution control. No issue closure, merge or whole
+Release 1 acceptance is claimed. Hosted checks must be verified on the final
+published commit, not on an earlier head.
+
+OpenAI Codex implemented and verified this extension at Yousef's request; the
+team supplied the issue requirements and existing preview/engine contracts.

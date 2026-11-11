@@ -12,6 +12,7 @@ import {
 import { PipelineControls } from "./PipelineControls";
 import { RunControls } from "./RunControls";
 import { Canvas } from "./Canvas";
+import { PreviewPanel } from "./PreviewPanel";
 import { ValidationPanel } from "./ValidationPanel";
 import { ConfigurationPanel } from "./configuration/ConfigurationPanel";
 import { useEditorStore } from "./state/editor";
@@ -92,6 +93,7 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
         </Box>
         <ConfigurationPanel diagnostics={validation.report?.diagnostics} />
       </Box>
+      <PreviewPanel projectId={projectId} />
     </Stack>
   );
 }

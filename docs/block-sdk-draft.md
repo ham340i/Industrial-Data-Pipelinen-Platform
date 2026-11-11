@@ -13,6 +13,13 @@ in the [verification record](testing/issue-8-block-sdk.md).
 
 ## Getting started
 
+`app/blocks/sample.py` remains the small developer reference for configuration,
+typed ports, validation, execution and the optional preview hook. Its descriptor
+sets `library_visible=False`, so Synthetic Add Constant is not offered for new
+nodes in the builder. Keep its registration and metadata for existing saved
+pipelines and its contract tests. It accepts only one non-nullable integer column
+named `value`; it is not a general-purpose arithmetic transform or data generator.
+
 Use the public imports from `app.blocks`. The project targets Python 3.12;
 run the following example from the repository root using the development
 environment and its installed dependencies.
@@ -283,16 +290,33 @@ their preview work and avoid publication or other side effects. Returned-data
 limits do not provide timeouts, memory isolation or limits on intermediate
 allocations.
 
+The example receives an already materialized input, and the SDK validates that
+input before calling the preview hook. Its small output does not establish a
+bound on input reading or validation. Production source and upstream preview
+need their own resource budgets; see the [issue #26 plan](planning/issue-26-preview.md).
+
 Successful preview emits `previewed`. Unsupported preview returns its declared
 public reason through `preview_unsupported`.
 
 ## Runtime context and events
+
+Production CSV Source and Select Columns now implement bounded preview. The
+project-scoped service supplies a request-local `observe_preview` callback that
+receives typed `PreviewObservation` evidence (inspected/full counts, truncation,
+schema scope and bytes read). It is optional for existing SDK callers and is
+never shared between requests or stored on a block instance. See the
+[preview policy](architecture/selected-node-preview.md) for upstream planning,
+workspace setup, cancellation and limits beyond returned rows/cells.
 
 `BlockContext` is a runtime-only frozen dataclass with:
 
 - Nonblank `run_id` and `node_id`.
 - Optional `log_sink: Callable[[BlockEvent], None]`.
 - Optional `resolve_resource: Callable[[str], Path]`.
+- Optional `workspace_root: Path` for contained file access.
+- Optional `is_cancelled: Callable[[], bool]` for cooperative checkpoints.
+- Optional `observe_preview: Callable[[PreviewObservation], None]` for typed,
+  request-local source evidence without changing the `PortValues` return type.
 
 Callbacks must be callable when supplied. A block using the resource resolver
 must handle its absence and supply safe failures. The host provides the resolver;
@@ -319,6 +343,12 @@ Failed registration leaves the catalog unchanged.
 Public metadata contains the descriptor and configuration JSON schema.
 It excludes concrete configuration instances, table rows and runtime callbacks.
 Registry exports are detached validated snapshots sorted by ID/version.
+
+Descriptors include `library_visible: bool = True`. Set it to `False` for an
+example or compatibility-only block that should remain resolvable but not be
+offered for new nodes. This flag is independent of category and preview support.
+It does not suppress API metadata, runtime execution or validation. The builder
+filters only its library and drop choices; existing nodes use the full catalog.
 
 Resolution rejects changed descriptor contents or a replaced configuration-model
 class. It does not detect every change inside implementation code or model
