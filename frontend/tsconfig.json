@@ -27,6 +27,8 @@
     "playwright.compose.config.ts",
     "compose-tests",
     "playwright.standalone.config.ts",
-    "standalone-tests"
+    "standalone-tests",
+    "playwright.release.config.ts",
+    "release-tests"
   ]
 }

@@ -316,7 +316,10 @@ def execute_pipeline(
     revision_id, _ = load_latest_definition(db, project_id, pipeline_id)
     try:
         outcome = execute_revision(
-            db, executor, revision_id, workspace_root=settings.workspace_root
+            db,
+            executor,
+            revision_id,
+            workspace_root=settings.workspace_root / str(project_id),
         )
     except RevisionNotFound:
         raise PipelineError(

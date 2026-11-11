@@ -24,6 +24,6 @@ The record also links Al-Yousef's allocated review of merged executor PR #70
 and the November 2 current-main verification. UI/stakeholder acceptance remains
 unverified.
 
-Issue #28 local implementation evidence:
-[MarcElHaddad1, Iteration 3 artifact governance](MarcElHaddad1-iteration-3.md).
-Independent review, PR, hosted CI and merge remain pending.
+Issue #23 local preparation: [aboudka2003, Iteration 3 SQL source](aboudka2003-iteration-3.md).
+This records AI-assisted implementation and local verification; PR, CI and
+independent review remain pending. Related #31 integration is incomplete.
