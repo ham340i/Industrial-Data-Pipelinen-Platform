@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.blocks.catalog import executor, registry
 from app.config import settings
 from app.blocks.triggers import TimerTriggerConfig
+from app.config import settings
 from app.metadata.database import Database
 from app.metadata.models import Pipeline, PipelineRevision, Project
 from app.pipelines.models import GraphDraft, Node, PipelineDefinition

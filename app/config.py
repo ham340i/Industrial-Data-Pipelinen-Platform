@@ -20,6 +20,11 @@ class Settings(BaseModel):
             os.environ.get("LPS_METADATA_PATH", "local-data/metadata.sqlite3")
         )
     )
+    workspace_root: Path = Field(
+        default_factory=lambda: Path(
+            os.environ.get("LPS_WORKSPACE_ROOT", "local-data/workspace")
+        )
+    )
     allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

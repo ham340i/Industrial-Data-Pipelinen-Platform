@@ -121,6 +121,17 @@ See the [execution guide](../../execution.md),
 This establishes the prerequisite for #25; it does not establish whole-iteration
 or UI/API acceptance.
 
+## Issue #28 artifact governance
+
+Local implementation is in progress on `feature/28-parquet-artifact-query`.
+It links successful CSV/Parquet publications to run/revision metadata and
+provides artifact-ID-only bounded Parquet reads through DuckDB. See
+[usage](../../artifacts.md), [design](../../architecture/artifact-governance.md),
+[verification](../../testing/issue-28-artifact-query.md) and
+[Marc's contribution record](../../individual-contributions/MarcElHaddad1-iteration-3.md).
+Independent review, PR, hosted CI, merge, UI E2E and iteration acceptance remain
+pending.
+
 ## Issue #25 quality blocks
 
 Implementation merged through
