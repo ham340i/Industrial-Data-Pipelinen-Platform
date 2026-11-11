@@ -16,13 +16,13 @@ test("real SDK config survives selection, failed copy, export and API save/reope
   await page
     .getByRole("textbox", { name: "Draft pipeline name" })
     .fill("Configuration roundtrip");
-  const add = page.getByRole("button", { name: "Add Synthetic Add Constant" });
-  const amount = page.getByRole("spinbutton", { name: "Amount" });
+  const add = page.getByRole("button", { name: "Add Row Count" });
+  const minimum = page.getByRole("spinbutton", { name: "Min Rows" });
   const nodes = page.locator(".react-flow__node");
   await add.click();
-  await amount.fill("42");
+  await minimum.fill("42");
   await add.click();
-  await amount.fill("7");
+  await minimum.fill("7");
   // Keep both real canvas nodes selectable after save/reopen. The builder's
   // initial positions deliberately overlap; use its keyboard movement controls.
   await nodes.last().focus();
@@ -30,7 +30,7 @@ test("real SDK config survives selection, failed copy, export and API save/reope
     await page.keyboard.press("Shift+ArrowRight");
   await page.getByRole("button", { name: "Fit View", exact: true }).click();
   await nodes.first().click({ position: { x: 10, y: 10 } });
-  await expect(amount).toHaveValue("42");
+  await expect(minimum).toHaveValue("42");
   const validation = page.waitForResponse(
     (r) =>
       r.url().endsWith("/pipelines/validate") &&
@@ -39,18 +39,18 @@ test("real SDK config survives selection, failed copy, export and API save/reope
         .request()
         .postDataJSON()
         ?.definition.nodes.some(
-          (n: { config: { amount?: number } }) => n.config.amount === 1001,
+          (n: { config: { min_rows?: number } }) => n.config.min_rows === -1,
         ),
   );
-  await amount.fill("1001");
+  await minimum.fill("-1");
   expect((await (await validation).json()).diagnostics).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ code: "invalid_config", field: "amount" }),
+      expect.objectContaining({ code: "invalid_config", field: "min_rows" }),
     ]),
   );
-  await expect(amount).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByText(/Use a value of at most 1000/)).toBeVisible();
-  await amount.fill("42");
+  await expect(minimum).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText(/Use a value of at least 0/)).toBeVisible();
+  await minimum.fill("42");
   const save = page.waitForResponse(
     (r) => r.request().method() === "POST" && r.url().endsWith("/pipelines"),
   );
@@ -60,7 +60,10 @@ test("real SDK config survives selection, failed copy, export and API save/reope
   const saved = await (await save).json();
   expect(
     saved.definition.nodes.map((n: { config: unknown }) => n.config),
-  ).toEqual([{ amount: 42 }, { amount: 7 }]);
+  ).toEqual([
+    { min_rows: 42, max_rows: null, required: true },
+    { min_rows: 7, max_rows: null, required: true },
+  ]);
   await expect(page.getByText("Pipeline saved.")).toBeVisible();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export JSON", exact: true }).click();
@@ -75,16 +78,16 @@ test("real SDK config survives selection, failed copy, export and API save/reope
     .getByRole("button", { name: "Open Configuration roundtrip (revision 1)" })
     .click();
   await nodes.first().click({ position: { x: 10, y: 10 } });
-  await expect(amount).toHaveValue("42");
-  await amount.fill("43");
+  await expect(minimum).toHaveValue("42");
+  await minimum.fill("43");
   const conflict = page.waitForResponse(
     (r) => r.request().method() === "POST" && r.url().endsWith("/pipelines"),
   );
   await page.getByRole("button", { name: "Save a copy", exact: true }).click();
   expect((await conflict).status()).toBe(409);
-  await expect(amount).toHaveValue("43");
+  await expect(minimum).toHaveValue("43");
   await nodes.last().click({ position: { x: 10, y: 10 } });
-  await expect(amount).toHaveValue("7");
+  await expect(minimum).toHaveValue("7");
 
   // A column flex layout must retain the canvas height on narrow screens.
   await page.setViewportSize({ width: 390, height: 844 });
@@ -92,12 +95,12 @@ test("real SDK config survives selection, failed copy, export and API save/reope
   expect((await canvas.boundingBox())?.height).toBeGreaterThanOrEqual(560);
   await page.getByRole("button", { name: "Fit View", exact: true }).click();
   await nodes.first().click({ position: { x: 10, y: 10 } });
-  await expect(amount).toHaveValue("43");
-  await amount.fill("44");
+  await expect(minimum).toHaveValue("43");
+  await minimum.fill("44");
   await nodes.last().click({ position: { x: 10, y: 10 } });
-  await expect(amount).toHaveValue("7");
+  await expect(minimum).toHaveValue("7");
   await nodes.first().click({ position: { x: 10, y: 10 } });
-  await expect(amount).toHaveValue("44");
+  await expect(minimum).toHaveValue("44");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

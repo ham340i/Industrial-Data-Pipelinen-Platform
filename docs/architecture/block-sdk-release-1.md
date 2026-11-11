@@ -31,6 +31,19 @@ Block wrappers validate inputs/outputs, provide lifecycle/context/log hooks and
 separate optional preview with combined row/cell limits. The Add Constant sample
 proves deterministic headless extension through synthetic fixtures.
 
+The sample remains in source and SDK tests, with `library_visible=False` to hide
+it from new builder choices. Registration and full metadata remain available for
+saved pipelines. Other descriptors default to visible. Product authoring tests
+use production blocks; preview acceptance must exercise production source and
+transform implementations, as described in the [issue #26 plan](../planning/issue-26-preview.md).
+
+Issue #26 now supplies production CSV/JSON/Parquet-to-Select preview paths, a request-local
+observation callback and project-scoped API/panel. See the
+[implemented preview contract](selected-node-preview.md). Schema/count provenance
+distinguishes sampled inference, observed completion and file metadata. SQL preview
+is excluded from the approved extension. General upstream execution and new source
+formats do not inherit preview support automatically.
+
 The issue owns these contracts and one synthetic sample, not the full Release 1
 block catalog below. No new dependencies, processing libraries, providers,
 execution engine, API/frontend changes or database migrations are required for

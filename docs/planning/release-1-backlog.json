@@ -885,7 +885,7 @@
         "Avoid publishing sinks or running timer side effects during preview",
         "Enforce a documented resource/sample policy and propagate structured errors"
       ],
-      "engineering_notes": "Run-to-Here is conditional: implement only if bounded subgraph execution is proven; otherwise expose supported block preview and document limitation. Do not promise full-count cheapness when it needs execution.",
+      "engineering_notes": "Run-to-Here is conditional: implement only if bounded subgraph execution is proven; otherwise expose supported block preview and document limitation. Do not promise full-count cheapness when it needs execution. Synthetic Add Constant remains an SDK reference and saved-pipeline compatibility block, hidden from new library choices via library_visible. Product preview acceptance uses real sources/transforms, starting with CSV Source and then Select Columns when bounded upstream evaluation is proven. See docs/planning/issue-26-preview.md for the implementation sequence.",
       "unit_tests": "Sampling limits, schema/null summary and unsupported capability behavior.",
       "integration_tests": "API-to-panel preview with safe subgraph/source fixtures and no output publication.",
       "e2e_tests": "Exercise this behavior in the Iteration 4 acceptance workflow when the UI is integrated; record not-applicable for pure tooling spikes.",

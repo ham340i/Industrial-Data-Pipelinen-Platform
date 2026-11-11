@@ -14,6 +14,14 @@ class Settings(BaseModel):
             os.environ.get("LPS_METADATA_PATH", "local-data/metadata.sqlite3")
         )
     )
+    # Private data folders are <workspace_root>/<project UUID>/, never portable JSON.
+    workspace_root: Path | None = Field(
+        default_factory=lambda: (
+            Path(os.environ["LPS_WORKSPACE_ROOT"])
+            if os.environ.get("LPS_WORKSPACE_ROOT")
+            else None
+        )
+    )
     allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { PipelineControls } from "./PipelineControls";
 import { Canvas } from "./Canvas";
+import { PreviewPanel } from "./PreviewPanel";
 import { ValidationPanel } from "./ValidationPanel";
 import { ConfigurationPanel } from "./configuration/ConfigurationPanel";
 import { useEditorStore } from "./state/editor";
@@ -85,6 +86,7 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
           diagnostics={validation.current ? validation.report?.diagnostics : []}
         />
       </Box>
+      <PreviewPanel projectId={projectId} />
     </Stack>
   );
 }

@@ -14,10 +14,8 @@ test("real API saves and reloads the canvas, then renames the pipeline", async (
     page.getByRole("heading", { name: "Pipeline builder" }),
   ).toBeVisible();
   const name = page.getByRole("textbox", { name: "Draft pipeline name" });
-  await name.fill("Synthetic pipeline");
-  await page
-    .getByRole("button", { name: "Add Synthetic Add Constant" })
-    .click();
+  await name.fill("Row count pipeline");
+  await page.getByRole("button", { name: "Add Row Count" }).click();
   const nodes = page.locator(".react-flow__node");
   const node = nodes.first();
   await expect(node).toHaveCount(1);
@@ -38,7 +36,7 @@ test("real API saves and reloads the canvas, then renames the pipeline", async (
 
   const dragData = await page.evaluateHandle(() => new DataTransfer());
   const entry = page.locator('[draggable="true"]').filter({
-    has: page.getByRole("button", { name: "Add Synthetic Add Constant" }),
+    has: page.getByRole("button", { name: "Add Row Count" }),
   });
   await entry.dispatchEvent("dragstart", { dataTransfer: dragData });
   await canvas.dispatchEvent("drop", {
@@ -60,11 +58,15 @@ test("real API saves and reloads the canvas, then renames the pipeline", async (
   const saved = await (await saveResponse).json();
   await expect(page.getByText("Pipeline saved.")).toBeVisible();
   expect(saved.definition.edges).toHaveLength(1);
-  expect(saved.definition.nodes[0].config).toEqual({ amount: 1 });
+  expect(saved.definition.nodes[0].config).toEqual({
+    min_rows: 0,
+    max_rows: null,
+    required: true,
+  });
   await page.reload();
   await expect(nodes).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Open Synthetic pipeline (revision 1)" })
+    .getByRole("button", { name: "Open Row count pipeline (revision 1)" })
     .click();
   await expect(node).toHaveAttribute("data-id", originalId!);
   await name.fill("Renamed pipeline");

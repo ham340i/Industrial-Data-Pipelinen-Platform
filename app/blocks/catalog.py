@@ -23,6 +23,8 @@ from app.execution import Executor
 
 router = APIRouter(prefix="/api/v1/blocks", tags=["blocks"])
 registry = BlockRegistry()
+# Keep exact-version resolution and metadata for existing saved pipelines.
+# The example's descriptor hides it from new authoring choices in the builder.
 registry.register(AddConstantBlock())
 for block in (
     ManualTrigger(),

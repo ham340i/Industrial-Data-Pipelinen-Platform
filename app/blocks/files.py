@@ -26,9 +26,18 @@ from app.blocks.contracts import (
     NonBlank,
     Port,
     PortValues,
+    PreviewLimits,
+    PreviewObservation,
     Table,
 )
 from app.blocks.errors import BlockError
+from app.blocks.preview_policy import (
+    CsvLines,
+    MAX_READ_BYTES,
+    MAX_FIELD_CHARS,
+    MAX_COLUMNS,
+    MAX_COLUMN_CHARS,
+)
 from app.blocks.tabular import (
     DType,
     POLARS_TYPES,
@@ -215,8 +224,131 @@ class CsvSource(FileSource[CsvConfig]):
     config_model = CsvConfig
     suffix = ".csv"
     descriptor = BlockDescriptor(
-        **descriptor_values("source.csv", "CSV Source", "source"), outputs=(TABLE_PORT,)
+        **descriptor_values("source.csv", "CSV Source", "source"),
+        outputs=(TABLE_PORT,),
+        supports_preview=True,
+        preview_reason=None,
     )
+
+    def _preview(
+        self,
+        config: CsvConfig,
+        inputs: PortValues,
+        context: BlockContext,
+        limits: PreviewLimits,
+    ) -> PortValues:
+        context.check_cancelled()
+        path = resource_path(context, config.resource_ref, self.suffix)
+        try:
+            if not path.is_file():
+                raise OSError
+            with path.open("rb", buffering=0) as stream:
+                lines = CsvLines(
+                    stream,
+                    config.encoding,
+                    min(config.max_bytes, MAX_READ_BYTES),
+                    context,
+                )
+                reader = csv.reader(lines, strict=True)
+                header = next(reader, [])
+                if not header or len(header) > min(config.max_columns, MAX_COLUMNS):
+                    raise BlockError(
+                        "preview_columns",
+                        "CSV preview requires 1 to 128 columns "
+                        "within the source limit.",
+                    )
+                checked_names(header)
+                if any(len(name) > MAX_COLUMN_CHARS for name in header):
+                    raise BlockError(
+                        "preview_columns",
+                        "CSV preview column names exceed the supported length.",
+                    )
+                if config.columns and header != config.columns:
+                    raise BlockError(
+                        "schema_mismatch",
+                        "Declared columns must match source order and names.",
+                        field="columns",
+                    )
+                count = min(
+                    limits.max_rows,
+                    limits.max_cells // len(header),
+                    config.max_rows,
+                    config.max_cells // len(header),
+                )
+                if count < 1:
+                    raise BlockError(
+                        "preview_limit",
+                        "The cell limit cannot hold one row of this schema.",
+                    )
+                rows: list[dict[str, str | None]] = []
+                inspected = 0
+                truncated = False
+                while True:
+                    lines.next_record()
+                    values = next(reader, None)
+                    if values is None:
+                        break
+                    inspected += 1
+                    if len(values) != len(header):
+                        raise BlockError(
+                            "invalid_csv", "CSV row width differs from its header."
+                        )
+                    if any(len(value) > MAX_FIELD_CHARS for value in values):
+                        raise BlockError(
+                            "preview_field_limit",
+                            "A CSV preview field exceeds 4096 characters.",
+                        )
+                    if len(rows) == count:
+                        truncated = True
+                        break
+                    rows.append(
+                        {
+                            name: None if value == config.null_value else value
+                            for name, value in zip(header, values, strict=True)
+                        }
+                    )
+                context.check_cancelled()
+                frame = pl.DataFrame(rows, schema={name: pl.String for name in header})
+                if config.columns:
+                    for name, kind in zip(config.columns, config.types, strict=True):
+                        context.check_cancelled()
+                        frame = cast_column(frame, name, kind)
+                    schema = config.declared_schema()
+                else:
+                    # A prefix cannot establish whole-file non-nullability.
+                    schema = DataSchema(
+                        columns=tuple(
+                            Column(name=name, dtype="string", nullable=True)
+                            for name in header
+                        )
+                    )
+                table = from_frame(frame, schema)
+                context.check_cancelled()
+                if context.observe_preview is not None:
+                    context.observe_preview(
+                        PreviewObservation(
+                            inspected_rows=inspected,
+                            full_row_count=None if truncated else len(rows),
+                            truncated=truncated,
+                            schema_scope="declared" if config.columns else "header",
+                            full_count_scope="unknown" if truncated else "observed",
+                            read_bytes=lines.read_bytes,
+                        )
+                    )
+                return {"table": (table,)}
+        except BlockError:
+            raise
+        except OSError:
+            raise BlockError(
+                "file_unavailable",
+                "Input file is missing or unreadable.",
+                field="resource_ref",
+            ) from None
+        except Exception:
+            raise BlockError(
+                "invalid_csv",
+                "CSV format, encoding, headers or scalar values are invalid.",
+            ) from None
 
     def _read(
         self, path: Path, config: CsvConfig
@@ -267,7 +399,20 @@ class JsonSource(FileSource[JsonConfig]):
     descriptor = BlockDescriptor(
         **descriptor_values("source.json", "JSON Source", "source"),
         outputs=(TABLE_PORT,),
+        supports_preview=True,
+        preview_reason=None,
     )
+
+    def _preview(
+        self,
+        config: JsonConfig,
+        inputs: PortValues,
+        context: BlockContext,
+        limits: PreviewLimits,
+    ) -> PortValues:
+        from app.blocks.file_preview import preview_json
+
+        return preview_json(config, context, limits)
 
     def _read(
         self, path: Path, config: JsonConfig
@@ -328,7 +473,20 @@ class ParquetSource(FileSource[SourceConfig]):
     descriptor = BlockDescriptor(
         **descriptor_values("source.parquet", "Parquet Source", "source"),
         outputs=(TABLE_PORT,),
+        supports_preview=True,
+        preview_reason=None,
     )
+
+    def _preview(
+        self,
+        config: SourceConfig,
+        inputs: PortValues,
+        context: BlockContext,
+        limits: PreviewLimits,
+    ) -> PortValues:
+        from app.blocks.file_preview import preview_parquet
+
+        return preview_parquet(config, context, limits)
 
     def _read(
         self, path: Path, config: SourceConfig
