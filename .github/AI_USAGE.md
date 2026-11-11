@@ -163,3 +163,14 @@ user's request. The user selected the issue and required repository/template
 compliance; human implementation, independent review and stakeholder acceptance
 are not asserted. See [verification](../docs/testing/issue-30-run-monitoring.md)
 and [contribution evidence](../docs/individual-contributions/ham340i-iteration-4.md).
+
+## SQL source and workflow preparation (#23, #31)
+
+Tool: OpenAI Codex. The user requested work on assignments for `aboudka2003`.
+Codex generated a registered SQLite source, bounded-query integration, saved-run
+controls, tests, design and operator documentation, and ran local verification.
+An existing SQL row-width-check edit was preserved. Human design/code review,
+CI and stakeholder acceptance remain pending. Issue #31 is dependency-blocked
+for preview and artifact inspection. See the
+[verification record](../docs/testing/issue-23-31-sql-workflow.md); this does not
+claim that the student manually authored or independently tested generated code.

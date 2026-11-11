@@ -1,3 +1,5 @@
+// AI contribution: 50% or more AI-generated
+import { object, invalidResponse } from "./guards";
 import { api, ApiError } from "./client";
 import { isProjectId } from "./projects";
 import type { Definition } from "../state/graph";
@@ -17,15 +19,9 @@ export interface PipelinePage {
   offset: number;
   limit: number;
 }
-function object(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-function invalid(): never {
-  throw new ApiError(
-    "The API returned an unsupported pipeline response. Your draft has not been replaced.",
-    "invalid-response",
-  );
-}
+const invalid = invalidResponse(
+  "The API returned an unsupported pipeline response. Your draft has not been replaced.",
+);
 function summary(v: unknown, projectId: string): PipelineSummary {
   if (
     !object(v) ||

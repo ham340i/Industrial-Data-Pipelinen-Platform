@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "nodes": [
+    {
+      "id": "csv",
+      "block_id": "source.csv",
+      "block_version": "1.0.0",
+      "config": {
+        "resource_ref": "readings.csv",
+        "columns": [
+          "asset_id",
+          "reading"
+        ],
+        "types": [
+          "integer",
+          "integer"
+        ],
+        "nullable": [
+          false,
+          false
+        ]
+      }
+    },
+    {
+      "id": "validate",
+      "block_id": "quality.schema_validation",
+      "block_version": "1.0.0",
+      "config": {
+        "columns": [
+          {
+            "name": "asset_id",
+            "dtype": "integer",
+            "nullable": false
+          },
+          {
+            "name": "reading",
+            "dtype": "integer",
+            "nullable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "filter",
+      "block_id": "transform.filter",
+      "block_version": "1.0.0",
+      "config": {
+        "column": "reading",
+        "operator": "gt",
+        "value_text": "10"
+      }
+    },
+    {
+      "id": "sql",
+      "block_id": "source.sql",
+      "block_version": "1.0.0",
+      "config": {
+        "resource_ref": "data.sqlite3",
+        "query": "SELECT asset_id, label FROM assets WHERE label IS NOT NULL",
+        "columns": [
+          "asset_id",
+          "label"
+        ],
+        "types": [
+          "integer",
+          "string"
+        ],
+        "nullable": [
+          false,
+          true
+        ]
+      }
+    },
+    {
+      "id": "join",
+      "block_id": "transform.join",
+      "block_version": "1.0.0",
+      "config": {
+        "left_on": [
+          "asset_id"
+        ],
+        "right_on": [
+          "asset_id"
+        ]
+      }
+    },
+    {
+      "id": "aggregate",
+      "block_id": "transform.aggregate",
+      "block_version": "1.0.0",
+      "config": {
+        "group_by": [
+          "label"
+        ],
+        "operations": [
+          {
+            "column": "reading",
+            "function": "sum",
+            "output_name": "total"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sink",
+      "block_id": "sink.parquet",
+      "block_version": "1.0.0",
+      "config": {
+        "resource_ref": "result.parquet",
+        "overwrite": "replace"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "source": {
+        "node_id": "csv",
+        "port": "table"
+      },
+      "target": {
+        "node_id": "validate",
+        "port": "table"
+      }
+    },
+    {
+      "id": "e1",
+      "source": {
+        "node_id": "validate",
+        "port": "table"
+      },
+      "target": {
+        "node_id": "filter",
+        "port": "table"
+      }
+    },
+    {
+      "id": "e2",
+      "source": {
+        "node_id": "filter",
+        "port": "table"
+      },
+      "target": {
+        "node_id": "join",
+        "port": "left"
+      }
+    },
+    {
+      "id": "e3",
+      "source": {
+        "node_id": "sql",
+        "port": "table"
+      },
+      "target": {
+        "node_id": "join",
+        "port": "right"
+      }
+    },
+    {
+      "id": "e4",
+      "source": {
+        "node_id": "join",
+        "port": "table"
+      },
+      "target": {
+        "node_id": "aggregate",
+        "port": "table"
+      }
+    },
+    {
+      "id": "e5",
+      "source": {
+        "node_id": "aggregate",
+        "port": "table"
+      },
+      "target": {
+        "node_id": "sink",
+        "port": "table"
+      }
+    }
+  ]
+}

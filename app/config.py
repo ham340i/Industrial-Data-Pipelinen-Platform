@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 import os
 from pathlib import Path
 
@@ -12,6 +13,11 @@ class Settings(BaseModel):
     metadata_path: Path = Field(
         default_factory=lambda: Path(
             os.environ.get("LPS_METADATA_PATH", "local-data/metadata.sqlite3")
+        )
+    )
+    workspace_root: Path = Field(
+        default_factory=lambda: Path(
+            os.environ.get("LPS_WORKSPACE_ROOT", "local-data/workspace")
         )
     )
     allowed_origins: list[str] = [

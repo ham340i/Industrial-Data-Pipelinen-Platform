@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 from __future__ import annotations
 
 import sqlite3
@@ -146,8 +147,20 @@ def execute_read_only_sqlite(
     connection: sqlite3.Connection,
     query: str,
     parameters: dict[str, Any] | None = None,
+    *,
+    max_rows: int | None = None,
+    max_bytes: int | None = None,
 ) -> SqlQueryResult:
-    """Execute a constrained read query using SQLite-bound parameters."""
+    """Execute a constrained read query using SQLite-bound parameters.
+
+    The workspace block in app.blocks.sql bounds the database file size,
+    SQLite value length and column count (setlimit), and VM work (progress
+    handler with cancellation). Here, streaming enforces aggregate result
+    bytes and rows; the block derives the row cap from max_rows/max_cells.
+    Both layers are needed: engine limits bound individual values/work,
+    while streaming budgets bound accumulated output. Standalone callers
+    must supply their own engine/work limits and optional result budgets.
+    """
     try:
         original_query = _validate_read_query(query)
     except ValueError as exc:
@@ -165,7 +178,25 @@ def execute_read_only_sqlite(
             raise SqlSourceError(
                 "SQL result column names must be unique; use explicit aliases"
             )
-        rows = [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
+
+        rows: list[dict[str, Any]] = []
+        result_bytes = 0
+        for row in cursor:
+            if max_rows is not None and len(rows) >= max_rows:
+                raise SqlSourceError("SQL result exceeds the row budget")
+            result_bytes += sum(
+                len(value.encode("utf-8"))
+                if isinstance(value, str)
+                else len(value)
+                if isinstance(value, bytes)
+                else 8
+                for value in row
+            )
+            if max_bytes is not None and result_bytes > max_bytes:
+                raise SqlSourceError("SQL result exceeds the byte budget")
+            if len(row) != len(columns):
+                raise SqlSourceError("SQLite returned an unexpected column count")
+            rows.append(dict(zip(columns, row, strict=False)))
 
         return SqlQueryResult(
             columns=columns,

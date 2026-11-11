@@ -98,3 +98,13 @@ merge and stakeholder acceptance remain pending. See [design](../../frontend/run
 [tests](../../testing/issue-30-run-monitoring.md) and
 [AI-assisted contribution record](../../individual-contributions/ham340i-iteration-4.md).
 This does not mark the iteration complete.
+
+## Issue #31 integration preparation
+
+Saved-run controls and a real SQL-only author/save/open/execute browser scenario
+are locally implemented. See the
+[verification record](../../testing/issue-23-31-sql-workflow.md).
+Full release UI acceptance remains blocked by preview, artifact inspection and
+monitoring/error-UX dependencies (#26, #28, #30, #33), as well as unsupported
+nested quality/aggregate configuration forms. No issue completion, independent
+review, CI result or stakeholder acceptance is asserted.

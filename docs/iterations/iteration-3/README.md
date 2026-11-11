@@ -121,6 +121,17 @@ See the [execution guide](../../execution.md),
 This establishes the prerequisite for #25; it does not establish whole-iteration
 or UI/API acceptance.
 
+## Issue #28 artifact governance
+
+Local implementation is in progress on `feature/28-parquet-artifact-query`.
+It links successful CSV/Parquet publications to run/revision metadata and
+provides artifact-ID-only bounded Parquet reads through DuckDB. See
+[usage](../../artifacts.md), [design](../../architecture/artifact-governance.md),
+[verification](../../testing/issue-28-artifact-query.md) and
+[Marc's contribution record](../../individual-contributions/MarcElHaddad1-iteration-3.md).
+Independent review, PR, hosted CI, merge, UI E2E and iteration acceptance remain
+pending.
+
 ## Issue #25 quality blocks
 
 Implementation merged through
@@ -135,4 +146,13 @@ tests (including all 84 quality cases), with one existing Windows symlink skip.
 Iteration 4 UI/E2E and stakeholder acceptance remain unverified. Issue #33 and
 the individual Release 1 `[LLL]` issue are separate from #25's completed
 Iteration 3 implementation. No team completion tag or academic delivery is
+asserted.
+
+## Issue #23 local preparation
+
+The [SQL source guide](../../sql-source.md),
+[verification record](../../testing/issue-23-31-sql-workflow.md) and
+[AI-assisted owner record](../../individual-contributions/aboudka2003-iteration-3.md)
+record the local SQLite implementation and actual tests. PR/CI, independent
+review and stakeholder acceptance remain pending; no iteration completion is
 asserted.

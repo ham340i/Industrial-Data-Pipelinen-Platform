@@ -49,6 +49,7 @@ function evidence(id = first, state = "succeeded") {
       },
     ],
     events: [],
+    outputs: [],
   };
 }
 function setup(items = [evidence()]) {

@@ -19,6 +19,7 @@
     "check": "npm run lint && npm run format:check && npm run typecheck && npm test && npm run build",
     "test:browser": "playwright test",
     "test:standalone": "playwright test --config playwright.standalone.config.ts",
+    "test:release": "playwright test --config playwright.release.config.ts",
     "browser:install": "playwright install chromium"
   },
   "dependencies": {

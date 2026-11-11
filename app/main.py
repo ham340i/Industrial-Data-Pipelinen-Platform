@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.artifacts import ArtifactNotFound, ArtifactNotQueryable, ArtifactUnavailable
+from app.artifacts.api import router as artifacts_router
 from app.blocks.catalog import executor, router as blocks_router
 from app.config import settings
 from app.execution import InvalidPipeline
@@ -87,11 +89,14 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.scheduler = None
     database = Database(settings.metadata_path)
     try:
+        settings.workspace_root.mkdir(parents=True, exist_ok=True)
         upgrade(database)
         # Runs a previous process left queued/running can never finish (#27).
         recover_interrupted(database)
         application.state.database = database
-        application.state.scheduler = TimerScheduler(database, executor)
+        application.state.scheduler = TimerScheduler(
+            database, executor, settings.workspace_root
+        )
         yield
     finally:
         # Stop every timer thread (#29) before closing the database it uses.
@@ -125,6 +130,7 @@ app.include_router(blocks_router)
 app.include_router(pipelines_router)
 app.include_router(validation_router)
 app.include_router(runs_router)
+app.include_router(artifacts_router)
 
 
 def error_response(
@@ -204,6 +210,42 @@ async def run_not_found_handler(request: Request, exc: RunNotFound) -> JSONRespo
         code="run_not_found",
         message="Run was not found.",
         status_code=404,
+    )
+
+
+@app.exception_handler(ArtifactNotFound)
+async def artifact_not_found_handler(
+    request: Request, exc: ArtifactNotFound
+) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="artifact_not_found",
+        message="Artifact was not found.",
+        status_code=404,
+    )
+
+
+@app.exception_handler(ArtifactNotQueryable)
+async def artifact_not_queryable_handler(
+    request: Request, exc: ArtifactNotQueryable
+) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="artifact_not_queryable",
+        message=str(exc),
+        status_code=422,
+    )
+
+
+@app.exception_handler(ArtifactUnavailable)
+async def artifact_unavailable_handler(
+    request: Request, exc: ArtifactUnavailable
+) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="artifact_unavailable",
+        message="Registered artifact is unavailable.",
+        status_code=409,
     )
 
 
