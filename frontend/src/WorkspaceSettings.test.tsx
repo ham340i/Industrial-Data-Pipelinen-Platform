@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { http, HttpResponse } from "msw";
 import { expect, it } from "vitest";
 import { WorkspaceSettings } from "./WorkspaceSettings";
+import { getWorkspace } from "./api/workspace";
 import { server } from "./test/server";
 import { useEditorStore } from "./state/editor";
 
@@ -14,6 +15,7 @@ const initial = {
   source: "unconfigured",
   ready: false,
   message: "Configure workspace",
+  allowed_roots: ["/data/workspaces"],
 };
 function mount() {
   const client = new QueryClient({
@@ -40,11 +42,13 @@ it("saves a validated path, shows the project folder, and restores environment c
         source: body.root_path ? "application" : "environment",
         ready: true,
         message: "Ready",
+        allowed_roots: initial.allowed_roots,
       });
     }),
   );
   mount();
   await screen.findByText("No workspace root configured");
+  expect(screen.getByText("Permitted folder: /data/workspaces")).toBeVisible();
   await userEvent.type(
     screen.getByLabelText("Workspace root folder"),
     "/data/workspaces",
@@ -112,3 +116,13 @@ it("allows repairing settings after a load error", async () => {
   expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
   expect(screen.getByLabelText("Workspace root folder")).toBeEnabled();
 });
+
+it.each([undefined, "not-a-list", [123]])(
+  "rejects malformed permitted roots %j",
+  async (allowed_roots) => {
+    server.use(
+      http.get(url, () => HttpResponse.json({ ...initial, allowed_roots })),
+    );
+    await expect(getWorkspace()).rejects.toThrow("invalid workspace settings");
+  },
+);

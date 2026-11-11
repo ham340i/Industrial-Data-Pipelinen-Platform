@@ -34,6 +34,7 @@ class WorkspaceStatus(BaseModel):
     source: Literal["application", "environment", "unconfigured"]
     ready: bool
     message: str
+    allowed_roots: list[str]
 
 
 def database(request: Request) -> Database:
@@ -78,9 +79,29 @@ def effective_workspace_root(db: Database) -> Path | None:
     return workspace_choice(db)[0]
 
 
-def checked_root(value: str) -> Path:
-    path = Path(value)
-    if not value.strip() or "\x00" in value or not path.is_absolute():
+def allowed_roots(db: Database) -> list[Path]:
+    """Only trusted startup configuration supplies filesystem candidates."""
+    roots = [db.path.parent / "workspaces", *settings.allowed_workspace_roots]
+    if settings.workspace_root is not None:
+        roots.append(settings.workspace_root)
+    return list(dict.fromkeys(Path(os.path.abspath(root)) for root in roots))
+
+
+def selected_root(value: str, db: Database) -> Path:
+    # Compare lexically, BEFORE resolve/stat/open: even checking whether an
+    # arbitrary path exists leaks filesystem information (and UNC can do I/O).
+    for candidate in allowed_roots(db):
+        if value == str(candidate):
+            return checked_root(candidate)
+    raise WorkspaceError(
+        "workspace_invalid_path",
+        "Choose an existing folder from the permitted workspace roots. "
+        "Configure LPS_ALLOWED_WORKSPACE_ROOTS on the API computer for other folders.",
+    )
+
+
+def checked_root(path: Path) -> Path:
+    if "\x00" in str(path) or not path.is_absolute():
         raise WorkspaceError(
             "workspace_invalid_path",
             "Enter an absolute folder path on the API computer.",
@@ -140,6 +161,7 @@ def status(db: Database) -> WorkspaceStatus:
             if ready
             else "Select an existing workspace folder on the API computer."
         ),
+        allowed_roots=[str(path) for path in allowed_roots(db)],
     )
 
 
@@ -161,10 +183,10 @@ def save_workspace(
     with workspace_lock:
         # Null removes the app override and restores the startup environment.
         root = (
-            checked_root(payload.root_path)
+            selected_root(payload.root_path, db)
             if payload.root_path is not None
             else (
-                checked_root(str(settings.workspace_root.resolve()))
+                checked_root(settings.workspace_root.absolute())
                 if settings.workspace_root
                 else None
             )

@@ -98,8 +98,21 @@ export function WorkspaceSettings() {
               mutation.reset();
             }}
             slotProps={{ htmlInput: { maxLength: 4096 } }}
-            helperText="Enter an existing absolute folder path on the API computer. Save validates access and creates project inputs folders."
+            helperText="Enter one of the permitted folder paths below exactly as shown. Save validates access and creates project inputs folders."
           />
+          {query.data?.allowed_roots.map((permittedRoot) => (
+            <Typography
+              key={permittedRoot}
+              variant="body2"
+              sx={{ overflowWrap: "anywhere" }}
+            >
+              Permitted folder: {permittedRoot}
+            </Typography>
+          ))}
+          <Typography variant="body2">
+            To permit another folder, set LPS_ALLOWED_WORKSPACE_ROOTS to a JSON
+            list of absolute paths on the API computer and restart the API.
+          </Typography>
           <Typography variant="body2">
             Changing the root applies to subsequent previews without restarting
             the API. Existing files stay in their current folders; move or copy

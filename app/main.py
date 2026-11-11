@@ -91,14 +91,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.scheduler = None
     database = Database(settings.metadata_path)
     try:
-        settings.workspace_root.mkdir(parents=True, exist_ok=True)
+        if settings.workspace_root is not None:
+            settings.workspace_root.mkdir(parents=True, exist_ok=True)
         upgrade(database)
         # Runs a previous process left queued/running can never finish (#27).
         recover_interrupted(database)
         application.state.database = database
-        application.state.scheduler = TimerScheduler(
-            database, executor, settings.workspace_root
-        )
+        application.state.scheduler = TimerScheduler(database, executor)
         yield
     finally:
         # Stop every timer thread (#29) before closing the database it uses.
@@ -134,6 +133,7 @@ app.include_router(preview_router)
 app.include_router(pipelines_router)
 app.include_router(validation_router)
 app.include_router(runs_router)
+app.include_router(artifacts_router)
 app.include_router(workspace_router)
 
 

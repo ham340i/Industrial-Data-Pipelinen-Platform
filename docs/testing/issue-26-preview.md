@@ -54,4 +54,34 @@ The standalone config defaults to an isolated test metadata database and workspa
 
 ## Assistance and limits
 
+### PR #83 local check repairs (2026-11-11)
+
+Reviewed PR head `c61bf6c` and repaired the merge's missing artifact router,
+optional workspace handling at startup, and workspace resolution for execution,
+timer ticks and artifact queries. Workspace selections now match a server-owned
+allowlist before any filesystem access; Settings displays permitted roots. See
+[workspace settings](../architecture/workspace-settings.md) for configuration.
+The configuration browser test waits for the current validation state before
+clicking Save, including cached validation results.
+
+Verification of the uncommitted fixes on Windows with Python 3.13.1, Node 24
+and installed Edge:
+
+- `python -m ruff check`, `python -m ruff format --check`, and
+  `python -m mypy`: passed (100 Python files type-checked).
+- `python -m pytest -q -p no:cacheprovider --basetemp=.venv/pytest-pr83-final`:
+  **841 passed**; existing deprecation warnings remain.
+- `npm run check --prefix frontend`: passed before the final regression-test
+  additions; final `npm test --prefix frontend`, lint and format checks passed
+  with **155 tests**. Production build and TypeScript checks passed.
+- Playwright standalone tests using the ignored isolated-port configuration:
+  **10 passed in development and 10 passed in production preview**. Synthetic
+  metadata/workspace and ports 8001/3001 kept this separate from user data.
+- Repository, release-plan, documentation and whitespace checks passed;
+  `python -m unittest discover -s scripts/tests -q`: **16 passed**.
+
+No fixes were committed or pushed, as requested. GitHub Actions and SonarCloud
+have not evaluated these local changes; their remote checks are not claimed green.
+OpenAI Codex implemented and verified these repairs. Human review is pending.
+
 OpenAI Codex implemented and tested the approved file-source scope and drafted the documentation. Independent human review, GitHub Actions and live issue acceptance have not been performed. Generic Run-to-Here, SQL preview, process memory isolation and hard I/O timeouts are not claimed. The source readers do not change normal file execution, create database migrations or introduce dependencies.

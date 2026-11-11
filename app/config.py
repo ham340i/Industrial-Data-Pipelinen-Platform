@@ -1,4 +1,5 @@
 # AI contribution: 50% or more AI-generated
+import json
 import os
 from pathlib import Path
 
@@ -22,6 +23,13 @@ class Settings(BaseModel):
             if os.environ.get("LPS_WORKSPACE_ROOT")
             else None
         )
+    )
+    # Administrator-controlled choices; requests may select, never grant access.
+    allowed_workspace_roots: list[Path] = Field(
+        default_factory=lambda: json.loads(
+            os.environ.get("LPS_ALLOWED_WORKSPACE_ROOTS", "[]")
+        ),
+        validate_default=True,
     )
     allowed_origins: list[str] = [
         "http://localhost:3000",

@@ -5,6 +5,7 @@ export interface WorkspaceStatus {
   source: "application" | "environment" | "unconfigured";
   ready: boolean;
   message: string;
+  allowed_roots: string[];
 }
 
 async function requestWorkspace(
@@ -38,7 +39,9 @@ async function requestWorkspace(
       String(value.source),
     ) ||
     typeof value.ready !== "boolean" ||
-    typeof value.message !== "string"
+    typeof value.message !== "string" ||
+    !Array.isArray(value.allowed_roots) ||
+    !value.allowed_roots.every((root: unknown) => typeof root === "string")
   ) {
     throw new ApiError(
       "The API returned invalid workspace settings.",

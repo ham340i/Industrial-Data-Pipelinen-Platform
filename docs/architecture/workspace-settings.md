@@ -4,8 +4,8 @@ Open **Settings** in the sidebar to configure the file workspace used by selecte
 
 ## Setup
 
-1. Create a parent data folder on the computer running the API.
-2. Enter its absolute path in **Workspace root folder**, then choose **Save workspace**.
+1. Create a parent data folder on the computer running the API. Settings shows permitted folders: `workspaces` beside the metadata database, `LPS_WORKSPACE_ROOT` if configured, and any paths in `LPS_ALLOWED_WORKSPACE_ROOTS`.
+2. Enter one of those absolute paths exactly as shown in **Workspace root folder**, then choose **Save workspace**. For other folders, set `LPS_ALLOWED_WORKSPACE_ROOTS` to a JSON list such as `["/srv/data/team-a", "/srv/data/team-b"]` and restart the API. Windows JSON paths must escape backslashes (for example `["C:\\Data\\Workspaces"]`).
 3. Save checks access and creates `<root>/<project UUID>/inputs` for every existing project. New projects receive the same folder structure automatically.
 4. Put input files in the project's folder and configure a source with a relative Resource Ref such as `inputs/readings.json`.
 5. Return to the project builder and explicitly preview again. Navigation through Settings preserves the draft in the current tab; refreshing the browser still discards unsaved drafts.
@@ -23,13 +23,15 @@ Changing the root does not move or delete data, change portable pipeline definit
 
 The private setting is stored atomically in `<metadata filename>.workspace.json`, alongside the configured metadata database. For the default installation this is `local-data/metadata.sqlite3.workspace.json`. Keep this file private and back it up with the installation configuration. Separate metadata database filenames have separate settings files. A corrupt settings file produces a repairable error instead of silently switching roots.
 
-This extends the existing preview workspace setting. Normal run/timer resource resolution is unchanged. SQL source integration is not part of this feature.
+Preview, manual execution, timer ticks and artifact queries use the effective workspace selection. Each operation captures its root when it begins; changes do not redirect operations already running. This reconciles workspace selection with the execution/artifact features merged from `main`. Existing artifact files are not relocated: queries can report an artifact unavailable after a root change until the original root is restored.
 
 ## API and implementation
 
-`GET /api/v1/settings/workspace` reports `root_path`, `source` (`application`, `environment`, or `unconfigured`), `ready`, and an explanatory `message`. `ready` describes root availability; Save performs the actual read/write probe and prepares project folders.
+`GET /api/v1/settings/workspace` reports `root_path`, `source` (`application`, `environment`, or `unconfigured`), `ready`, an explanatory `message`, and `allowed_roots`. `ready` describes root availability; Save performs the actual read/write probe and prepares project folders.
 
 `PUT /api/v1/settings/workspace` accepts `{"root_path":"<absolute API-computer folder>"}` or `{"root_path":null}` to restore the environment. Roots must already exist. Access probes use temporary files removed immediately. Missing roots, files in place of directories, inaccessible folders and aliased project folders produce safe structured errors. Settings responses and errors use `Cache-Control: no-store`.
+
+The request string must exactly match a permitted path before any filesystem probe. The server then operates on the trusted configured `Path`, not the supplied string. Existing and nonexistent unapproved paths receive the same rejection; traversal and UNC request values cannot trigger filesystem/network probes. This prevents the filesystem oracle reported by SonarCloud on PR #83. The allowlist controls new selections; private settings already saved on disk remain trusted installation configuration. Protect the API and private sidecar from untrusted writers.
 
 `app/workspace.py` owns validation, persistence, folder preparation and the API. `app/projects.py` prepares new project folders; a preparation failure rolls back project creation. The preview API resolves the effective root on each request. The React settings screen and its typed API client live in `frontend/src/WorkspaceSettings.tsx` and `frontend/src/api/workspace.ts`. No database migration or dependency was added.
 

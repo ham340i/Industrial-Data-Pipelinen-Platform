@@ -16,8 +16,28 @@ URL = "/api/v1/settings/workspace"
 
 
 @pytest.fixture(autouse=True)
-def no_environment_root(monkeypatch: pytest.MonkeyPatch):
+def no_environment_root(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     monkeypatch.setattr(settings, "workspace_root", None)
+    monkeypatch.setattr(
+        settings,
+        "allowed_workspace_roots",
+        [
+            tmp_path / name
+            for name in (
+                "root-1",
+                "root-2",
+                "override",
+                "valid",
+                "missing",
+                "file.txt",
+                "root",
+                "other",
+                "repaired",
+            )
+        ],
+    )
 
 
 def test_save_persists_prepares_projects_and_changes_preview_without_restart(
@@ -168,3 +188,37 @@ def test_request_validation_is_no_store(client: TestClient):
     response = client.put(URL, json={"root_path": 123})
     assert response.status_code == 422
     assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.parametrize(
+    "suffix", ["outside", "missing", "../escape", "\\\\server\\share"]
+)
+def test_unapproved_paths_are_rejected_before_filesystem_access(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suffix: str
+):
+    monkeypatch.setattr(settings, "allowed_workspace_roots", [])
+    existing = tmp_path / "outside"
+    existing.mkdir()
+
+    def unexpected_probe(*args: Any, **kwargs: Any) -> Any:
+        pytest.fail("Unapproved request reached the filesystem probe")
+
+    monkeypatch.setattr(workspace, "checked_root", unexpected_probe)
+    value = suffix if suffix.startswith("\\\\") else str(tmp_path / suffix)
+    response = client.put(URL, json={"root_path": value})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "workspace_invalid_path"
+    assert not workspace.settings_file(app.state.database).exists()
+    assert list(existing.iterdir()) == []
+
+
+def test_default_permitted_root_and_startup_without_environment(
+    client: TestClient, tmp_path: Path
+):
+    root = tmp_path / "workspaces"
+    root.mkdir()
+    assert str(root) in client.get(URL).json()["allowed_roots"]
+    assert client.put(URL, json={"root_path": str(root)}).status_code == 200
+    # Exercise lifespan with no environment root (the shared fixture sets one).
+    with TestClient(app) as restarted:
+        assert restarted.get(URL).json()["root_path"] == str(root)

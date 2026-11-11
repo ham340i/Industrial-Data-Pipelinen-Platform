@@ -4,7 +4,9 @@ test("default standalone workbench connects to the real versioned API", async ({
   page,
   baseURL,
 }) => {
-  const healthUrl = "http://127.0.0.1:8000/api/v1/health";
+  const api =
+    process.env.LPS_STANDALONE_API_URL || "http://127.0.0.1:8000/api/v1";
+  const healthUrl = `${api}/health`;
   let healthResponse: Response | undefined;
   page.on("response", (response) => {
     if (response.url() === healthUrl) healthResponse = response;
