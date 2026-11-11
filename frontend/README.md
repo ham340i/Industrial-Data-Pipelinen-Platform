@@ -12,3 +12,9 @@ npm run preview
 ```
 
 The API is optional for navigating the shell. Project persistence, the graph editor and pipeline execution are future scope.
+
+The builder can run the latest saved, validated graph and display run evidence.
+See [SQL source and workspace setup](../docs/sql-source.md). Run
+`npm run test:release` with the backend Python interpreter in `LPS_PYTHON` for
+an isolated, real SQL author/save/open/run/rerun/failure browser test. This does
+not establish the complete #31 preview/artifact acceptance scenario.

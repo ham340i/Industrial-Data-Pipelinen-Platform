@@ -52,3 +52,5 @@ Start with the [October 4 team delivery audit](team-readiness-2026-10-04.md), [p
 
 - [Iteration records and tag strategy](iterations/README.md)
 - [Release target](release-1/README.md), [acceptance checklist](release-1/acceptance.md) and [current traceability](release-1/traceability.md)
+
+- [Read-only SQL source and synthetic join workflow (#23)](sql-source.md)

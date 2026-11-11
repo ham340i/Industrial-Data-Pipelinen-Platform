@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.blocks.catalog import executor, registry
 from app.blocks.triggers import TimerTriggerConfig
+from app.config import settings
 from app.metadata.database import Database
 from app.metadata.models import Pipeline, PipelineRevision, Project
 from app.pipelines.models import GraphDraft, Node, PipelineDefinition
@@ -314,7 +315,12 @@ def execute_pipeline(
     """
     revision_id, _ = load_latest_definition(db, project_id, pipeline_id)
     try:
-        outcome = execute_revision(db, executor, revision_id)
+        outcome = execute_revision(
+            db,
+            executor,
+            revision_id,
+            workspace_root=settings.workspace_root / str(project_id),
+        )
     except RevisionNotFound:
         raise PipelineError(
             "pipeline_not_found", "Pipeline was not found.", 404
