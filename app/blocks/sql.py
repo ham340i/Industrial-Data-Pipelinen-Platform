@@ -5,13 +5,18 @@ import json
 import sqlite3
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationError, field_validator
 
 from app.blocks.base import Block
 from app.blocks.context import BlockContext
 from app.blocks.contracts import BlockDescriptor, PortValues, Table, require_public_json
 from app.blocks.errors import BlockError
-from app.blocks.files import SourceConfig, resource_path, unique_object
+from app.blocks.files import (
+    SourceConfig,
+    check_source_file,
+    resource_path,
+    unique_object,
+)
 from app.blocks.tabular import TABLE_PORT, descriptor_values, to_frame
 from app.sources.sql import (
     _validate_read_query,
@@ -59,10 +64,7 @@ class SqlSource(Block[SqlConfig]):
         path = resource_path(context, config.resource_ref, ".sqlite3")
         connection: sqlite3.Connection | None = None
         try:
-            if not path.is_file() or path.stat().st_size > config.max_bytes:
-                raise BlockError(
-                    "sql_connection_failed", "Database unavailable or too large."
-                )
+            check_source_file(path, config.max_bytes)
             connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
             connection.execute("PRAGMA query_only = ON")
             connection.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, config.max_bytes)
@@ -90,14 +92,19 @@ class SqlSource(Block[SqlConfig]):
                 raise BlockError(
                     "schema_mismatch", "Declare SQL columns in result order."
                 )
-            if len(result.columns) > config.max_columns:
-                raise BlockError("table_limit", "SQL result exceeds the column limit.")
             try:
                 table = Table(
                     data_schema=config.declared_schema(), rows=tuple(result.rows)
                 )
+            except ValidationError:
+                raise BlockError(
+                    "schema_mismatch", "SQL values violate the declared scalar schema."
+                ) from None
+            try:
                 to_frame(table)
-            except Exception:
+            except BlockError as exc:
+                if exc.failure.code != "unsupported_value":
+                    raise
                 raise BlockError(
                     "schema_mismatch", "SQL values violate the declared scalar schema."
                 ) from None

@@ -39,6 +39,10 @@ import threading
 from dataclasses import dataclass
 
 from fastapi import Request
+from sqlalchemy import select
+
+from app.config import settings
+from app.metadata.models import Pipeline, PipelineRevision
 
 from app.execution import Cancellation, Executor
 from app.metadata.database import Database
@@ -144,8 +148,18 @@ class _Timer:
 
     def _run_once(self, token: Cancellation) -> None:
         try:
+            with self._db.transaction() as session:
+                project_id = session.execute(
+                    select(Pipeline.project_id)
+                    .join(PipelineRevision, PipelineRevision.pipeline_id == Pipeline.id)
+                    .where(PipelineRevision.id == self.status.revision_id)
+                ).scalar_one()
             execute_revision(
-                self._db, self._executor, self.status.revision_id, cancellation=token
+                self._db,
+                self._executor,
+                self.status.revision_id,
+                cancellation=token,
+                workspace_root=settings.workspace_root / project_id,
             )
         except Exception:
             # The run row itself already records a truthful failed/cancelled
@@ -182,8 +196,9 @@ class TimerScheduler:
             timer = _Timer(
                 self._db, self._executor, pipeline_id, revision_id, interval_seconds
             )
+            # Publish only a started thread, while stop/start share this lock.
+            timer.start()
             self._timers[pipeline_id] = timer
-        timer.start()
 
     def stop(self, pipeline_id: str, *, join_timeout: float = 30.0) -> None:
         with self._lock:

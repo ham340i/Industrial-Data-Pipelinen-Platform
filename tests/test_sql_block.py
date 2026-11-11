@@ -81,7 +81,17 @@ def test_invalid_portable_inputs(database: Path, changes: dict[str, Any]):
         ({"query": "SELECT missing FROM assets"}, "sql_query_failed"),
         ({"query": "SELECT 1 AS asset_id, X'00' AS label"}, "schema_mismatch"),
         ({"types": ["string", "string"]}, "schema_mismatch"),
-        ({"resource_ref": "missing.sqlite3"}, "sql_connection_failed"),
+        ({"resource_ref": "missing.sqlite3"}, "file_unavailable"),
+        ({"max_bytes": 1}, "file_limit"),
+        ({"max_columns": 1}, "sql_query_failed"),
+        ({"nullable": [False, False]}, "schema_mismatch"),
+        (
+            {
+                "query": "SELECT 9223372036854775807 AS asset_id, NULL AS label",
+                "types": ["number", "string"],
+            },
+            "schema_mismatch",
+        ),
         (
             {
                 "query": "WITH RECURSIVE x(n) AS "
@@ -258,3 +268,44 @@ def test_block_read_only_permissions_survive_query_policy_bypass(
     assert error.value.failure.code == "sql_connection_failed"
     with sqlite3.connect(database / "data.sqlite3") as connection:
         assert connection.execute("SELECT COUNT(*) FROM assets").fetchone() == (2,)
+
+
+def test_internal_conversion_bug_is_not_schema_mismatch(
+    database: Path, monkeypatch: pytest.MonkeyPatch
+):
+    def broken(table: Table) -> None:
+        raise RuntimeError("internal bug")
+
+    monkeypatch.setattr("app.blocks.sql.to_frame", broken)
+    with pytest.raises(BlockError) as failure:
+        read(database)
+    assert failure.value.failure.code == "execution_failed"
+
+
+def test_timer_tick_executes_sql_in_project_workspace(
+    client: TestClient, database: Path, monkeypatch: pytest.MonkeyPatch
+):
+    from app.execution import Cancellation
+    from app.runs.scheduler import _Timer
+
+    # Reuse the manual execution integration's saved SQL workflow, then drive
+    # one timer tick synchronously so this regression needs no timing sleeps.
+    test_real_saved_release_graph_executes_and_reruns(
+        client, database, monkeypatch, database
+    )
+    from sqlalchemy import select
+    from app.metadata.models import PipelineRevision, Run
+
+    from app.main import app
+    from app.blocks.catalog import executor
+
+    db = app.state.database
+    with db.transaction() as session:
+        revision = session.execute(select(PipelineRevision)).scalar_one()
+        revision_id, pipeline_id = revision.id, revision.pipeline_id
+    timer = _Timer(db, executor, pipeline_id, revision_id, 30)
+    timer._run_once(Cancellation())
+    with db.transaction() as session:
+        runs = session.execute(select(Run)).scalars().all()
+        assert len(runs) == 3
+        assert all(run.state == "succeeded" for run in runs)

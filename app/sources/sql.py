@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 from __future__ import annotations
 
 import sqlite3
@@ -150,7 +151,16 @@ def execute_read_only_sqlite(
     max_rows: int | None = None,
     max_bytes: int | None = None,
 ) -> SqlQueryResult:
-    """Execute a constrained read query using SQLite-bound parameters."""
+    """Execute a constrained read query using SQLite-bound parameters.
+
+    The workspace block in app.blocks.sql bounds the database file size,
+    SQLite value length and column count (setlimit), and VM work (progress
+    handler with cancellation). Here, streaming enforces aggregate result
+    bytes and rows; the block derives the row cap from max_rows/max_cells.
+    Both layers are needed: engine limits bound individual values/work,
+    while streaming budgets bound accumulated output. Standalone callers
+    must supply their own engine/work limits and optional result budgets.
+    """
     try:
         original_query = _validate_read_query(query)
     except ValueError as exc:

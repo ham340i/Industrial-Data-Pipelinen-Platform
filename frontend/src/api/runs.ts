@@ -1,5 +1,6 @@
 // AI contribution: 50% or more AI-generated
-import { api, ApiError } from "./client";
+import { object, invalidResponse } from "./guards";
+import { api } from "./client";
 import { isProjectId } from "./projects";
 
 export interface RunDetail {
@@ -27,19 +28,14 @@ export interface RunDetail {
     row_count: number | null;
   }[];
 }
-const object = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
 const count = (v: unknown) =>
   v === null || (Number.isSafeInteger(v) && Number(v) >= 0);
 const failure = (v: unknown) =>
   v === null ||
   (object(v) && typeof v.code === "string" && typeof v.reason === "string");
-function invalid(): never {
-  throw new ApiError(
-    "The API returned an unsupported run response.",
-    "invalid-response",
-  );
-}
+const invalid = invalidResponse(
+  "The API returned an unsupported run response.",
+);
 export function parseRun(
   v: unknown,
   projectId: string,

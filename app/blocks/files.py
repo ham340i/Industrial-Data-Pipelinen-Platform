@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Workspace-bound file readers and atomic file writers (#16, #20)."""
 
 from __future__ import annotations
@@ -154,6 +155,25 @@ class JsonConfig(SourceConfig):
     encoding: Literal["utf-8", "utf-8-sig", "latin-1"] = "utf-8"
 
 
+def check_source_file(path: Path, max_bytes: int) -> None:
+    """Apply the shared availability and on-disk byte budget for sources."""
+    try:
+        if not path.is_file():
+            raise BlockError(
+                "file_unavailable",
+                "Input file is missing or unreadable.",
+                field="resource_ref",
+            )
+        if path.stat().st_size > max_bytes:
+            raise BlockError("file_limit", "Input exceeds the configured byte limit.")
+    except OSError:
+        raise BlockError(
+            "file_unavailable",
+            "Input file is missing or unreadable.",
+            field="resource_ref",
+        ) from None
+
+
 class FileSource[SourceT: SourceConfig](Block[SourceT]):
     suffix = ""
 
@@ -167,16 +187,7 @@ class FileSource[SourceT: SourceConfig](Block[SourceT]):
     ) -> PortValues:
         path = resource_path(context, config.resource_ref, self.suffix)
         try:
-            if not path.is_file():
-                raise BlockError(
-                    "file_unavailable",
-                    "Input file is missing or unreadable.",
-                    field="resource_ref",
-                )
-            if path.stat().st_size > config.max_bytes:
-                raise BlockError(
-                    "file_limit", "Input exceeds the configured byte limit."
-                )
+            check_source_file(path, config.max_bytes)
             frame, schema = self._read(path, config)
             if (
                 len(frame) > config.max_rows

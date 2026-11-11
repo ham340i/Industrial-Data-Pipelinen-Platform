@@ -319,3 +319,37 @@ def test_stop_all_waits_for_an_active_run_before_the_caller_closes_the_database(
         runs = list(session.scalars(select(Run)))
     assert len(runs) == 1
     assert runs[0].state == "succeeded"
+
+
+def test_start_publishes_only_started_timer(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+):
+    scheduler = TimerScheduler(db, executor_for(RecordingTrigger()))
+    original_start = _Timer.start
+    observed = []
+
+    def checked_start(timer: _Timer) -> None:
+        observed.append(timer.status.pipeline_id in scheduler._timers)
+        assert scheduler._lock.locked()
+        original_start(timer)
+
+    monkeypatch.setattr(_Timer, "start", checked_start)
+    scheduler.start("pipeline", "revision", 30)
+    try:
+        assert observed == [False]
+    finally:
+        scheduler.stop("pipeline")
+
+
+def test_failed_start_does_not_leave_registered_timer(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+):
+    scheduler = TimerScheduler(db, executor_for(RecordingTrigger()))
+
+    def fail_start(timer: _Timer) -> None:
+        raise RuntimeError("cannot start thread")
+
+    monkeypatch.setattr(_Timer, "start", fail_start)
+    with pytest.raises(RuntimeError, match="cannot start"):
+        scheduler.start("pipeline", "revision", 30)
+    assert scheduler.status("pipeline") is None
