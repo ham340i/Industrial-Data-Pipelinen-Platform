@@ -280,7 +280,8 @@ class OutputEndpoint(Base):
     node_id: Mapped[str] = mapped_column(String(128))
     name: Mapped[str] = mapped_column(String(128))
     format: Mapped[str] = mapped_column(String(16))
-    artifact_ref: Mapped[str] = mapped_column(String(128))
+    artifact_ref: Mapped[str] = mapped_column(String(256))
     row_count: Mapped[int | None]
+    schema_json: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(default=utc_now)
     run: Mapped[Run] = relationship(back_populates="outputs")

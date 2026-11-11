@@ -37,6 +37,7 @@ out at the exact moment ``stop()`` is called.
 import logging
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 
 from fastapi import Request
 
@@ -85,10 +86,12 @@ class _Timer:
         pipeline_id: str,
         revision_id: str,
         interval_seconds: int,
+        workspace_root: Path | None = None,
     ) -> None:
         self.status = TimerStatus(pipeline_id, revision_id, interval_seconds)
         self._db = db
         self._executor = executor
+        self._workspace_root = workspace_root
         self._stop_event = threading.Event()
         # Guards both halves of the race a timer boundary can create: a tick
         # deciding to start, and stop() deciding to cancel/signal. Both hold
@@ -145,7 +148,11 @@ class _Timer:
     def _run_once(self, token: Cancellation) -> None:
         try:
             execute_revision(
-                self._db, self._executor, self.status.revision_id, cancellation=token
+                self._db,
+                self._executor,
+                self.status.revision_id,
+                cancellation=token,
+                workspace_root=self._workspace_root,
             )
         except Exception:
             # The run row itself already records a truthful failed/cancelled
@@ -163,9 +170,12 @@ class _Timer:
 class TimerScheduler:
     """Tracks at most one running timer per pipeline."""
 
-    def __init__(self, db: Database, executor: Executor) -> None:
+    def __init__(
+        self, db: Database, executor: Executor, workspace_root: Path | None = None
+    ) -> None:
         self._db = db
         self._executor = executor
+        self._workspace_root = workspace_root
         self._lock = threading.Lock()
         self._timers: dict[str, _Timer] = {}
 
@@ -180,7 +190,12 @@ class TimerScheduler:
                 # is free again rather than staying rejected forever.
                 del self._timers[pipeline_id]
             timer = _Timer(
-                self._db, self._executor, pipeline_id, revision_id, interval_seconds
+                self._db,
+                self._executor,
+                pipeline_id,
+                revision_id,
+                interval_seconds,
+                self._workspace_root,
             )
             self._timers[pipeline_id] = timer
         timer.start()
