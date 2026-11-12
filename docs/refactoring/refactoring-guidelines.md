@@ -30,4 +30,6 @@ If the code intentionally requires any of the critera to be unsatisfied, then it
 These documents should include the affected file, the affected lines of code, the reason for the design decision, the related pull request (if applicable), and the username of the contributor. 
 The reasoning should have concrete purpose for the code.
 
+### Refactoring Timing
+Ideally, all checks and documented exceptions should be completed by each release. 
 
