@@ -17,6 +17,7 @@ import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useHealth } from "./api/health";
 import { Projects } from "./Projects";
 import { BuilderEntry, ProjectWorkspace } from "./ProjectWorkspace";
+import { WorkspaceSettings } from "./WorkspaceSettings";
 
 const theme = createTheme({
   palette: {
@@ -171,6 +172,7 @@ export function App() {
           "/": "Overview",
           "/projects": "Projects",
           "/builder": "Pipeline builder",
+          "/settings/workspace": "Workspace settings",
         } as Record<string, string>
       )[pathname] ??
       (pathname.startsWith("/projects/")
@@ -252,6 +254,7 @@ export function App() {
               ["/", "Overview"],
               ["/projects", "Projects"],
               ["/builder", "Builder"],
+              ["/settings/workspace", "Settings"],
             ].map(([to, label]) => (
               <Button
                 key={to}
@@ -321,6 +324,10 @@ export function App() {
                 element={<ProjectWorkspace />}
               />
               <Route path="/builder" element={<BuilderEntry />} />
+              <Route
+                path="/settings/workspace"
+                element={<WorkspaceSettings />}
+              />
               <Route
                 path="*"
                 element={

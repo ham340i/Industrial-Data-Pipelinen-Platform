@@ -1,4 +1,5 @@
 # AI contribution: 50% or more AI-generated
+import json
 import os
 from pathlib import Path
 
@@ -15,10 +16,20 @@ class Settings(BaseModel):
             os.environ.get("LPS_METADATA_PATH", "local-data/metadata.sqlite3")
         )
     )
-    workspace_root: Path = Field(
-        default_factory=lambda: Path(
-            os.environ.get("LPS_WORKSPACE_ROOT", "local-data/workspace")
+    # Private data folders are <workspace_root>/<project UUID>/, never portable JSON.
+    workspace_root: Path | None = Field(
+        default_factory=lambda: (
+            Path(os.environ["LPS_WORKSPACE_ROOT"])
+            if os.environ.get("LPS_WORKSPACE_ROOT")
+            else None
         )
+    )
+    # Administrator-controlled choices; requests may select, never grant access.
+    allowed_workspace_roots: list[Path] = Field(
+        default_factory=lambda: json.loads(
+            os.environ.get("LPS_ALLOWED_WORKSPACE_ROOTS", "[]")
+        ),
+        validate_default=True,
     )
     allowed_origins: list[str] = [
         "http://localhost:3000",

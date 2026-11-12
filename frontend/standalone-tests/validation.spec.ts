@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Real API, no mocks (#21). Use the synthetic transform's required input to
+// Real API, no mocks (#21). Use the Row Count block's required input to
 // exercise invalid graphs. File-source catalog coverage is in file-blocks.spec.
 test("real API diagnoses the draft, maps problems to nodes and gates running", async ({
   page,
@@ -14,7 +14,7 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   ).toBeVisible();
   await expect(run).toBeDisabled();
 
-  const add = page.getByRole("button", { name: "Add Synthetic Add Constant" });
+  const add = page.getByRole("button", { name: "Add Row Count" });
   await add.click();
   await add.click();
   const nodes = page.locator(".react-flow__node");

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-from app.blocks.contracts import Contract, NonBlank
+from app.blocks.contracts import Contract, NonBlank, PreviewObservation
 from app.blocks.errors import BlockError, QualityDiagnostic
 
 EventKind = Literal["started", "succeeded", "failed", "previewed", "quality"]
@@ -30,6 +30,9 @@ class BlockContext:
     resolve_resource: Callable[[str], Path] | None = field(default=None, repr=False)
     workspace_root: Path | None = field(default=None, repr=False)
     is_cancelled: Callable[[], bool] | None = field(default=None, repr=False)
+    observe_preview: Callable[[PreviewObservation], None] | None = field(
+        default=None, repr=False
+    )
 
     def __post_init__(self) -> None:
         if self.workspace_root is not None and not isinstance(
@@ -47,7 +50,12 @@ class BlockContext:
             )
         if any(
             service is not None and not callable(service)
-            for service in (self.log_sink, self.resolve_resource, self.is_cancelled)
+            for service in (
+                self.log_sink,
+                self.resolve_resource,
+                self.is_cancelled,
+                self.observe_preview,
+            )
         ):
             raise BlockError("invalid_context", "Context services must be callable.")
 

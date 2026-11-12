@@ -20,6 +20,7 @@ from app.blocks.contracts import (
     NonBlank,
     Port,
     PortValues,
+    PreviewLimits,
     Table,
 )
 from app.blocks.errors import BlockError
@@ -95,7 +96,40 @@ class SelectColumns(Block[SelectConfig]):
         **descriptor_values("transform.select", "Select Columns", "transform"),
         inputs=(TABLE_PORT,),
         outputs=(TABLE_PORT,),
+        supports_preview=True,
+        preview_reason=None,
     )
+
+    def _preview(
+        self,
+        config: SelectConfig,
+        inputs: PortValues,
+        context: BlockContext,
+        limits: PreviewLimits,
+    ) -> PortValues:
+        context.check_cancelled()
+        table = input_table(inputs)
+        require_columns(table, config.columns)
+        columns = {column.name: column for column in table.data_schema.columns}
+        count = min(limits.max_rows, limits.max_cells // len(config.columns))
+        if count < 1:
+            raise BlockError(
+                "preview_limit", "The cell limit cannot hold one row of this schema."
+            )
+        rows = []
+        for row in table.rows[:count]:
+            context.check_cancelled()
+            rows.append({name: row[name] for name in config.columns})
+        return {
+            "table": (
+                Table(
+                    data_schema=DataSchema(
+                        columns=tuple(columns[name] for name in config.columns)
+                    ),
+                    rows=tuple(rows),
+                ),
+            )
+        }
 
     def _execute(
         self, config: SelectConfig, inputs: PortValues, context: BlockContext

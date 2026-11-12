@@ -207,9 +207,17 @@ def test_real_saved_release_graph_executes_and_reruns(
     import shutil
 
     monkeypatch.setattr(settings, "workspace_root", tmp_path / "workspaces")
+    (tmp_path / "workspaces").mkdir()
+    # App selection must also drive execution/timer resource resolution.
+    selected = tmp_path / "selected"
+    selected.mkdir()
+    monkeypatch.setattr(settings, "allowed_workspace_roots", [selected])
+    client.put(
+        "/api/v1/settings/workspace", json={"root_path": str(selected)}
+    ).raise_for_status()
     project = client.post("/api/v1/projects", json={"name": "SQL release"}).json()
-    workspace = settings.workspace_root / project["id"]
-    workspace.mkdir(parents=True)
+    workspace = selected / project["id"]
+    workspace.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(database / "data.sqlite3", workspace / "data.sqlite3")
     (workspace / "readings.csv").write_text("asset_id,reading\n1,5\n1,20\n1,30\n2,99\n")
     graph = release_graph()

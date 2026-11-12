@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.blocks.catalog import executor, registry
 from app.blocks.triggers import TimerTriggerConfig
-from app.config import settings
+from app.workspace import effective_workspace_root
 from app.metadata.database import Database
 from app.metadata.models import Pipeline, PipelineRevision, Project
 from app.pipelines.models import GraphDraft, Node, PipelineDefinition
@@ -314,12 +314,13 @@ def execute_pipeline(
     exactly like a direct ``execute_revision`` call.
     """
     revision_id, _ = load_latest_definition(db, project_id, pipeline_id)
+    root = effective_workspace_root(db)
     try:
         outcome = execute_revision(
             db,
             executor,
             revision_id,
-            workspace_root=settings.workspace_root / str(project_id),
+            workspace_root=root / str(project_id) if root is not None else None,
         )
     except RevisionNotFound:
         raise PipelineError(

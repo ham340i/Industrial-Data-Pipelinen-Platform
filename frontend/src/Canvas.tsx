@@ -133,6 +133,8 @@ function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
     retry: false,
   });
   const blocks = catalog.data ?? [];
+  // Keep all metadata for existing nodes, configuration and connections.
+  const libraryBlocks = blocks.filter((b) => b.library_visible !== false);
   return (
     <Stack spacing={2}>
       {catalog.isPending && (
@@ -155,7 +157,13 @@ function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
         <Paper
           component="aside"
           variant="outlined"
-          sx={{ p: 2, width: { md: 280 }, flexShrink: 0 }}
+          sx={{
+            p: 2,
+            width: { md: 280 },
+            flexShrink: 0,
+            maxHeight: { xs: 360, md: 560 },
+            overflowY: "auto",
+          }}
         >
           <Typography component="h2" variant="h2">
             Block library
@@ -167,10 +175,10 @@ function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
             fullWidth
             sx={{ my: 2 }}
           />
-          {catalog.isSuccess && !blocks.length && (
-            <Typography>No blocks are registered.</Typography>
+          {catalog.isSuccess && !libraryBlocks.length && (
+            <Typography>No blocks are available to add.</Typography>
           )}
-          {blocks
+          {libraryBlocks
             .filter((b) =>
               `${b.name} ${b.category} ${b.block_id}`
                 .toLowerCase()
@@ -230,7 +238,7 @@ function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
                   );
                   const block =
                     Array.isArray(key) &&
-                    blocks.find(
+                    libraryBlocks.find(
                       (b) => b.block_id === key[0] && b.version === key[1],
                     );
                   if (block)

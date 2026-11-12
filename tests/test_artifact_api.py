@@ -1,10 +1,12 @@
 """Artifact metadata and bounded-query HTTP contracts (#28)."""
 
 from typing import cast
+from pathlib import Path
 from uuid import uuid4
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 from fastapi.testclient import TestClient
 
 from app.blocks.contracts import Column, DataSchema
@@ -29,6 +31,7 @@ def registered(client: TestClient, *, format_: str = "parquet") -> str:
     db = db_of(client)
     revision_id = seed_revision(db, chain("test.source"))
     run_id, artifact_id = str(uuid4()), str(uuid4())
+    assert settings.workspace_root is not None
     output = settings.workspace_root / "outputs"
     output.mkdir(parents=True, exist_ok=True)
     pq.write_table(
@@ -123,9 +126,34 @@ def test_csv_and_missing_files_are_not_queryable(client: TestClient):
     )
 
     parquet_id = registered(client)
+    assert settings.workspace_root is not None
     (settings.workspace_root / "outputs" / "result.parquet").unlink()
     missing = client.post(f"/api/v1/artifacts/{parquet_id}/query", json={})
     assert (missing.status_code, missing.json()["error"]["code"]) == (
         409,
         "artifact_unavailable",
     )
+
+
+def test_artifact_query_uses_saved_root_and_handles_unconfigured_workspace(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    artifact_id = registered(client)
+    original = settings.workspace_root
+    assert original is not None
+    selected = tmp_path / "selected"
+    selected.mkdir()
+    (original / "outputs").rename(selected / "outputs")
+    monkeypatch.setattr(settings, "allowed_workspace_roots", [selected])
+    client.put(
+        "/api/v1/settings/workspace", json={"root_path": str(selected)}
+    ).raise_for_status()
+    url = f"/api/v1/artifacts/{artifact_id}/query"
+    assert client.post(url, json={}).status_code == 200
+    monkeypatch.setattr(settings, "workspace_root", None)
+    client.put(
+        "/api/v1/settings/workspace", json={"root_path": None}
+    ).raise_for_status()
+    response = client.post(url, json={})
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "artifact_unavailable"

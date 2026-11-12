@@ -1,4 +1,14 @@
 import { defineConfig } from "@playwright/test";
+import { resolve } from "node:path";
+import { mkdirSync } from "node:fs";
+
+// Test data stays separate from the user's database and from Playwright's
+// disposable screenshots/traces. Both API and browser workers inherit these.
+process.env.LPS_METADATA_PATH ??= resolve(
+  "test-results/standalone-metadata.sqlite3",
+);
+process.env.LPS_WORKSPACE_ROOT ??= resolve("test-results/preview-workspaces");
+mkdirSync(process.env.LPS_WORKSPACE_ROOT, { recursive: true });
 
 // No HTTP mocks: exercise the default Vite origin against the actual API.
 const frontendUrl = process.env.LPS_STANDALONE_URL || "http://127.0.0.1:3000";
@@ -10,6 +20,7 @@ const frontendCommand =
 
 export default defineConfig({
   testDir: "./standalone-tests",
+  outputDir: "./test-results/standalone",
   workers: 1,
   use: {
     baseURL: frontendUrl,

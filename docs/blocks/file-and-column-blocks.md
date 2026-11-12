@@ -47,7 +47,15 @@ development safety budgets, not measured production throughput. Parquet reads
 at most the row/cell budget plus one to detect overflow; compressed data can
 still consume more memory than its byte size. JSON parsing is byte bounded.
 CSV additionally inherits Python's parser field-size limit (normally 128 KiB).
-No streaming or hard process memory guarantee is claimed.
+These execution readers do not claim streaming or a hard process memory guarantee.
+
+CSV, JSON and Parquet Source and Select Columns support the separate
+[bounded preview path](../architecture/selected-node-preview.md). CSV/JSON stream
+bounded prefixes; Parquet uses budgeted reads, metadata checks and bounded batches.
+JSON labels sample-derived schemas and requires configured types for empty/all-null
+samples. Parquet labels metadata-derived schema and full counts. Limits and schema
+configuration are enforced independently of full execution. Preview does not call
+the full execution readers or publish sinks. SQL preview is outside this extension.
 
 ## Transforms
 
