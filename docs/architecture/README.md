@@ -50,3 +50,7 @@ flowchart LR
 ```
 
 Arrows identify parent/child relationships or owned values. Each run retains its exact revision; exporting the definition returns only graph JSON. Private bindings are resolved separately at runtime. See the [metadata integration guide](../metadata.md). `RunBlock` and `RunEvent` hold per-node evidence and the redacted run log; see [run telemetry](run-telemetry.md) (#27).
+
+The [run monitoring UI](../frontend/run-monitoring.md) (#30) reads these persisted
+contracts with bounded polling and keeps runtime evidence separate from graph
+authoring state. Error navigation opens existing block configuration.

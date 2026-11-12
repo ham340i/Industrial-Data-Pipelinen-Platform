@@ -9,6 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { RunMonitor } from "./RunMonitor";
 import { PipelineControls } from "./PipelineControls";
 import { RunControls } from "./RunControls";
 import { Canvas } from "./Canvas";
@@ -21,6 +22,9 @@ import { usePipelineValidation } from "./state/validation";
 export function Builder({ projectId = null }: { projectId?: string | null }) {
   const draftName = useEditorStore((state) =>
     state.projectId === projectId ? state.draftName : "",
+  );
+  const pipelineId = useEditorStore((state) =>
+    state.projectId === projectId ? state.pipelineId : null,
   );
   const busy = useEditorStore((state) => state.busy);
   const nodeCount = useEditorStore((state) => state.nodes.length);
@@ -74,6 +78,13 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
         <RunControls
           key={`${projectId}-${generation}`}
           canRun={validation.canRun}
+        />
+      )}
+      {projectId && pipelineId && (
+        <RunMonitor
+          key={`${projectId}:${pipelineId}`}
+          projectId={projectId}
+          pipelineId={pipelineId}
         />
       )}
       <Box
