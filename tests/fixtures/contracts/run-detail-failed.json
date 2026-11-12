@@ -1,0 +1,221 @@
+{
+  "blocks": [
+    {
+      "block_id": "source.csv",
+      "block_version": "1.0.0",
+      "duration_ms": 2,
+      "ended_at": "2026-11-12T23:41:23.987933",
+      "error": null,
+      "node_id": "source",
+      "position": 0,
+      "rows_in": 0,
+      "rows_out": 4,
+      "started_at": "2026-11-12T23:41:23.986282",
+      "state": "completed"
+    },
+    {
+      "block_id": "quality.null_check",
+      "block_version": "1.0.0",
+      "duration_ms": 1,
+      "ended_at": "2026-11-12T23:41:23.989464",
+      "error": {
+        "code": "quality_failed",
+        "reason": "Required data-quality validation failed."
+      },
+      "node_id": "gate",
+      "position": 1,
+      "rows_in": null,
+      "rows_out": null,
+      "started_at": "2026-11-12T23:41:23.988683",
+      "state": "failed"
+    },
+    {
+      "block_id": "sink.parquet",
+      "block_version": "1.0.0",
+      "duration_ms": null,
+      "ended_at": null,
+      "error": {
+        "code": "dependency_failed",
+        "reason": "An upstream dependency did not complete."
+      },
+      "node_id": "sink",
+      "position": 2,
+      "rows_in": null,
+      "rows_out": null,
+      "started_at": null,
+      "state": "skipped"
+    }
+  ],
+  "created_at": "2026-11-12T23:41:23.982722",
+  "duration_ms": 6,
+  "ended_at": "2026-11-12T23:41:23.991499",
+  "error": {
+    "code": "quality_failed",
+    "reason": "Node gate: Required data-quality validation failed."
+  },
+  "events": [
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.983443",
+      "kind": "state",
+      "level": "info",
+      "message": "Run queued",
+      "node_id": null,
+      "sequence": 0
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.984130",
+      "kind": "state",
+      "level": "info",
+      "message": "Node source queued",
+      "node_id": "source",
+      "sequence": 1
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.984647",
+      "kind": "state",
+      "level": "info",
+      "message": "Node gate queued",
+      "node_id": "gate",
+      "sequence": 2
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.985130",
+      "kind": "state",
+      "level": "info",
+      "message": "Node sink queued",
+      "node_id": "sink",
+      "sequence": 3
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.985985",
+      "kind": "state",
+      "level": "info",
+      "message": "Run running",
+      "node_id": null,
+      "sequence": 4
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.986663",
+      "kind": "state",
+      "level": "info",
+      "message": "Node source running",
+      "node_id": "source",
+      "sequence": 5
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.988374",
+      "kind": "state",
+      "level": "info",
+      "message": "Node source completed",
+      "node_id": "source",
+      "sequence": 6
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.989002",
+      "kind": "state",
+      "level": "info",
+      "message": "Node gate running",
+      "node_id": "gate",
+      "sequence": 7
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.989725",
+      "kind": "state",
+      "level": "warning",
+      "message": "Node gate failed",
+      "node_id": "gate",
+      "sequence": 8
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.990337",
+      "kind": "state",
+      "level": "info",
+      "message": "Node sink skipped",
+      "node_id": "sink",
+      "sequence": 9
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.990670",
+      "kind": "state",
+      "level": "warning",
+      "message": "Run failed",
+      "node_id": null,
+      "sequence": 10
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.992206",
+      "kind": "block",
+      "level": "info",
+      "message": "Block source.csv@1.0.0 started",
+      "node_id": "source",
+      "sequence": 11
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.992210",
+      "kind": "block",
+      "level": "info",
+      "message": "Block source.csv@1.0.0 succeeded",
+      "node_id": "source",
+      "sequence": 12
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.992213",
+      "kind": "block",
+      "level": "info",
+      "message": "Block quality.null_check@1.0.0 started",
+      "node_id": "gate",
+      "sequence": 13
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.992215",
+      "kind": "block",
+      "level": "info",
+      "message": "Block quality.null_check@1.0.0 quality",
+      "node_id": "gate",
+      "sequence": 14
+    },
+    {
+      "code": "quality_failed",
+      "created_at": "2026-11-12T23:41:23.992217",
+      "kind": "block",
+      "level": "warning",
+      "message": "Block quality.null_check@1.0.0 failed",
+      "node_id": "gate",
+      "sequence": 15
+    },
+    {
+      "code": "quality_failed",
+      "created_at": "2026-11-12T23:41:23.992219",
+      "kind": "state",
+      "level": "warning",
+      "message": "Run failed",
+      "node_id": null,
+      "sequence": 16
+    }
+  ],
+  "id": "3bbcdcce-f574-467b-9eeb-3c7ae023cf1b",
+  "outputs": [],
+  "pipeline_id": "c5636172-86ff-4d37-9d93-32ac13d7c022",
+  "pipeline_revision_id": "1ef6f780-5ba3-4077-9d32-635922c28cff",
+  "project_id": "4ba83b61-1c73-4f6d-af97-f57309301803",
+  "revision": 1,
+  "row_count": null,
+  "schema_version": 1,
+  "started_at": "2026-11-12T23:41:23.985437",
+  "state": "failed"
+}

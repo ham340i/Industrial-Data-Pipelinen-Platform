@@ -1,0 +1,23 @@
+{
+  "artifact_id": "76afabdd-988a-47dd-9714-8e0f4c0d306e",
+  "columns": [
+    "name",
+    "value"
+  ],
+  "has_more": true,
+  "limit": 2,
+  "offset": 0,
+  "pipeline_revision_id": "de432afe-2525-4f19-b183-736bdb005e27",
+  "rows": [
+    [
+      "alpha",
+      1
+    ],
+    [
+      "gamma",
+      3
+    ]
+  ],
+  "run_id": "2d2a2598-7d60-41cd-b3c3-b2efaf041185",
+  "schema_version": 1
+}
