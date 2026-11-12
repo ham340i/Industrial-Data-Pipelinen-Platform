@@ -1,6 +1,6 @@
 # Refactoring 
 
-The refactoring of the code in this project will be based on the SOEN 490 requirements and issues from Sonar Cloud Code analysis.
+The refactoring of the code in this project will be based on the SOEN 490 requirements and issues from Sonar Cloud Code analysis. All refactoring changes should not affect tests results and should not impact the app. 
 
 ## Code Quality Rubric Checks
 The following refactoring checks taken from the SOEN 490 Code Quality Rubric
