@@ -78,7 +78,7 @@ workspace path instead.
 ## Observed results
 
 macOS, Python 3.12.15 virtual environment, Node 22.21.0, November 12, 2026,
-revision: this branch before the pull request was opened.
+revision `4e744a5` ([PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85)).
 
 - `python -m pytest -q`: **880 passed** (39 new: 18 in
   `test_integration_matrix.py`, 17 in `test_integration_failures.py`, 4 in

@@ -49,13 +49,14 @@ the Builder parsers check in CI. Record of what was actually run:
 
 ## Pull Requests
 
-- Pending: opened from `feature/37-block-integration-matrix`; planned
-  reviewer `Al-Yousef` per the issue.
+- [PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85) (author), opened November 12, 2026 from
+  `feature/37-block-integration-matrix`; review requested from `Al-Yousef`,
+  the planned reviewer per the issue. Review and merge pending.
 
 ## Commits
 
-On `feature/37-block-integration-matrix`; each references #37. Links are
-added once the branch is pushed.
+On `feature/37-block-integration-matrix`, each referencing #37; see the
+[commit list on PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85/commits).
 
 ## Tests
 
@@ -114,8 +115,8 @@ pending on the pull request.
 ## Evidence Links
 
 Design and results: [verification record](../testing/issue-37-integration-matrix.md)
-→ code on `feature/37-block-integration-matrix` → PR/review: pending →
-CI: pending → iteration: [Iteration 4 testing evidence](../iterations/iteration-4-release-1/testing-evidence.md).
+→ code on `feature/37-block-integration-matrix` → [PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85) (review pending) →
+CI: on the PR → iteration: [Iteration 4 testing evidence](../iterations/iteration-4-release-1/testing-evidence.md).
 
 ## Record identification
 

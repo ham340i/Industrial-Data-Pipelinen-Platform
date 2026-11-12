@@ -187,8 +187,8 @@ the two compatibility fixes below, the CI JUnit capture, and the
 documentation. Verified by 39 new backend tests (880 passing overall), 4
 frontend parser tests, Ruff, mypy, ESLint, Prettier and `tsc`
 ([record](../docs/testing/issue-37-integration-matrix.md)). Pull request:
-pending from `feature/37-block-integration-matrix`; independent review by
-the planned student reviewer is pending.
+[PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85); independent review by the planned student reviewer `Al-Yousef`
+is requested and pending.
 
 Problems found and corrected: the artifact query endpoint resolved Parquet
 files beneath the bare workspace root while the execute API publishes them

@@ -30,5 +30,5 @@ independent review remain pending. Related #31 integration is incomplete.
 
 Issue #37 implementation evidence: [menaboulus, Iteration 4 integration matrix](menaboulus-iteration-4.md).
 This records the API-level compatibility matrix, the two cross-feature fixes
-it surfaced and local verification; PR, CI and independent review remain
-pending.
+it surfaced and local verification; [PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85) is open with review requested
+from Al-Yousef.
