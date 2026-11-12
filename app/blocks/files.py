@@ -578,6 +578,10 @@ class FileSink(Block[SinkConfig]):
                 raise BlockError(
                     "output_exists", "Output already exists; choose replace explicitly."
                 )
+            # resource_path already proved target lies inside the project
+            # workspace; only inputs/ is pre-created, so make output folders
+            # such as outputs/ on demand instead of failing the publication.
+            target.parent.mkdir(parents=True, exist_ok=True)
             with NamedTemporaryFile(
                 dir=target.parent, prefix=".lps-", suffix=".tmp", delete=False
             ) as stream:
