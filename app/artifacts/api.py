@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Read-only metadata and bounded local Parquet query endpoints (#28)."""
 
 from pathlib import Path
@@ -60,7 +61,11 @@ def artifact_query(
     db: Annotated[Database, Depends(database)],
     root: Annotated[Path, Depends(workspace_root)],
 ) -> ArtifactQueryResponse:
-    result = query_artifact(db, str(artifact_id), root, payload)
+    # Sinks publish under <workspace>/<project>/<resource_ref> (execute, #29),
+    # so the query must resolve the artifact inside the same project folder
+    # instead of the bare workspace root (#37 integration matrix).
+    artifact = get_artifact(db, str(artifact_id))
+    result = query_artifact(db, str(artifact_id), root / artifact.project_id, payload)
     return ArtifactQueryResponse(
         artifact_id=result.artifact_id,
         run_id=result.run_id,
