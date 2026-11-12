@@ -108,3 +108,12 @@ Full release UI acceptance remains blocked by preview, artifact inspection and
 monitoring/error-UX dependencies (#26, #28, #30, #33), as well as unsupported
 nested quality/aggregate configuration forms. No issue completion, independent
 review, CI result or stakeholder acceptance is asserted.
+
+## Issue #37 implementation evidence
+
+The API/engine block integration matrix is implemented on
+`feature/37-block-integration-matrix`; independent review, merge and
+stakeholder acceptance remain pending. See
+[tests and fixes](../../testing/issue-37-integration-matrix.md) and the
+[contribution record](../../individual-contributions/menaboulus-iteration-4.md).
+This does not mark the iteration complete.

@@ -174,3 +174,30 @@ CI and stakeholder acceptance remain pending. Issue #31 is dependency-blocked
 for preview and artifact inspection. See the
 [verification record](../docs/testing/issue-23-31-sql-workflow.md); this does not
 claim that the student manually authored or independently tested generated code.
+
+## Issue #37 API/engine block integration matrix
+
+AI contribution: 50% or more AI-generated.
+Tool: Claude Code. Assisted with the API-level integration fixtures
+(`tests/integration_support.py`), the source → transform → quality → sink
+compatibility matrix, the malformed-definition / schema-mismatch /
+timeout-response cases, the shared response fixtures parsed by the frontend
+(`tests/test_integration_contracts.py`, `frontend/src/api/contracts.test.ts`),
+the two compatibility fixes below, the CI JUnit capture, and the
+documentation. Verified by 39 new backend tests (880 passing overall), 4
+frontend parser tests, Ruff, mypy, ESLint, Prettier and `tsc`
+([record](../docs/testing/issue-37-integration-matrix.md)). Pull request:
+pending from `feature/37-block-integration-matrix`; independent review by
+the planned student reviewer is pending.
+
+Problems found and corrected: the artifact query endpoint resolved Parquet
+files beneath the bare workspace root while the execute API publishes them
+under `<root>/<project id>/`, so every artifact from a real run was reported
+unavailable; fixed in `app/artifacts/api.py` and pinned by the Parquet matrix
+cases. File sinks writing into a not-yet-existing `outputs/` folder failed
+with a misleading `write_failed`; the sink now creates the folder inside the
+already-checked project path, pinned by a regression test. Three mistakes in
+the generated tests themselves were caught by running them and corrected
+without touching the product: re-running a no-clobber sink, reusing a
+pipeline name within a project, and a leak assertion that tripped on an
+ordinary `/` in an error message.

@@ -27,3 +27,8 @@ unverified.
 Issue #23 local preparation: [aboudka2003, Iteration 3 SQL source](aboudka2003-iteration-3.md).
 This records AI-assisted implementation and local verification; PR, CI and
 independent review remain pending. Related #31 integration is incomplete.
+
+Issue #37 implementation evidence: [menaboulus, Iteration 4 integration matrix](menaboulus-iteration-4.md).
+This records the API-level compatibility matrix, the two cross-feature fixes
+it surfaced and local verification; PR, CI and independent review remain
+pending.
