@@ -53,7 +53,7 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   await amount.fill("-1");
   const problems = page.getByRole("list", { name: "Pipeline problems" });
   const invalidAmount = problems.getByRole("button", {
-    name: /Fix 'min_rows'/,
+    name: /Use a value of at least 0 for 'min_rows'/,
   });
   await expect(invalidAmount).toBeVisible();
   await invalidAmount.focus();

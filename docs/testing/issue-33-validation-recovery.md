@@ -281,7 +281,14 @@ recovery. The following checks cover the six review comments.
 | Fieldless recovery should land on an editable field | Component tests verify invalid-field priority, first-field and no-field fallbacks. The real browser test focuses the CSV Source resource field, retains edits, then saves and executes the corrected revision. |
 
 Windows checks passed for 860 backend tests (one existing symlink case skipped),
-201 frontend tests, the production build, and 14 development-mode standalone
-Chrome/FastAPI scenarios including the merged run monitor. Ruff, mypy, ESLint,
-Prettier, TypeScript and the repository, documentation and release-plan checks
-also passed. Independent teammate review and stakeholder acceptance remain pending.
+201 frontend tests and the production build. All 14 standalone Chrome/FastAPI
+scenarios passed against the production build, including the merged run monitor.
+The SQL release test and all four production shell browser tests passed. The
+first production browser pass identified two selectors tied to the old
+validation wording. The assertions now target the affected field's accessible
+description and the corresponding pipeline diagnostic.
+
+Ruff, mypy, ESLint, Prettier, TypeScript and the repository, documentation and
+release-plan checks passed. The 66 validation tests also passed with Pydantic
+error URLs disabled. Independent teammate review and stakeholder acceptance
+remain pending.
