@@ -131,15 +131,27 @@ def project_data_folder(root: Path, project_id: str) -> Path:
     preview, execute, timer ticks and artifact queries. ``resource_path``
     trusts the root it is given, so a symlink or junction installed at the
     project folder would otherwise redirect reads into another project or
-    outside the workspace (#37 review). Raises ``ValueError`` when the folder
-    is missing, is not a directory, or resolves anywhere other than directly
-    beneath the resolved workspace root.
+    outside the workspace (#37 review).
+
+    The request-supplied ``project_id`` is never used to build a path. The
+    trusted workspace root is listed and the id must equal an entry name, so
+    the filesystem cannot be probed with arbitrary values; the entry must be
+    a real directory (not a link or junction) whose canonical path is itself.
+    Raises ``ValueError`` otherwise.
     """
     try:
         base = root.resolve(strict=True)
-        folder = (base / project_id).resolve(strict=True)
-        folder.relative_to(base)
-        if folder != base / project_id or not folder.is_dir():
+        with os.scandir(base) as entries:
+            match = next((entry for entry in entries if entry.name == project_id), None)
+        if (
+            match is None
+            or match.is_symlink()
+            or match.is_junction()
+            or not match.is_dir(follow_symlinks=False)
+        ):
+            raise ValueError("Project folder is unavailable")
+        folder = base / match.name
+        if folder.resolve(strict=True) != folder:
             raise ValueError("Project folder aliases another folder")
     except OSError:
         raise ValueError("Project folder is unavailable") from None
