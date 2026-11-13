@@ -33,4 +33,4 @@ The reasoning should have concrete purpose for the code.
 
 ### Refactoring Timing
 
-Ideally, all checks and documented exceptions should be completed by each release. 
+Ideally, all checks and documented exceptions should be completed by each release.
