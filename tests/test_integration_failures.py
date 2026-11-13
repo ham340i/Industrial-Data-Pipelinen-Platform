@@ -9,6 +9,8 @@ here may leak a workspace path, a credential or a traceback.
 
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -297,3 +299,63 @@ def test_preview_and_execute_agree_on_the_same_project_folder(bench: Workbench):
     detail = bench.run_pipeline(definition)
     assert detail["state"] == "succeeded", detail["error"]
     assert detail["row_count"] == sample["full_row_count"]
+
+
+# -- project-folder containment (PR #85 review) --------------------------
+
+
+def alias_project_folder(bench: Workbench, target: Path) -> None:
+    """Replace the project's data folder with a link to ``target``."""
+    shutil.rmtree(bench.root)
+    try:
+        bench.root.symlink_to(target, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symbolic links are unavailable on this runner")
+
+
+def test_artifact_query_refuses_a_project_folder_that_aliases_another(
+    bench: Workbench, tmp_path: Path
+):
+    """A link at <workspace>/<project> must not redirect reads elsewhere."""
+    sink = node("sink", "sink.parquet", {"resource_ref": "result.parquet"})
+    detail = bench.run_pipeline(linear(csv(bench), sink))
+    artifact_id = detail["outputs"][0]["id"]
+    assert bench.query(artifact_id, limit=5).status_code == 200
+    published = (bench.root / "result.parquet").read_bytes()
+
+    other = bench.client.post("/api/v1/projects", json={"name": "Other"}).json()
+    other_root = bench.root.parent / other["id"]
+    (other_root / "result.parquet").write_bytes(published)
+    alias_project_folder(bench, other_root)
+    aliased = bench.query(artifact_id, limit=5)
+    assert aliased.status_code == 409, aliased.text
+    assert aliased.json()["error"]["code"] == "artifact_unavailable"
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "result.parquet").write_bytes(published)
+    bench.root.unlink()
+    bench.root.symlink_to(outside, target_is_directory=True)
+    escaped = bench.query(artifact_id, limit=5)
+    assert escaped.status_code == 409, escaped.text
+    assert escaped.json()["error"]["code"] == "artifact_unavailable"
+
+
+@pytest.mark.parametrize("problem", ["aliased", "missing"])
+def test_execute_refuses_an_unusable_project_folder_before_creating_a_run(
+    bench: Workbench, tmp_path: Path, problem: str
+):
+    pipeline_id = bench.save(linear(csv(bench), CSV_SINK))
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "inputs").mkdir(parents=True)
+    shutil.copy(bench.root / "inputs" / "readings.csv", elsewhere / "inputs")
+    if problem == "aliased":
+        alias_project_folder(bench, elsewhere)
+    else:
+        shutil.rmtree(bench.root)
+
+    response = bench.execute(pipeline_id)
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["code"] == "workspace_project_folder"
+    assert bench.runs()["total"] == 0
+    assert not (elsewhere / "result.csv").exists()

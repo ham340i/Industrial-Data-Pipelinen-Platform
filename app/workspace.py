@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Private local workspace settings; never part of portable pipeline definitions."""
 
 import json
@@ -121,6 +122,28 @@ def checked_root(path: Path) -> Path:
             "workspace_invalid_path",
             "Choose an existing folder the API can read and write.",
         ) from None
+
+
+def project_data_folder(root: Path, project_id: str) -> Path:
+    """The prepared ``<root>/<project_id>`` folder, rejecting links and aliases.
+
+    One containment rule for every path that reads or writes project data:
+    preview, execute, timer ticks and artifact queries. ``resource_path``
+    trusts the root it is given, so a symlink or junction installed at the
+    project folder would otherwise redirect reads into another project or
+    outside the workspace (#37 review). Raises ``ValueError`` when the folder
+    is missing, is not a directory, or resolves anywhere other than directly
+    beneath the resolved workspace root.
+    """
+    try:
+        base = root.resolve(strict=True)
+        folder = (base / project_id).resolve(strict=True)
+        folder.relative_to(base)
+        if folder != base / project_id or not folder.is_dir():
+            raise ValueError("Project folder aliases another folder")
+    except OSError:
+        raise ValueError("Project folder is unavailable") from None
+    return folder
 
 
 def prepare_project(root: Path, project_id: str) -> None:

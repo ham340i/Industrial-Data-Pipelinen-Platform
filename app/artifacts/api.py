@@ -14,7 +14,7 @@ from app.artifacts.query import (
     query_artifact,
 )
 from app.artifacts import ArtifactUnavailable
-from app.workspace import effective_workspace_root
+from app.workspace import effective_workspace_root, project_data_folder
 from app.metadata.database import Database
 from app.projects import database
 from app.schemas.artifacts import ArtifactMetadataResponse, ArtifactQueryResponse
@@ -63,9 +63,14 @@ def artifact_query(
 ) -> ArtifactQueryResponse:
     # Sinks publish under <workspace>/<project>/<resource_ref> (execute, #29),
     # so the query must resolve the artifact inside the same project folder
-    # instead of the bare workspace root (#37 integration matrix).
+    # instead of the bare workspace root (#37 integration matrix). The folder
+    # is checked for links/aliases first: resource_path trusts its root.
     artifact = get_artifact(db, str(artifact_id))
-    result = query_artifact(db, str(artifact_id), root / artifact.project_id, payload)
+    try:
+        folder = project_data_folder(root, artifact.project_id)
+    except ValueError:
+        raise ArtifactUnavailable("Registered artifact is unavailable.") from None
+    result = query_artifact(db, str(artifact_id), folder, payload)
     return ArtifactQueryResponse(
         artifact_id=result.artifact_id,
         run_id=result.run_id,
