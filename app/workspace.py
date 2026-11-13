@@ -133,11 +133,13 @@ def project_data_folder(root: Path, project_id: str) -> Path:
     project folder would otherwise redirect reads into another project or
     outside the workspace (#37 review).
 
-    The request-supplied ``project_id`` is never used to build a path. The
-    trusted workspace root is listed and the id must equal an entry name, so
-    the filesystem cannot be probed with arbitrary values; the entry must be
-    a real directory (not a link or junction) whose canonical path is itself.
-    Raises ``ValueError`` otherwise.
+    The request-supplied ``project_id`` never reaches the filesystem. The
+    trusted workspace root is canonicalised and listed, and the id must equal
+    the name of an entry that is a real directory (not a symlink or junction,
+    checked on the listing itself without following links). A non-link
+    directory child of a canonical base is canonical by construction, so no
+    further path probing is needed or performed. Raises ``ValueError``
+    otherwise.
     """
     try:
         base = root.resolve(strict=True)
@@ -151,8 +153,6 @@ def project_data_folder(root: Path, project_id: str) -> Path:
         ):
             raise ValueError("Project folder is unavailable")
         folder = base / match.name
-        if folder.resolve(strict=True) != folder:
-            raise ValueError("Project folder aliases another folder")
     except OSError:
         raise ValueError("Project folder is unavailable") from None
     return folder

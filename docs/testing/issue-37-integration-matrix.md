@@ -108,9 +108,10 @@ argued with:
    SonarCloud then flagged the first version of the rule as a filesystem
    oracle (`pythonsecurity:S6549`): the request-supplied project id was
    joined into a path that was probed with `resolve`. The rule now lists
-   the trusted workspace root and requires the id to equal an entry name
-   that is a real directory (not a link or junction) whose canonical path
-   is itself, so no path is ever built from request data. SonarCloud's
+   the canonical workspace root and requires the id to equal the name of an
+   entry that is a real directory (not a symlink or junction, checked on the
+   listing without following links), so no path built from request data is
+   ever probed. SonarCloud's
    composite-assertion smells in the new tests were split as well.
 3. **Declaration wording.** The PR description listed the AI contribution
    per file while `.github/AI_USAGE.md` gave one issue-level line; the usage
