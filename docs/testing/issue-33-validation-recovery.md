@@ -1,8 +1,7 @@
 # Issue 33 contextual error recovery
 
-The sections before the November 11 preview/run extension are historical
-validation-only evidence. The current scope and remaining human acceptance
-are recorded in that final section.
+The original validation slice and November 11 extension retain their
+historical results. The review follow-up records the latest changes and checks.
 
 ## Original validation slice
 
@@ -266,3 +265,23 @@ published commit, not on an earlier head.
 
 OpenAI Codex implemented and verified this extension at Yousef's request; the
 team supplied the issue requirements and existing preview/engine contracts.
+
+## November 12 review follow-up
+
+Integrated the run monitor from main and preserved both the monitor and saved-run
+recovery. The following checks cover the six review comments.
+
+| Review comment | Verification |
+| --- | --- |
+| Native and custom validation errors can expose rejected values | Real validation API cases cover UUID and hex byte parser failures, a custom error that reuses a built-in code, and an invalid discriminator. They assert public text and field context. The Row Count test checks that its numeric minimum remains actionable. |
+| HTTP rejection and uncertain execution need distinct guidance | The run recovery test checks that a 404 is a rejection. A network error, malformed acknowledgment or 500 prompts a run-history check. Each uncertain case sends one POST. |
+| A failed refresh removes run evidence | The test delays a poll, returns 503, and asserts that the last status and log remain beside the refresh alert. Retrying makes another GET and the original POST count remains one. |
+| Polling repeats live loading announcements | The same test verifies that the running status remains stable while the next GET is pending. |
+| Validation diagnostics disappear during rechecks | Builder tests verify that the old canvas markers, field messages and problem list remain labeled during debounce and while a request is pending. Previous results cannot navigate the graph or enable execution, and a new draft clears them. |
+| Fieldless recovery should land on an editable field | Component tests verify invalid-field priority, first-field and no-field fallbacks. The real browser test focuses the CSV Source resource field, retains edits, then saves and executes the corrected revision. |
+
+Windows checks passed for 860 backend tests (one existing symlink case skipped),
+201 frontend tests, the production build, and 14 development-mode standalone
+Chrome/FastAPI scenarios including the merged run monitor. Ruff, mypy, ESLint,
+Prettier, TypeScript and the repository, documentation and release-plan checks
+also passed. Independent teammate review and stakeholder acceptance remain pending.

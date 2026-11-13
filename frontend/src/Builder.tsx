@@ -9,6 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { RunMonitor } from "./RunMonitor";
 import { PipelineControls } from "./PipelineControls";
 import { RunControls } from "./RunControls";
 import { Canvas } from "./Canvas";
@@ -22,6 +23,9 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
   const draftName = useEditorStore((state) =>
     state.projectId === projectId ? state.draftName : "",
   );
+  const pipelineId = useEditorStore((state) =>
+    state.projectId === projectId ? state.pipelineId : null,
+  );
   const busy = useEditorStore((state) => state.busy);
   const nodeCount = useEditorStore((state) => state.nodes.length);
   const setDraftName = useEditorStore((state) => state.setDraftName);
@@ -29,7 +33,7 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
   const nodes = useEditorStore((state) => state.nodes);
   const edges = useEditorStore((state) => state.edges);
   const generation = useEditorStore((state) => state.generation);
-  const validation = usePipelineValidation(nodes, edges);
+  const validation = usePipelineValidation(nodes, edges, generation);
   useEffect(() => setProject(projectId), [projectId, setProject]);
   return (
     <Stack spacing={3}>
@@ -76,6 +80,13 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
           canRun={validation.canRun}
         />
       )}
+      {projectId && pipelineId && (
+        <RunMonitor
+          key={`${projectId}:${pipelineId}`}
+          projectId={projectId}
+          pipelineId={pipelineId}
+        />
+      )}
       <Box
         inert={busy}
         sx={{
@@ -89,9 +100,15 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
         }}
       >
         <Box sx={{ minWidth: 0 }}>
-          <Canvas diagnostics={validation.report?.diagnostics} />
+          <Canvas
+            diagnostics={validation.report?.diagnostics}
+            staleDiagnostics={!validation.current}
+          />
         </Box>
-        <ConfigurationPanel diagnostics={validation.report?.diagnostics} />
+        <ConfigurationPanel
+          diagnostics={validation.report?.diagnostics}
+          staleDiagnostics={!validation.current}
+        />
       </Box>
       <PreviewPanel projectId={projectId} />
     </Stack>

@@ -16,20 +16,30 @@ const runId = "33333333-3333-4333-8333-333333333333";
 const executeUrl = `http://127.0.0.1:8000/api/v1/projects/${project}/pipelines/${pipeline}/execute`;
 const detailUrl = `http://127.0.0.1:8000/api/v1/runs/${runId}`;
 const failure = { code: "sql_query_failed", reason: "Read query failed." };
+const timestamp = "2026-11-12T23:00:00.000Z";
 const result = {
   schema_version: 1,
   id: runId,
   project_id: project,
   pipeline_id: pipeline,
+  pipeline_revision_id: "55555555-5555-4555-8555-555555555555",
   revision: 1,
   state: "failed",
+  created_at: timestamp,
+  started_at: timestamp,
+  ended_at: timestamp,
   duration_ms: 0,
   row_count: 0,
   error: failure,
   blocks: [
     {
+      position: 0,
       node_id: "sql",
+      block_id: sampleBlock.block_id,
+      block_version: sampleBlock.version,
       state: "failed",
+      started_at: timestamp,
+      ended_at: timestamp,
       duration_ms: 0,
       rows_in: null,
       rows_out: 0,
@@ -106,9 +116,7 @@ it("sends the opened revision and focuses failed block settings without changing
   configure.focus();
   await userEvent.keyboard("{Enter}");
   expect(
-    await screen.findByRole("region", {
-      name: "Configure Synthetic Add Constant",
-    }),
+    await screen.findByRole("spinbutton", { name: "Amount" }),
   ).toHaveFocus();
   expect(
     useEditorStore
@@ -148,6 +156,63 @@ it("retries a result read from the keyboard without executing again or exposing 
   expect(posts).toHaveLength(1);
   expect(gets).toBe(2);
   expect(useEditorStore.getState().nodes).toBe(nodes);
+});
+
+it("keeps run status and evidence during a poll and after a failed refresh", async () => {
+  const posts = failedRun();
+  let finishPoll!: () => void;
+  const poll = new Promise<void>((resolve) => {
+    finishPoll = resolve;
+  });
+  let reads = 0;
+  server.use(
+    http.get(detailUrl, async () => {
+      reads += 1;
+      if (reads === 1)
+        return HttpResponse.json({
+          ...result,
+          state: "running",
+          ended_at: null,
+          duration_ms: null,
+          row_count: null,
+          error: null,
+          blocks: [],
+          events: [
+            {
+              sequence: 1,
+              created_at: timestamp,
+              level: "info",
+              node_id: null,
+              kind: "run_started",
+              code: null,
+              message: "Execution started.",
+            },
+          ],
+        });
+      if (reads === 2) {
+        await poll;
+        return new HttpResponse(null, { status: 503 });
+      }
+      return HttpResponse.json(result);
+    }),
+  );
+  setup();
+  await userEvent.click(run());
+  const status = screen.getByRole("status", { name: "Execution status" });
+  await screen.findByText("Execution started.");
+  await waitFor(() => expect(reads).toBe(2), { timeout: 2000 });
+  expect(status).toHaveTextContent("Run running");
+  finishPoll();
+  const retry = await screen.findByRole("button", {
+    name: "Retry run results",
+  });
+  expect(status).toHaveTextContent("Run running");
+  expect(screen.getByText("Execution started.")).toBeVisible();
+  expect(screen.getByText(/last loaded run results/)).toBeVisible();
+  await userEvent.click(retry);
+  await screen.findByText(/Run failed.*revision 1/);
+  expect(screen.queryByText("Execution started.")).not.toBeInTheDocument();
+  expect(posts).toHaveLength(1);
 });
 
 it("keeps unsaved edits and does not navigate a late failure into a changed draft", async () => {
@@ -282,25 +347,36 @@ it("navigates a structured refused-run node without reflecting its private error
   configure.focus();
   await userEvent.keyboard("{Enter}");
   expect(
-    await screen.findByRole("region", {
-      name: "Configure Synthetic Add Constant",
-    }),
+    await screen.findByRole("spinbutton", { name: "Amount" }),
   ).toHaveFocus();
 });
 
-it.each(["network", "malformed"] as const)(
+it("reports an HTTP rejection without suggesting it started a run", async () => {
+  server.use(
+    http.post(executeUrl, () =>
+      HttpResponse.json({ detail: "secret=synthetic" }, { status: 404 }),
+    ),
+  );
+  setup();
+  await userEvent.click(run());
+  expect(await screen.findByText(/rejected.*HTTP 404/)).toBeVisible();
+  expect(
+    screen.queryByText(/may have started a run|secret=/),
+  ).not.toBeInTheDocument();
+});
+
+it.each(["network", "malformed", "server"] as const)(
   "does not automatically repeat an uncertain %s execution",
   async (kind) => {
     let posts = 0;
     server.use(
       http.post(executeUrl, () => {
         posts += 1;
-        return kind === "network"
-          ? HttpResponse.error()
-          : HttpResponse.json({
-              run_id: "invalid",
-              message: "secret=synthetic",
-            });
+        if (kind === "network") return HttpResponse.error();
+        return HttpResponse.json(
+          { run_id: "invalid", message: "secret=synthetic" },
+          { status: kind === "server" ? 500 : 200 },
+        );
       }),
     );
     setup();

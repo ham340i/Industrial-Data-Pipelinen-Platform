@@ -2,7 +2,12 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Stack, Typography } from "@mui/material";
-import { executePipeline, ExecutionRequestError, getRun } from "./api/runs";
+import {
+  executePipeline,
+  ExecutionRequestError,
+  getRun,
+  isActiveRun,
+} from "./api/runs";
 import { normalizeApiError, type ApiError } from "./api/client";
 import { fingerprint, useEditorStore } from "./state/editor";
 import { semanticDefinition } from "./state/validation";
@@ -48,12 +53,10 @@ export function RunControls({ canRun }: { canRun: boolean }) {
     enabled: Boolean(visible?.runId),
     retry: false,
     gcTime: 0,
-    refetchInterval: (query) =>
-      ["queued", "running"].includes(query.state.data?.state ?? "")
-        ? 1000
-        : false,
+    refetchInterval: ({ state: { data } }) =>
+      data && isActiveRun(data.state) ? 1000 : false,
   });
-  const result = visible?.runId && detail.isSuccess ? detail.data : null;
+  const result = visible?.runId ? detail.data : undefined;
   const matches = Boolean(
     result && visible && sameDraft(visible, state, result.revision),
   );
@@ -126,15 +129,15 @@ export function RunControls({ canRun }: { canRun: boolean }) {
       : null;
   const status = visible?.pending
     ? "Starting saved pipeline."
-    : visible?.runId && detail.isFetching
-      ? "Loading run results."
-      : visible?.runId && detail.isError
-        ? "Run results could not be loaded."
-        : result
-          ? `Run ${result.state} · revision ${result.revision}`
-          : error
-            ? "Execution request failed."
-            : "No run requested.";
+    : result
+      ? `Run ${result.state} · revision ${result.revision}`
+      : visible?.runId
+        ? detail.isPending
+          ? "Loading run results."
+          : "Run results could not be loaded."
+        : error
+          ? "Execution request failed."
+          : "No run requested.";
   return (
     <Stack spacing={2} aria-label="Pipeline execution">
       <Button
@@ -171,7 +174,10 @@ export function RunControls({ canRun }: { canRun: boolean }) {
             ) : undefined
           }
         >
-          {error.message} Your saved pipeline is retained.
+          {error.kind === "timeout"
+            ? "The local API took too long to confirm execution."
+            : error.message}{" "}
+          Your saved pipeline is retained.
           {!(error instanceof ExecutionRequestError) && (
             <Typography>
               The request may have started a run. Check run history before
@@ -195,7 +201,7 @@ export function RunControls({ canRun }: { canRun: boolean }) {
           }
         >
           {normalizeApiError(detail.error).message} Retrying results does not
-          start another run.
+          start another run. {result && "Showing the last loaded run results."}
         </Alert>
       )}
       {result && (

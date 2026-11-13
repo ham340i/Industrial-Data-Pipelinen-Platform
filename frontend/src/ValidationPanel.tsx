@@ -61,7 +61,9 @@ export function ValidationPanel({
   const status = error
     ? null
     : !current
-      ? "Checking pipeline…"
+      ? problems.length
+        ? "Checking pipeline… Showing problems from the last check."
+        : "Checking pipeline…"
       : canRun
         ? "Ready to run. No problems found."
         : `${problems.length} ${problems.length === 1 ? "problem" : "problems"} must be fixed before running.`;
@@ -117,15 +119,22 @@ export function ValidationPanel({
           </Alert>
         )}
         {problems.length > 0 && (
-          <List dense aria-label="Pipeline problems">
+          <List
+            dense
+            aria-label={
+              current ? "Pipeline problems" : "Previous pipeline problems"
+            }
+          >
             {problems.map((d, index) => {
               const { node_id: nodeId } = d;
-              const canFocus = nodeId !== null && hasNode(nodeId);
+              const canFocus = current && nodeId !== null && hasNode(nodeId);
               const text = (
                 <ListItemText
                   primary={d.message}
                   secondary={subject(d)}
-                  slotProps={{ primary: { color: "error" } }}
+                  slotProps={{
+                    primary: { color: current ? "error" : "text.secondary" },
+                  }}
                 />
               );
               return (

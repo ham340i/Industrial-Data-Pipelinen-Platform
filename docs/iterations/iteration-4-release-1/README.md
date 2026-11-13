@@ -98,6 +98,14 @@ Not recorded. Add actions, owners and issues in the [retrospective](retrospectiv
 
 Planned: `v1.0.0-release1`. Not created. Follow the [tag strategy](../README.md#completion-tags).
 
+## Issue #30 implementation evidence
+
+Run monitoring is implemented on `feature/30-run-monitoring`; independent review,
+merge and stakeholder acceptance remain pending. See [design](../../frontend/run-monitoring.md),
+[tests](../../testing/issue-30-run-monitoring.md) and
+[AI-assisted contribution record](../../individual-contributions/ham340i-iteration-4.md).
+This does not mark the iteration complete.
+
 ## Issue #31 integration preparation
 
 Saved-run controls and a real SQL-only author/save/open/execute browser scenario

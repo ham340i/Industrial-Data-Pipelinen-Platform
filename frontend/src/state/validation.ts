@@ -60,6 +60,7 @@ export function markEdges(
   edges: Edge[],
   byEdge: Map<string, Diagnostic[]>,
   color: string,
+  stale = false,
 ): Edge[] {
   return edges.map((e) => {
     const problems = byEdge.get(e.id);
@@ -67,7 +68,7 @@ export function markEdges(
     return {
       ...e,
       className: "invalid-connection",
-      ariaLabel: `Connection problem: ${problems.map((p) => p.message).join(" ")}`,
+      ariaLabel: `${stale ? "Previous connection problem" : "Connection problem"}: ${problems.map((p) => p.message).join(" ")}`,
       label: problems.length > 1 ? `${problems.length} problems` : "Problem",
       style: { stroke: color, strokeWidth: 2 },
       labelStyle: { fill: color, fontWeight: 600 },
@@ -104,27 +105,35 @@ export interface ValidationState {
 export function usePipelineValidation(
   nodes: BlockNode[],
   edges: Edge[],
+  generation: number,
   delay = 300,
 ): ValidationState {
   const key = useMemo(
     () => JSON.stringify(semanticDefinition(nodes, edges)),
     [nodes, edges],
   );
-  const [checked, setChecked] = useState(key);
+  const [debounced, setDebounced] = useState({ generation, key });
+  const checked = debounced.generation === generation ? debounced.key : key;
   useEffect(() => {
-    const timer = setTimeout(() => setChecked(key), delay);
+    const timer = setTimeout(() => setDebounced({ generation, key }), delay);
     return () => clearTimeout(timer);
-  }, [key, delay]);
+  }, [generation, key, delay]);
   const query = useQuery({
-    queryKey: ["validation", checked],
+    queryKey: ["validation", generation, checked],
     queryFn: ({ signal }) =>
       validatePipeline(JSON.parse(checked) as SemanticDefinition, signal),
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === generation ? previous : undefined,
     retry: false,
     staleTime: Infinity,
   });
-  const current = checked === key && query.isSuccess && !query.isFetching;
+  const current =
+    checked === key &&
+    query.isSuccess &&
+    !query.isPlaceholderData &&
+    !query.isFetching;
   return {
-    report: current ? query.data : undefined,
+    report: query.data,
     current,
     error:
       checked === key && query.isError && !query.isFetching

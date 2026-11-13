@@ -16,7 +16,7 @@ it("accepts a response record", () => {
 it.each([
   [() => parseDefinition(null), "pipeline response"],
   [() => parseProject(null), "project response"],
-  [() => parseRun(null, "project", "pipeline", "run"), "run response"],
+  [() => parseRun(null, "project", "pipeline", "run"), "run evidence"],
   [() => parseReport(null), "validation response"],
 ] as const)(
   "preserves endpoint-specific invalid response errors %#",

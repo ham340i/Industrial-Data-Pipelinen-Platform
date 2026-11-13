@@ -37,6 +37,7 @@ export interface BlockConfigPanelProps {
   onChange: (nodeId: string, value: Configuration) => void;
   disabled?: boolean;
   serverErrors?: Record<string, string[]>;
+  staleDiagnostics?: boolean;
   focusRequest?: { nodeId: string; field: string | null } | null;
   onRetry?: () => void;
 }
@@ -71,12 +72,14 @@ function ArrayField({
   value,
   onChange,
   issue,
+  previousIssue,
   disabled,
 }: {
   field: ConfigField;
   value: JsonValue | undefined;
   onChange: (value: JsonValue | undefined) => void;
   issue?: string;
+  previousIssue?: string;
   disabled?: boolean;
 }) {
   const text =
@@ -102,6 +105,7 @@ function ArrayField({
         parseError
           ? "Enter a valid JSON list."
           : (issue ??
+            previousIssue ??
             field.description ??
             'Enter a JSON list, such as ["column_a"].')
       }
@@ -130,6 +134,7 @@ function ConfigForm({
   onChange,
   disabled = false,
   serverErrors = {},
+  staleDiagnostics = false,
   focusRequest,
 }: {
   selected: SelectedBlock;
@@ -138,6 +143,7 @@ function ConfigForm({
   onChange: BlockConfigPanelProps["onChange"];
   disabled?: boolean;
   serverErrors?: Record<string, string[]>;
+  staleDiagnostics?: boolean;
   focusRequest?: BlockConfigPanelProps["focusRequest"];
 }) {
   const headingId = useId();
@@ -147,15 +153,19 @@ function ConfigForm({
     if (!focusRequest || disabled) return;
     const controls = Array.from(
       formRef.current?.querySelectorAll<HTMLElement>(
-        "input, textarea, select",
+        "input[data-config-field]:not([type=hidden]):not([readonly]):not(:disabled), textarea[data-config-field]:not([readonly]):not(:disabled), select[data-config-field]:not(:disabled)",
       ) ?? [],
+    ).filter(
+      (input) => !input.closest("[hidden], [aria-hidden=true], [inert]"),
     );
     const field = focusRequest.field?.split(/[.[]/, 1)[0];
     const input = field
       ? (controls.find(
           (input) => input.dataset.configField === focusRequest.field,
         ) ?? controls.find((input) => input.dataset.configField === field))
-      : undefined;
+      : (controls.find(
+          (input) => input.getAttribute("aria-invalid") === "true",
+        ) ?? controls[0]);
     (input ?? formRef.current)?.focus();
   }, [focusRequest, disabled]);
   let fields: ConfigField[];
@@ -233,10 +243,20 @@ function ConfigForm({
             )
             .flatMap(([, messages]) => messages);
           const issue =
-            [...new Set([localIssue, ...remote].filter(Boolean))].join(" ") ||
-            undefined;
+            [
+              ...new Set(
+                [localIssue, ...(staleDiagnostics ? [] : remote)].filter(
+                  Boolean,
+                ),
+              ),
+            ].join(" ") || undefined;
+          const previousIssue =
+            staleDiagnostics && remote.length > 0
+              ? `Previous check: ${[...new Set(remote)].join(" ")}`
+              : undefined;
           const helper =
             issue ??
+            previousIssue ??
             field.description ??
             (field.required ? "Required" : "Optional");
           const options = Array.isArray(field.schema.enum)
@@ -252,6 +272,7 @@ function ConfigForm({
                   field={field}
                   value={current}
                   issue={issue}
+                  previousIssue={previousIssue}
                   disabled={disabled}
                   onChange={(next) => update(field.name, next)}
                 />
@@ -302,7 +323,9 @@ function ConfigForm({
                   required={field.required}
                   error={Boolean(issue)}
                   helperText={
-                    issue ?? (current === null ? "Explicit null value" : helper)
+                    issue ??
+                    previousIssue ??
+                    (current === null ? "Explicit null value" : helper)
                   }
                   type={
                     field.type === "number" || field.type === "integer"
@@ -410,6 +433,7 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
       onChange={props.onChange}
       disabled={props.disabled}
       serverErrors={props.serverErrors}
+      staleDiagnostics={props.staleDiagnostics}
       focusRequest={props.focusRequest}
     />
   );

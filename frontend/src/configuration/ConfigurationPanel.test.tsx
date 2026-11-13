@@ -151,6 +151,55 @@ it("shows only this node's backend field diagnostics and focuses the requested f
   expect(amount()).toHaveFocus();
 });
 
+it("focuses the invalid configuration control for a block-level problem", async () => {
+  server.use(
+    http.get(url, () =>
+      HttpResponse.json(
+        blocks({
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            first: { title: "First setting", type: "string" },
+            enabled: { title: "Enabled setting", type: "boolean" },
+          },
+        }),
+      ),
+    ),
+  );
+  seed({ first: "unchanged", enabled: "invalid" });
+  mount();
+  const select = await screen.findByRole("combobox", {
+    name: "Enabled setting",
+  });
+  act(() => useEditorStore.getState().focusConfiguration("first", null));
+  expect(select).toHaveFocus();
+  expect(useEditorStore.getState().nodes[0].data.config).toEqual({
+    first: "unchanged",
+    enabled: "invalid",
+  });
+});
+
+it("focuses the configuration region when there are no editable fields", async () => {
+  server.use(
+    http.get(url, () =>
+      HttpResponse.json(
+        blocks({
+          type: "object",
+          additionalProperties: false,
+          properties: {},
+        }),
+      ),
+    ),
+  );
+  seed({});
+  mount();
+  const region = await screen.findByRole("region", {
+    name: "Configure Synthetic Add Constant",
+  });
+  act(() => useEditorStore.getState().focusConfiguration("first", null));
+  expect(region).toHaveFocus();
+});
+
 it("retains configuration while registry metadata is loading", async () => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {

@@ -26,10 +26,15 @@ The API needs a configured workspace and project data folder. Use **Settings** i
 ## Error recovery (#33)
 
 Preview errors offer **Configure node** only for a node in the submitted graph.
-The action focuses its affected field when supplied, otherwise the configuration
-region. Editing, changing selection or opening another pipeline discards old
-preview errors. Retry, cancellation and completion preserve keyboard focus
-without moving it away from a field the user has started editing.
+The action focuses its affected field when supplied. For a block-level problem,
+focus moves to the first invalid or editable configuration field when available,
+with the configuration region as a fallback. Editing, changing selection or
+opening another pipeline discards old preview errors. Retry, cancellation and
+completion preserve keyboard focus when the user has started editing a field.
+
+During a draft recheck, the Builder labels the previous diagnostics and dims
+their markers. The previous problems have no navigation actions. Opening a
+different draft clears the previous diagnostics.
 
 **Run saved pipeline** requires a saved, unchanged, currently valid graph. It
 sends that saved revision as a precondition, so a teammate's newer save causes a
@@ -39,10 +44,10 @@ draft automatically. Runtime failures offer **Configure failed block** while
 the result still matches the saved revision and semantic graph. After an edit,
 old evidence is labeled separately and its configuration links disappear.
 
-**Retry run results** repeats only the result read, never the execution. If the
-execute response is lost or malformed, a run may already exist; check run
-history before starting another. Configuration recovery does not save or rerun
-anything. See [design and integration boundaries](../architecture/error-recovery.md)
+**Retry run results** refreshes the displayed run. If a refresh fails, the last
+loaded results stay visible. If the execute response is lost, malformed or
+reports a server error, check run history before starting another. See
+[design and integration boundaries](../architecture/error-recovery.md)
 and [verification](../testing/issue-33-validation-recovery.md).
 
 ## Verification

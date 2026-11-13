@@ -9,10 +9,8 @@ quality checks happen at runtime and are out of scope.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import get_args
 
 from pydantic import Field, ValidationError
-from pydantic_core.core_schema import ErrorType
 
 from app.blocks.contracts import Contract, Port, ports_compatible
 from app.blocks.errors import BlockError
@@ -61,16 +59,18 @@ _RANK = {
     for code in codes
 }
 
-# Custom validators can interpolate rejected values into their exception text.
-# Keep useful built-in constraint messages without rendering arbitrary exceptions.
-_PUBLIC_CONFIG_ERROR_TYPES = frozenset(get_args(ErrorType)) - {
-    "assertion_error",
-    "value_error",
-    "get_attribute_error",
-    "iteration_error",
-    "mapping_type",
-    "datetime_object_invalid",
-    "union_tag_invalid",
+# Public guidance uses fixed text and constraints declared by the block model.
+# Both native parsers and custom validators can embed rejected values in errors.
+_CONFIG_CONSTRAINT_HINTS = {
+    "greater_than": ("gt", "Enter a value greater than {limit} for {label}."),
+    "greater_than_equal": ("ge", "Use a value of at least {limit} for {label}."),
+    "less_than": ("lt", "Enter a value less than {limit} for {label}."),
+    "less_than_equal": ("le", "Use a value of at most {limit} for {label}."),
+    "multiple_of": ("multiple_of", "Enter a multiple of {limit} for {label}."),
+    "string_too_short": ("min_length", "Use at least {limit} characters for {label}."),
+    "string_too_long": ("max_length", "Use at most {limit} characters for {label}."),
+    "too_short": ("min_length", "Use at least {limit} items for {label}."),
+    "too_long": ("max_length", "Use at most {limit} items for {label}."),
 }
 
 
@@ -295,7 +295,9 @@ def _config_diagnostics(
     try:
         block.config_model.model_validate(config)
     except ValidationError as exc:
-        errors = exc.errors(include_input=False)
+        errors = exc.errors(
+            include_input=False, include_context=False, include_url=False
+        )
     except (ValueError, TypeError):
         return [
             Diagnostic(
@@ -308,26 +310,50 @@ def _config_diagnostics(
         return []
     found = []
     for error in errors:
-        field = ".".join(str(part) for part in error["loc"]) or None
+        location = error["loc"]
+        field = ".".join(str(part) for part in location) or None
         label = f"'{field}'" if field else "the configuration"
-        blank = error["type"] == "string_too_short" and (
-            error.get("ctx", {}).get("min_length") == 1
-        )
-        if error["type"] == "missing" or blank:
+        error_type = error["type"]
+        if error_type == "missing":
             code, message = "missing_config", f"Enter a value for {label}."
-        elif error["type"] == "extra_forbidden":
+        elif error_type == "extra_forbidden":
             code, message = "unknown_config", f"Remove the unsupported setting {label}."
-        # PydanticCustomError can reuse a built-in code with arbitrary text.
-        # Only native errors have Pydantic's documentation URL; it is not sent.
-        elif error["type"] in _PUBLIC_CONFIG_ERROR_TYPES and "url" in error:
-            code, message = "invalid_config", f"Fix {label}: {error['msg']}."
         else:
-            code = "invalid_config"
-            message = f"Review {label} against this block's configuration requirements."
+            code, message = _config_constraint_diagnostic(
+                block, config, location, label, error_type
+            )
         found.append(
             Diagnostic(code=code, message=message, node_id=node_id, field=field)
         )
     return found
+
+
+def _config_constraint_diagnostic(
+    block: RegisteredBlock,
+    config: dict[str, object],
+    location: tuple[str | int, ...],
+    label: str,
+    error_type: str,
+) -> tuple[str, str]:
+    constraint = _CONFIG_CONSTRAINT_HINTS.get(error_type)
+    if constraint is not None and len(location) == 1 and isinstance(location[0], str):
+        field = block.config_model.model_fields.get(location[0])
+        if field is not None:
+            attribute, message = constraint
+            for metadata in field.metadata:
+                limit = getattr(metadata, attribute, None)
+                if type(limit) in (int, float):
+                    if (
+                        error_type == "string_too_short"
+                        and limit == 1
+                        and config.get(location[0]) == ""
+                    ):
+                        return "missing_config", f"Enter a value for {label}."
+                    return "invalid_config", message.format(limit=limit, label=label)
+    return (
+        "invalid_config",
+        f"Review {label} against this block's configuration requirements.",
+    )
 
 
 def describe_incompatibility(out: Port, inp: Port) -> str:

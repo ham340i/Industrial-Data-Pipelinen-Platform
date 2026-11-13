@@ -56,3 +56,9 @@ Not recorded. Add actual evidence and distinguish planned checks from executed c
 ## Evidence Links
 
 Not recorded. Add actual evidence and distinguish planned checks from executed checks.
+
+## Issue #30 feature verification
+
+[Run monitoring evidence](../../testing/issue-30-run-monitoring.md) records actual
+component, API and real-browser checks, environment and limitations. Whole-release
+acceptance, independent review and stakeholder signoff remain pending.

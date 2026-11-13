@@ -4,11 +4,14 @@
 
 Reuse Builder validation, selected-node preview and saved-run controls. Recovery
 only selects configuration or retries a read; it never reloads or rewrites the
-user's draft. Preview remains bounded and side-effect free. Monitoring/history
-belongs to #30 and is not duplicated here.
+user's draft. Preview remains bounded and side-effect free. Issue #30 provides
+run history and monitoring through the shared run API.
 
-- Validation diagnostics apply only to the current semantic draft. Existing
-  field focus and fallback recovery notices remain the shared navigation path.
+- Validation gates execution against the current semantic draft. During
+  revalidation, the previous diagnostics are marked as stale and their
+  navigation actions are disabled. Fieldless recovery focuses an invalid
+  configuration control, the first editable control, or the region when no
+  editable control is available.
 - Preview errors refer to the exact requested draft and a node present in that
   snapshot. An unknown node or pipeline-wide failure stays a readable notice.
   Retry and cancellation keep keyboard focus on the persistent preview control.
@@ -20,9 +23,10 @@ belongs to #30 and is not duplicated here.
   only while the result revision and semantic draft match the submitted saved
   snapshot. Newer unsaved edits stay untouched and historical failures are
   labeled instead of being applied to the new graph.
-- Failed result reads can be retried without another execution. Execute itself
-  is never automatically retried: a lost response may hide a started run.
-  Recovery text distinguishes that uncertainty from a definite revision refusal.
+- A result refresh keeps the last loaded run status and evidence visible.
+  A failed refresh labels that evidence and offers a GET retry. A client-error
+  response reports a refusal. A transport failure, malformed acknowledgment or
+  unexpected server failure directs the user to run history before trying again.
 - The API supplies redacted runtime reasons. Request failures use fixed public
   client messages rather than arbitrary HTTP bodies or thrown exception text.
 
@@ -33,8 +37,6 @@ Builder from executing a newer teammate save. Merely comparing revision numbers
 in the UI after execution would discover the mistake too late. Holding a write
 lock for the whole execution is unnecessary because revision records are immutable.
 
-This work adds recovery to existing controls; it does not import unmerged #30
-monitoring changes. That work can reuse the revision guard and configuration
-focus path. History without a matching saved snapshot must not present errors as
-current-draft diagnostics. Independent review and stakeholder acceptance remain
-separate from automated verification.
+The saved-run controls and the #30 monitor share the run detail parser and cache.
+History without a matching saved snapshot presents historical evidence. Independent
+review and stakeholder acceptance remain pending.

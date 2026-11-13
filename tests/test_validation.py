@@ -4,10 +4,11 @@ import json
 import random
 from pathlib import Path
 from typing import Any, Literal
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_core import PydanticCustomError
 
 from app.blocks import BlockConfig, BlockContext, BlockRegistry, Column, DataSchema
@@ -66,6 +67,34 @@ class CustomCodeSourceConfig(SourceConfig):
 
 class CustomCodeSourceBlock(SourceBlock):
     config_model = CustomCodeSourceConfig
+
+
+class CustomLimitSourceConfig(SourceConfig):
+    @field_validator("resource_id")
+    @classmethod
+    def validate_resource(cls, value: str) -> str:
+        raise PydanticCustomError("less_than_equal", "Rejected {le}", {"le": value})
+
+
+class CustomLimitSourceBlock(SourceBlock):
+    config_model = CustomLimitSourceConfig
+
+
+class UuidSourceConfig(BlockConfig):
+    resource_id: UUID = Field(strict=False)
+
+
+class UuidSourceBlock(SourceBlock):
+    config_model = UuidSourceConfig  # type: ignore[assignment]
+
+
+class HexSourceConfig(BlockConfig):
+    model_config = ConfigDict(val_json_bytes="hex")
+    payload: bytes = Field(strict=False)
+
+
+class HexSourceBlock(SourceBlock):
+    config_model = HexSourceConfig  # type: ignore[assignment]
 
 
 class FileChoice(BlockConfig):
@@ -216,10 +245,17 @@ def test_messages_explain_the_fix_without_echoing_config_values():
             {"resource_id": "synthetic-private-value"},
             "resource_id",
         ),
+        (
+            CustomLimitSourceBlock,
+            {"resource_id": "synthetic-private-value"},
+            "resource_id",
+        ),
         (ChoiceSourceBlock, {"source": {"kind": "synthetic-private-value"}}, "source"),
+        (UuidSourceBlock, {"resource_id": "z-private-uuid"}, "resource_id"),
+        (HexSourceBlock, {"payload": "PRIVATEPAYLOAD"}, "payload"),
     ],
 )
-def test_validation_api_omits_private_custom_validator_details(
+def test_validation_api_omits_private_parser_and_validator_details(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     block_type: type[SourceBlock],

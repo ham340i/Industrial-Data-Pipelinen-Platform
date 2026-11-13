@@ -167,7 +167,9 @@ test("failed saved run focuses its block, retains edits and runs a corrected rev
   await configure.focus();
   await page.keyboard.press("Enter");
   const form = page.getByRole("region", { name: "Configure CSV Source" });
-  await expect(form).toBeFocused();
+  await expect(
+    form.getByRole("textbox", { name: "Resource Ref", exact: true }),
+  ).toBeFocused();
   await selectNode(page, "select");
   await page
     .getByRole("textbox", { name: "Columns", exact: true })
