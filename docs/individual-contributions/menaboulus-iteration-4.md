@@ -35,7 +35,9 @@ the Builder parsers check in CI. Record of what was actually run:
   `tests/test_integration_contracts.py`, `tests/fixtures/contracts/*.json`
 - `frontend/src/api/contracts.test.ts`, `frontend/vite.config.ts` (JUnit on CI)
 - Fixes: `app/artifacts/api.py` (project-scoped artifact query),
-  `app/blocks/files.py` (sink creates a missing output folder);
+  `app/blocks/files.py` (sink creates a missing output folder),
+  `app/workspace.py` `project_data_folder` shared by `app/preview/service.py`,
+  `app/pipelines/api.py` and `app/runs/scheduler.py` (review follow-up);
   `tests/test_artifact_api.py` updated to register files where execute
   publishes them
 - `.github/workflows/ci.yml`: JUnit capture and artifact upload for the
@@ -83,6 +85,12 @@ counts: [verification record](../testing/issue-37-integration-matrix.md#observed
 - A sink into `outputs/...` failed with a misleading atomic-publication
   error because only `inputs/` is pre-created. Fixed in the sink; pinned by
   a regression test.
+
+- Al-Yousef's review of PR #85 showed the project-scoped query trusted a
+  symlinked project folder, that execute and timers had the same gap, and
+  that the contract bridge was type-only. Fixed with one shared containment
+  rule and parser-rule checks on both sides; see the
+  [review section](../testing/issue-37-integration-matrix.md#al-yousefs-review-of-pr-85).
 
 ## Failed Attempts / Experiments
 

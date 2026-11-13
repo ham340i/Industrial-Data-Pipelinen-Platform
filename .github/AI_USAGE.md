@@ -177,7 +177,17 @@ claim that the student manually authored or independently tested generated code.
 
 ## Issue #37 API/engine block integration matrix
 
-AI contribution: 50% or more AI-generated.
+AI contribution: 50% or more AI-generated overall, declared per file exactly
+as in the PR description: `50% or more` for `tests/integration_support.py`,
+`tests/test_integration_matrix.py`, `tests/test_integration_failures.py`,
+`tests/test_integration_contracts.py`, `tests/fixtures/contracts/*.json`,
+`frontend/src/api/contracts.test.ts`,
+`docs/testing/issue-37-integration-matrix.md` and
+`docs/individual-contributions/menaboulus-iteration-4.md`; `below 50%` for
+the small edits to `app/artifacts/api.py`, `app/blocks/files.py`,
+`app/workspace.py`, `app/pipelines/api.py`, `app/preview/service.py`,
+`app/runs/scheduler.py`, `tests/test_artifact_api.py`, `tests/conftest.py`,
+`frontend/vite.config.ts` and `.github/workflows/ci.yml`.
 Tool: Claude Code. Assisted with the API-level integration fixtures
 (`tests/integration_support.py`), the source → transform → quality → sink
 compatibility matrix, the malformed-definition / schema-mismatch /
@@ -201,3 +211,25 @@ the generated tests themselves were caught by running them and corrected
 without touching the product: re-running a no-clobber sink, reusing a
 pipeline name within a project, and a leak assertion that tripped on an
 ordinary `/` in an error message.
+
+Corrections found in `Al-Yousef`'s review of
+[PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85)
+(Claude Code, each verified by a new automated test): the project-scoped
+artifact query handed `<workspace>/<project id>` to `resource_path`, which
+resolves and then trusts the root it is given, so a symlink or junction
+installed at the project folder redirected the query into another project's
+folder (project A's metadata with project B's rows) or outside the workspace
+entirely. The execute and timer paths built the same unchecked folder. One
+shared rule, `project_data_folder` in `app/workspace.py`, now rejects a
+missing or aliased project folder; the artifact query answers
+`409 artifact_unavailable`, execute refuses with `422
+workspace_project_folder` before creating a run, timer ticks fall back to
+running without a workspace so the failure is recorded, and the preview
+service reuses the rule instead of its own copy. Second, the
+backend/frontend contract bridge compared only JSON types, so a same-type
+incompatible change such as `level: "warn"` passed the backend check while
+the Builder parser rejected it; the bridge now also applies the parser's
+own value rules (enumerations, identifier format, event ordering, the
+`valid`/diagnostics relationship) to every live response and to the recorded
+fixtures, with same-type negative cases on both sides. Third, the AI
+declaration above was restated per file to match the PR description.

@@ -75,26 +75,64 @@ fresh name); and the 422 message for malformed definitions legitimately
 contains a `/` character, so the leak assertion now checks for the real
 workspace path instead.
 
+### `Al-Yousef`'s review of PR #85
+
+Three findings, each confirmed and fixed with a regression test rather than
+argued with:
+
+1. **Project-folder containment.** The project-scoped artifact query (fix 1
+   above) passed `<workspace>/<project id>` to `resource_path`, which
+   resolves and then trusts the root it is given. Replacing project A's
+   folder with a symlink or junction to project B's folder returned A's
+   metadata with B's rows, and a link pointing outside the workspace also
+   answered 200. The execute and timer paths built the same unchecked
+   folder. `project_data_folder` in `app/workspace.py` is now the single
+   rule, shared by preview (which previously had its own copy), execute,
+   timer ticks and the artifact query: the folder must exist, be a
+   directory and resolve to exactly `<resolved workspace>/<project id>`.
+   Tests: `test_artifact_query_refuses_a_project_folder_that_aliases_another`
+   (link to another project, then to a folder outside the workspace) and
+   `test_execute_refuses_an_unusable_project_folder_before_creating_a_run`
+   (aliased and missing). Execute now refuses with
+   `422 workspace_project_folder` and creates no run; a configured-but-absent
+   workspace still records a failed run with `workspace_required`.
+2. **Contract bridge compared types only.** A live event with `level:
+   "warn"` has the same Python shape as `"warning"` but `parseRun` rejects
+   it. `test_integration_contracts.py` now applies the parser's own rules
+   (enumerations, identifier format, strictly increasing event sequences,
+   `valid` equals "no diagnostics", measurement and failure shapes) to every
+   live response and to the recorded fixtures, in addition to the shape
+   check. `test_same_type_incompatible_changes_fail_the_bridge` proves four
+   same-type mutations fail on the backend, and the frontend test proves the
+   same mutations fail `parseRun` / `parseReport`.
+3. **Declaration wording.** The PR description listed the AI contribution
+   per file while `.github/AI_USAGE.md` gave one issue-level line; the usage
+   entry now carries the identical per-file split.
+
 ## Observed results
 
-macOS, Python 3.12.15 virtual environment, Node 22.21.0, November 12, 2026,
-revision `4e744a5` ([PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85)).
+macOS, Python 3.12.15 virtual environment, Node 22.21.0, November 13, 2026,
+after the review follow-ups above ([PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85)).
 
-- `python -m pytest -q`: **880 passed** (39 new: 18 in
-  `test_integration_matrix.py`, 17 in `test_integration_failures.py`, 4 in
-  `test_integration_contracts.py`). The new modules run in under two seconds.
+- `python -m pytest -q`: **887 passed** (46 new: 18 in
+  `test_integration_matrix.py`, 20 in `test_integration_failures.py`, 8 in
+  `test_integration_contracts.py`). The new modules run in about two seconds.
 - `python -m ruff check`: passed. `python -m ruff format --check`: passed.
   `python -m mypy`: no issues in 104 source files.
-- `npx vitest run src/api/contracts.test.ts`: 4 passed. `npx eslint`,
+- `npx vitest run src/api/contracts.test.ts`: 8 passed. `npx eslint`,
   `npx prettier --check` and `npx tsc --noEmit` on the touched frontend
-  files: passed.
+  files: passed; the full `npm run check` (173 tests, build) passed on the
+  first revision and in hosted CI.
 - `python3 scripts/check_repository.py` and `python3 scripts/check_docs.py`:
   passed.
 
-Hosted CI results, including the uploaded JUnit artifacts, are recorded on
-the pull request. No manual UI demonstration applies: the matrix is
-API-level by design, and the UI side is covered by the parser contract tests
-above; the Iteration 4 acceptance workflow (#38) exercises the integrated UI.
+Hosted CI on the first revision (`4c0e860`): all eight checks passed,
+including both standalone smoke jobs and SonarCloud; the JUnit artifacts
+were uploaded by the backend and frontend jobs. Results for the follow-up
+revision are recorded on the pull request. No manual UI demonstration
+applies: the matrix is API-level by design, and the UI side is covered by
+the parser contract tests above; the Iteration 4 acceptance workflow (#38)
+exercises the integrated UI.
 
 ## Limitations
 
