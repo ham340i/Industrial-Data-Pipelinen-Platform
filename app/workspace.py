@@ -124,6 +124,25 @@ def checked_root(path: Path) -> Path:
         ) from None
 
 
+def project_folders(root: Path) -> dict[str, Path]:
+    """Real project directories directly beneath the canonical workspace root.
+
+    Symlinks and junctions are excluded on the listing itself, without
+    following them, so every returned path is canonical by construction.
+    This is the only function that touches the filesystem for project
+    lookup, and it never receives request data.
+    """
+    base = root.resolve(strict=True)
+    with os.scandir(base) as entries:
+        return {
+            entry.name: base / entry.name
+            for entry in entries
+            if not entry.is_symlink()
+            and not entry.is_junction()
+            and entry.is_dir(follow_symlinks=False)
+        }
+
+
 def project_data_folder(root: Path, project_id: str) -> Path:
     """The prepared ``<root>/<project_id>`` folder, rejecting links and aliases.
 
@@ -133,28 +152,17 @@ def project_data_folder(root: Path, project_id: str) -> Path:
     project folder would otherwise redirect reads into another project or
     outside the workspace (#37 review).
 
-    The request-supplied ``project_id`` never reaches the filesystem. The
-    trusted workspace root is canonicalised and listed, and the id must equal
-    the name of an entry that is a real directory (not a symlink or junction,
-    checked on the listing itself without following links). A non-link
-    directory child of a canonical base is canonical by construction, so no
-    further path probing is needed or performed. Raises ``ValueError``
-    otherwise.
+    The request-supplied ``project_id`` is only ever used as a key into the
+    trusted listing from ``project_folders``; it never reaches a filesystem
+    call. Raises ``ValueError`` when no real directory of that name exists.
     """
     try:
-        base = root.resolve(strict=True)
-        with os.scandir(base) as entries:
-            match = next((entry for entry in entries if entry.name == project_id), None)
-        if (
-            match is None
-            or match.is_symlink()
-            or match.is_junction()
-            or not match.is_dir(follow_symlinks=False)
-        ):
-            raise ValueError("Project folder is unavailable")
-        folder = base / match.name
+        folders = project_folders(root)
     except OSError:
-        raise ValueError("Project folder is unavailable") from None
+        raise ValueError("Workspace root is unavailable") from None
+    folder = folders.get(project_id)
+    if folder is None:
+        raise ValueError("Project folder is missing or aliases another folder")
     return folder
 
 
