@@ -89,12 +89,14 @@ def parsable_summary(run: Any) -> None:
     assert run["schema_version"] == 1
     for key in ("id", "project_id", "pipeline_id", "pipeline_revision_id"):
         assert IDENTIFIER.match(run[key]), key
-    assert is_count(run["revision"]) and run["revision"] >= 1
+    assert is_count(run["revision"])
+    assert run["revision"] >= 1
     assert run["state"] in RUN_STATES, run["state"]
     assert is_date(run["created_at"])
     for key in ("started_at", "ended_at"):
         assert run[key] is None or is_date(run[key]), key
-    assert is_measurement(run["duration_ms"]) and is_measurement(run["row_count"])
+    assert is_measurement(run["duration_ms"])
+    assert is_measurement(run["row_count"])
     assert is_failure(run["error"])
 
 
@@ -103,7 +105,8 @@ def parsable_run(run: Any) -> None:
     parsable_summary(run)
     seen: set[str] = set()
     for block in run["blocks"]:
-        assert isinstance(block["node_id"], str) and block["node_id"] not in seen
+        assert isinstance(block["node_id"], str)
+        assert block["node_id"] not in seen
         seen.add(block["node_id"])
         assert isinstance(block["block_id"], str)
         assert isinstance(block["block_version"], str)
@@ -116,7 +119,8 @@ def parsable_run(run: Any) -> None:
         assert is_failure(block["error"])
     previous = -1
     for event in run["events"]:
-        assert is_count(event["sequence"]) and event["sequence"] > previous
+        assert is_count(event["sequence"])
+        assert event["sequence"] > previous
         previous = event["sequence"]
         assert is_date(event["created_at"])
         assert event["level"] in LEVELS, event["level"]
@@ -131,8 +135,10 @@ def parsable_run(run: Any) -> None:
 
 
 def parsable_run_list(page: Any) -> None:
-    assert is_count(page["total"]) and is_count(page["offset"])
-    assert is_count(page["limit"]) and len(page["items"]) <= page["limit"]
+    assert is_count(page["total"])
+    assert is_count(page["offset"])
+    assert is_count(page["limit"])
+    assert len(page["items"]) <= page["limit"]
     for item in page["items"]:
         parsable_summary(item)
     assert len({item["id"] for item in page["items"]}) == len(page["items"])
@@ -144,18 +150,21 @@ def parsable_report(report: Any) -> None:
     assert report["valid"] == (len(report["diagnostics"]) == 0)
     for diagnostic in report["diagnostics"]:
         assert isinstance(diagnostic["code"], str)
-        assert isinstance(diagnostic["message"], str) and diagnostic["message"].strip()
+        assert isinstance(diagnostic["message"], str)
+        assert diagnostic["message"].strip()
         for key in ("node_id", "edge_id", "port", "field"):
             assert diagnostic[key] is None or isinstance(diagnostic[key], str), key
 
 
 def parsable_execute(response: Any) -> None:
-    assert IDENTIFIER.match(response["run_id"]) and response["state"] in RUN_STATES
+    assert IDENTIFIER.match(response["run_id"])
+    assert response["state"] in RUN_STATES
 
 
 def parsable_error(envelope: Any) -> None:
     error = envelope["error"]
-    assert isinstance(error["code"], str) and isinstance(error["message"], str)
+    assert isinstance(error["code"], str)
+    assert isinstance(error["message"], str)
     assert isinstance(error["correlation_id"], str)
 
 
@@ -211,7 +220,8 @@ def test_failed_run_contract_carries_block_and_run_errors(bench: Workbench):
     assert executed.status_code == 201, executed.text
     detail = bench.run(executed.json()["run_id"])
     assert detail["state"] == "failed"
-    assert detail["error"] and detail["blocks"][1]["error"]
+    assert detail["error"]
+    assert detail["blocks"][1]["error"]
     check("run-detail-failed", detail, parsable_run)
 
 

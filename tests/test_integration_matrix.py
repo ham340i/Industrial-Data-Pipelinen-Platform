@@ -163,7 +163,8 @@ def test_select_rename_filter_cast_sort_chain_publishes_typed_rows(
     assert detail["state"] == "succeeded", detail["error"]
     assert set(block_states(detail).values()) == {"completed"}
     rows_out = {b["node_id"]: b["rows_out"] for b in detail["blocks"]}
-    assert rows_out["select"] == 4 and rows_out["filter"] == 3
+    assert rows_out["select"] == 4
+    assert rows_out["filter"] == 3
     assert detail["row_count"] == 3
     assert published_rows(bench, detail) == [
         ["delta", 4.0],
@@ -293,7 +294,8 @@ def test_required_gate_failure_blocks_publication_and_registers_nothing(
     }
     sink = detail["blocks"][2]
     assert sink["error"]["code"] == "dependency_failed"
-    assert detail["outputs"] == [] and detail["row_count"] is None
+    assert detail["outputs"] == []
+    assert detail["row_count"] is None
     assert not (bench.root / "result.parquet").exists()
 
 
@@ -331,7 +333,8 @@ def test_run_status_paths_list_filter_and_scope_the_matrix_runs(bench: Workbench
     assert bench.runs(project_id=bench.project_id, state="cancelled")["total"] == 0
     detail = bench.run(ids[2])
     sequences = [event["sequence"] for event in detail["events"]]
-    assert sequences == sorted(sequences) and len(set(sequences)) == len(sequences)
+    assert sequences == sorted(sequences)
+    assert len(set(sequences)) == len(sequences)
 
 
 def test_sink_creates_a_missing_output_folder_inside_the_project(bench: Workbench):

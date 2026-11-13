@@ -76,7 +76,8 @@ def test_malformed_definitions_are_refused_at_save_without_persistence(
     assert response.status_code == 422, response.text
     error = response.json()["error"]
     assert error["code"] == "validation_error"
-    assert "Traceback" not in response.text and str(bench.root) not in response.text
+    assert "Traceback" not in response.text
+    assert str(bench.root) not in response.text
     assert bench.client.get(bench.pipelines).json()["total"] == 0
 
 
@@ -219,7 +220,8 @@ def test_missing_input_file_fails_without_leaking_the_workspace_path(
     detail = failed_run(bench, linear(source, CSV_SINK))
     assert detail["error"]["code"] == "file_unavailable"
     text = bench.client.get(f"/api/v1/runs/{detail['id']}").text
-    assert str(bench.root) not in text and "absent.csv" not in text
+    assert str(bench.root) not in text
+    assert "absent.csv" not in text
 
 
 def test_sql_work_budget_exhaustion_is_a_structured_query_failure(bench: Workbench):
@@ -295,7 +297,8 @@ def test_preview_and_execute_agree_on_the_same_project_folder(bench: Workbench):
     preview = bench.preview(definition, "source", max_rows=10, max_cells=100)
     assert preview.status_code == 200, preview.text
     sample = preview.json()
-    assert sample["full_row_count"] == 4 and sample["schema_scope"] == "declared"
+    assert sample["full_row_count"] == 4
+    assert sample["schema_scope"] == "declared"
     detail = bench.run_pipeline(definition)
     assert detail["state"] == "succeeded", detail["error"]
     assert detail["row_count"] == sample["full_row_count"]
