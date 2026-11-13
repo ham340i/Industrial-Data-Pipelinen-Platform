@@ -59,15 +59,16 @@ def artifact_query(
     artifact_id: UUID,
     payload: ArtifactQuery,
     db: Annotated[Database, Depends(database)],
-    root: Annotated[Path, Depends(workspace_root)],
 ) -> ArtifactQueryResponse:
     # Sinks publish under <workspace>/<project>/<resource_ref> (execute, #29),
     # so the query must resolve the artifact inside the same project folder
     # instead of the bare workspace root (#37 integration matrix). The folder
-    # is checked for links/aliases first: resource_path trusts its root.
+    # is checked for links/aliases first: resource_path trusts its root. The
+    # root is read from saved settings here, as the execute API does, rather
+    # than injected as a handler parameter.
     artifact = get_artifact(db, str(artifact_id))
     try:
-        folder = project_data_folder(root, artifact.project_id)
+        folder = project_data_folder(workspace_root(db), artifact.project_id)
     except ValueError:
         raise ArtifactUnavailable("Registered artifact is unavailable.") from None
     result = query_artifact(db, str(artifact_id), folder, payload)
