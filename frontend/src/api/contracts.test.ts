@@ -74,3 +74,38 @@ it("rejects a mismatched project identity on the recorded run", () => {
     parseRun(data, data.pipeline_id, data.project_id, data.id),
   ).toThrow("run evidence");
 });
+
+it.each([
+  [
+    "a same-type event level the parser does not know",
+    (d: Record<string, unknown>) => {
+      (d.events as Record<string, unknown>[])[0].level = "warn";
+    },
+  ],
+  [
+    "a same-type block state the parser does not know",
+    (d: Record<string, unknown>) => {
+      (d.blocks as Record<string, unknown>[])[0].state = "done";
+    },
+  ],
+  [
+    "a repeated event sequence",
+    (d: Record<string, unknown>) => {
+      const events = d.events as Record<string, unknown>[];
+      events[1].sequence = events[0].sequence;
+    },
+  ],
+])("rejects the recorded run after %s", (_label, mutate) => {
+  const data = fixture("run-detail-succeeded") as Record<string, unknown>;
+  mutate(data);
+  const ids = data as Record<string, string>;
+  expect(() => parseRun(data, ids.project_id, ids.pipeline_id, ids.id)).toThrow(
+    "run evidence",
+  );
+});
+
+it("rejects a validation report whose valid flag contradicts its list", () => {
+  const data = fixture("validation-report") as Record<string, unknown>;
+  data.valid = true;
+  expect(() => parseReport(data)).toThrow("validation response");
+});
