@@ -53,7 +53,9 @@ POST .../timer/stop ───▶ TimerScheduler.stop ─▶ cancels + joins the 
   `Cancellation` token immediately and then waits (bounded by a timeout) for
   the thread to return. A block already running cannot be interrupted mid-call
   (Python cannot preempt a thread), so a one-node timer's in-flight run still
-  finishes and is recorded truthfully as `succeeded`; cancellation only skips
+  finishes successfully and is recorded truthfully as `succeeded`. If Stop arrives
+  after a tick is accepted but before its block starts, the run is `cancelled`.
+  Cancellation only skips
   work that has not started yet, exactly like the rest of the executor.
 - **A timed-out `stop()` is reported honestly, not swallowed.** If the bound
   elapses while a block is still running, `stop()` raises `TimerStopTimedOut`

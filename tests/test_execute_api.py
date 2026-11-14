@@ -3,6 +3,7 @@
 
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -241,13 +242,51 @@ def test_timer_ticks_create_isolated_runs_without_overlap(client: TestClient):
     path = pipelines_path(client)
     pipeline_id = create(client, path, timer_graph(1))
 
-    client.post(f"{path}/{pipeline_id}/timer/start")
-    time.sleep(2.3)
-    client.post(f"{path}/{pipeline_id}/timer/stop")
+    start = client.post(f"{path}/{pipeline_id}/timer/start")
+    assert start.status_code == 201, start.text
+    params = {"pipeline_id": pipeline_id, "limit": 100}
+    try:
+        deadline = time.monotonic() + 10
+        while True:
+            response = client.get("/api/v1/runs", params=params)
+            assert response.status_code == 200, response.text
+            runs = response.json()
+            assert all(
+                item["state"] in {"queued", "running", "succeeded"}
+                for item in runs["items"]
+            ), runs
+            completed = {
+                item["id"] for item in runs["items"] if item["state"] == "succeeded"
+            }
+            if len(completed) >= 2:
+                break
+            assert time.monotonic() < deadline, runs
+            time.sleep(0.05)
+    finally:
+        stop = client.post(f"{path}/{pipeline_id}/timer/stop")
+        assert stop.status_code == 200, stop.text
 
-    runs = client.get("/api/v1/runs", params={"pipeline_id": pipeline_id}).json()
-    assert 1 <= runs["total"] <= 3
-    assert all(item["state"] == "succeeded" for item in runs["items"])
+    response = client.get("/api/v1/runs", params=params)
+    assert response.status_code == 200, response.text
+    runs = response.json()
+    items = sorted(runs["items"], key=lambda item: item["created_at"])
+    assert runs["total"] == len(items), runs
+    assert len({item["id"] for item in items}) == len(items), runs
+    assert completed <= {
+        item["id"] for item in items if item["state"] == "succeeded"
+    }, runs
+    assert all(item["state"] in {"succeeded", "cancelled"} for item in items), runs
+    # Stop may cancel one final tick before its trigger starts. Earlier ticks
+    # must succeed; allowing cancellation everywhere would hide real failures.
+    assert all(item["state"] == "succeeded" for item in items[:-1]), runs
+    if items[-1]["state"] == "cancelled":
+        assert items[-1]["error"]["code"] == "cancelled", runs
+    assert all(item["started_at"] and item["ended_at"] for item in items), runs
+    for previous, following in zip(items, items[1:], strict=False):
+        assert datetime.fromisoformat(previous["ended_at"]) <= datetime.fromisoformat(
+            following["started_at"]
+        ), runs
+    assert client.get(f"{path}/{pipeline_id}/timer").json()["running"] is False
 
 
 def test_timer_stop_still_finishing_is_structured_409(client: TestClient):
