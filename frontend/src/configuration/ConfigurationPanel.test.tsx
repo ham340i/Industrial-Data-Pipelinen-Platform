@@ -125,7 +125,7 @@ it("identifies required, range and type problems without overwriting invalid inp
 
 it("shows only this node's backend field diagnostics and focuses the requested field", async () => {
   ready();
-  seed();
+  seed({ amount: null });
   mount([
     {
       code: "invalid_config",
@@ -145,10 +145,59 @@ it("shows only this node's backend field diagnostics and focuses the requested f
     },
   ]);
   await screen.findByRole("spinbutton", { name: "Amount" });
-  expect(screen.getByText("Server field constraint.")).toBeVisible();
+  expect(screen.getByText(/Server field constraint\./)).toBeVisible();
   expect(screen.queryByText("Other node problem.")).not.toBeInTheDocument();
   act(() => useEditorStore.getState().focusConfiguration("first", "amount"));
   expect(amount()).toHaveFocus();
+});
+
+it("focuses the invalid configuration control for a block-level problem", async () => {
+  server.use(
+    http.get(url, () =>
+      HttpResponse.json(
+        blocks({
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            first: { title: "First setting", type: "string" },
+            enabled: { title: "Enabled setting", type: "boolean" },
+          },
+        }),
+      ),
+    ),
+  );
+  seed({ first: "unchanged", enabled: "invalid" });
+  mount();
+  const select = await screen.findByRole("combobox", {
+    name: "Enabled setting",
+  });
+  act(() => useEditorStore.getState().focusConfiguration("first", null));
+  expect(select).toHaveFocus();
+  expect(useEditorStore.getState().nodes[0].data.config).toEqual({
+    first: "unchanged",
+    enabled: "invalid",
+  });
+});
+
+it("focuses the configuration region when there are no editable fields", async () => {
+  server.use(
+    http.get(url, () =>
+      HttpResponse.json(
+        blocks({
+          type: "object",
+          additionalProperties: false,
+          properties: {},
+        }),
+      ),
+    ),
+  );
+  seed({});
+  mount();
+  const region = await screen.findByRole("region", {
+    name: "Configure Synthetic Add Constant",
+  });
+  act(() => useEditorStore.getState().focusConfiguration("first", null));
+  expect(region).toHaveFocus();
 });
 
 it("retains configuration while registry metadata is loading", async () => {
@@ -173,6 +222,29 @@ it("retains configuration while registry metadata is loading", async () => {
     42,
   );
 });
+
+it.each([
+  { catalog: [] },
+  {
+    catalog: blocks({
+      type: "object",
+      properties: { unsafe: { type: "object" } },
+    }),
+  },
+])(
+  "focuses the recovery notice when a diagnostic has no editable form",
+  async ({ catalog }) => {
+    server.use(http.get(url, () => HttpResponse.json(catalog)));
+    seed({ amount: 42 });
+    mount();
+    const notice = await screen.findByRole("alert");
+    act(() => useEditorStore.getState().focusConfiguration("first", "amount"));
+    expect(notice).toHaveFocus();
+    expect(useEditorStore.getState().nodes[0].data.config).toEqual({
+      amount: 42,
+    });
+  },
+);
 
 it("recovers a registry failure through retry without reflecting the raw response", async () => {
   server.use(

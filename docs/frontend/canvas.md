@@ -22,6 +22,34 @@ In a project, select CSV, JSON or Parquet Source, or Select Columns on a support
 
 The API needs a configured workspace and project data folder. Use **Settings** in the sidebar or **Configure workspace** on a setup error to save a root and prepare project folders. The app setting overrides the environment fallback. See [workspace settings](../architecture/workspace-settings.md) and [supported paths and budgets](../architecture/selected-node-preview.md). The library scrolls inside its panel to keep preview accessible even with many registered blocks.
 
+
+## Error recovery (#33)
+
+Preview errors offer **Configure node** only for a node in the submitted graph.
+The action focuses its affected field when supplied. For a block-level problem,
+focus moves to the first invalid or editable configuration field when available,
+with the configuration region as a fallback. Editing, changing selection or
+opening another pipeline discards old preview errors. Retry, cancellation and
+completion preserve keyboard focus when the user has started editing a field.
+
+During a draft recheck, the Builder labels the previous diagnostics and dims
+their markers. The previous problems have no navigation actions. Opening a
+different draft clears the previous diagnostics.
+
+**Run saved pipeline** requires a saved, unchanged, currently valid graph. It
+sends that saved revision as a precondition, so a teammate's newer save causes a
+conflict instead of executing a different revision. Open the latest version or
+save a copy to resolve the conflict; neither recovery overwrites the current
+draft automatically. Runtime failures offer **Configure failed block** while
+the result still matches the saved revision and semantic graph. After an edit,
+old evidence is labeled separately and its configuration links disappear.
+
+**Retry run results** refreshes the displayed run. If a refresh fails, the last
+loaded results stay visible. If the execute response is lost, malformed or
+reports a server error, check run history before starting another. See
+[design and integration boundaries](../architecture/error-recovery.md)
+and [verification](../testing/issue-33-validation-recovery.md).
+
 ## Verification
 
 Run `npm run check --prefix frontend`, followed by `npm run test:browser --prefix frontend` with Chromium installed. Run the backend suite using the developer guide. The real API suite (`npm run test:standalone --prefix frontend`) uses production blocks for creation, configuration and connections, and separately checks reopening an existing hidden example. See the [library cleanup verification](../testing/block-library-visibility.md) for current evidence and the [iteration evidence](../iterations/iteration-2/testing-evidence.md) for historical results.

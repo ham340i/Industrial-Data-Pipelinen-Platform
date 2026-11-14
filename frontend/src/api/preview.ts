@@ -41,6 +41,54 @@ export class PreviewError extends ApiError {
     super(message, "http", status);
   }
 }
+// Display only public recovery copy, never arbitrary server exception text.
+const recoveryMessages: Record<string, string> = {
+  file_unavailable: "Input file is missing or unreadable.",
+  unsafe_resource:
+    "Resource must be a supported file inside this project's workspace.",
+  schema_mismatch: "The sampled data does not match the configured schema.",
+  cast_failed: "A sampled value cannot be converted to the configured type.",
+  missing_column: "A selected column is absent from the input schema.",
+  invalid_csv: "CSV format, encoding, headers or row widths are invalid.",
+  preview_columns:
+    "Preview requires at most 128 columns with names of at most 128 characters.",
+  preview_field_limit: "A preview field exceeds 4096 characters.",
+  invalid_json:
+    "JSON must be an array of records with unique keys and scalar values.",
+  invalid_parquet:
+    "Parquet metadata or sampled data is invalid or unsupported.",
+  schema_required:
+    "Provide an explicit schema for empty or all-null JSON columns.",
+  unsupported_type:
+    "The sampled columns must have consistent supported scalar types.",
+  preview_decode_limit:
+    "Parquet metadata or row groups exceed the preview decoding budget. Use smaller row groups or input.",
+  preview_read_limit:
+    "Preview reached its input-byte or record-size budget. Use a smaller sample or input.",
+  preview_limit: "The limits cannot hold a row, or a block exceeded them.",
+  invalid_inputs: "The sampled input does not match this block's port schema.",
+  invalid_outputs: "The block returned an invalid preview schema or sample.",
+  invalid_config: "The block configuration is invalid.",
+  unsupported_value: "A sampled value exceeds the supported scalar range.",
+  resource_unavailable:
+    "The project's resource binding does not provide a file.",
+  workspace_required:
+    "Configure Workspace in Settings and prepare this project's data folder before previewing.",
+  workspace_settings_unavailable:
+    "Workspace settings are unavailable. Check Settings and retry.",
+  workspace_project_folder:
+    "Prepare this project's data folder in Workspace settings.",
+  preview_invalid_graph:
+    "Check the selected input path and block configuration before retrying.",
+  preview_node_missing: "Select a node that exists in the current draft.",
+  preview_graph_limit:
+    "Preview supports at most 20 nodes on the selected input path.",
+  preview_block_unavailable:
+    "A block version on the selected input path is unavailable.",
+  preview_unsupported: "This input path does not support bounded preview.",
+  preview_output_missing: "Select a tabular output on this node.",
+  project_not_found: "Project was not found.",
+};
 const object = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 const count = (v: unknown): v is number =>
@@ -185,14 +233,28 @@ export async function previewNode(
       !optional(e.port ?? null)
     )
       return invalid();
+    const nodeId = request.definition.nodes.some(
+      (node) => node.id === e.node_context,
+    )
+      ? (e.node_context as string)
+      : null;
+    const context = (value: unknown): string | null =>
+      typeof value === "string" &&
+      /^[A-Za-z_][A-Za-z0-9_.[\]-]{0,127}$/.test(value)
+        ? value
+        : null;
     throw new PreviewError(
-      e.message,
+      Object.hasOwn(recoveryMessages, e.code)
+        ? recoveryMessages[e.code]
+        : "Preview could not complete. Check the input path and configuration, then retry. Your draft is unchanged.",
       e.code,
       response.status,
-      e.node_context as string | null,
-      (e.field as string | null) ?? null,
-      (e.port as string | null) ?? null,
-      e.correlation_id,
+      nodeId,
+      nodeId ? context(e.field) : null,
+      nodeId ? context(e.port) : null,
+      /^[A-Za-z0-9_-]{1,100}$/.test(e.correlation_id)
+        ? e.correlation_id
+        : "unavailable",
     );
   }
   return parsePreview(response.data, request);

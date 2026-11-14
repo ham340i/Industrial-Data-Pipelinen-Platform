@@ -47,4 +47,23 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   expect(
     await nodes.evaluateAll((all) => all.map((n) => n.getAttribute("data-id"))),
   ).toEqual(ids);
+
+  await nodes.first().click();
+  const amount = page.getByRole("spinbutton", { name: "Min Rows" });
+  await amount.fill("-1");
+  const problems = page.getByRole("list", { name: "Pipeline problems" });
+  const invalidAmount = problems.getByRole("button", {
+    name: /Use a value of at least 0 for 'min_rows'/,
+  });
+  await expect(invalidAmount).toBeVisible();
+  await invalidAmount.focus();
+  await page.keyboard.press("Enter");
+  await expect(amount).toBeFocused();
+  await expect(amount).toHaveValue("-1");
+  await amount.fill("2");
+  await expect(status).toHaveText("1 problem must be fixed before running.");
+  await expect(invalidAmount).toHaveCount(0);
+  await expect(amount).toHaveValue("2");
+  await expect(nodes).toHaveCount(2);
+  await expect(page.locator(".react-flow__edge")).toHaveCount(1);
 });

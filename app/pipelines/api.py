@@ -27,7 +27,7 @@ from app.runs.scheduler import (
     TimerStopTimedOut,
     scheduler,
 )
-from app.schemas.execute import ExecuteResponse, TimerStatusResponse
+from app.schemas.execute import ExecuteRequest, ExecuteResponse, TimerStatusResponse
 from app.schemas.projects import ProjectCreate
 
 router = APIRouter(prefix="/api/v1/projects/{project_id}/pipelines", tags=["pipelines"])
@@ -282,11 +282,21 @@ def rename_pipeline(
 
 
 def load_latest_definition(
-    db: Database, project_id: UUID, pipeline_id: UUID
+    db: Database,
+    project_id: UUID,
+    pipeline_id: UUID,
+    expected_revision: int | None = None,
 ) -> tuple[str, PipelineDefinition]:
     """The latest revision's id and parsed definition, for execute/timer (#29)."""
     with db.transaction() as session:
         revision = latest_revision(session, project_id, pipeline_id)
+        if expected_revision is not None and revision.revision != expected_revision:
+            raise PipelineError(
+                "revision_conflict",
+                "This pipeline changed since it was opened. "
+                "Open the latest version before running it.",
+            )
+        # Capture the immutable ID with the guard; never resolve latest again.
         revision_id, stored = revision.id, revision.definition
     return revision_id, PipelineDefinition.from_json(json.dumps(stored))
 
@@ -306,6 +316,7 @@ def execute_pipeline(
     project_id: UUID,
     pipeline_id: UUID,
     db: Annotated[Database, Depends(database)],
+    payload: ExecuteRequest | None = None,
 ) -> ExecuteResponse:
     """Run the latest saved revision now and return its run ID (#29).
 
@@ -313,7 +324,9 @@ def execute_pipeline(
     refused with a structured ``invalid_pipeline`` error and create no run,
     exactly like a direct ``execute_revision`` call.
     """
-    revision_id, _ = load_latest_definition(db, project_id, pipeline_id)
+    revision_id, _ = load_latest_definition(
+        db, project_id, pipeline_id, payload.expected_revision if payload else None
+    )
     root = effective_workspace_root(db)
     try:
         outcome = execute_revision(

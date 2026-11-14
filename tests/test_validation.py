@@ -3,11 +3,13 @@
 import json
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import Field
+from pydantic import ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.blocks import BlockConfig, BlockContext, BlockRegistry, Column, DataSchema
 from app.blocks import Port, PortValues
@@ -39,6 +41,76 @@ class SourceBlock(NeverRuns):
     descriptor = AddConstantBlock.descriptor.model_copy(
         update={"block_id": "synthetic.source", "block_type": "source", "inputs": ()}
     )
+
+
+class RejectingSourceConfig(SourceConfig):
+    @field_validator("resource_id")
+    @classmethod
+    def validate_resource(cls, value: str) -> str:
+        raise ValueError(f"Rejected {value} using C:\\example\\private.db")
+
+
+class RejectingSourceBlock(SourceBlock):
+    config_model = RejectingSourceConfig
+
+
+class CustomCodeSourceConfig(SourceConfig):
+    @field_validator("resource_id")
+    @classmethod
+    def validate_resource(cls, value: str) -> str:
+        raise PydanticCustomError(
+            "string_type",
+            "Rejected {value} using C:\\example\\private.db",
+            {"value": value},
+        )
+
+
+class CustomCodeSourceBlock(SourceBlock):
+    config_model = CustomCodeSourceConfig
+
+
+class CustomLimitSourceConfig(SourceConfig):
+    @field_validator("resource_id")
+    @classmethod
+    def validate_resource(cls, value: str) -> str:
+        raise PydanticCustomError("less_than_equal", "Rejected {le}", {"le": value})
+
+
+class CustomLimitSourceBlock(SourceBlock):
+    config_model = CustomLimitSourceConfig
+
+
+class UuidSourceConfig(BlockConfig):
+    resource_id: UUID = Field(strict=False)
+
+
+class UuidSourceBlock(SourceBlock):
+    config_model = UuidSourceConfig  # type: ignore[assignment]
+
+
+class HexSourceConfig(BlockConfig):
+    model_config = ConfigDict(val_json_bytes="hex")
+    payload: bytes = Field(strict=False)
+
+
+class HexSourceBlock(SourceBlock):
+    config_model = HexSourceConfig  # type: ignore[assignment]
+
+
+class FileChoice(BlockConfig):
+    kind: Literal["file"]
+
+
+class TableChoice(BlockConfig):
+    kind: Literal["table"]
+
+
+class ChoiceSourceConfig(BlockConfig):
+    source: FileChoice | TableChoice = Field(discriminator="kind")
+
+
+class ChoiceSourceBlock(SourceBlock):
+    config_model = ChoiceSourceConfig  # type: ignore[assignment]
 
 
 class SinkBlock(NeverRuns):
@@ -158,6 +230,74 @@ def test_messages_explain_the_fix_without_echoing_config_values():
     assert "1000" in messages[("add", "amount")]
     assert "5000" not in " ".join(messages.values())
     assert "red" not in " ".join(messages.values())
+
+
+@pytest.mark.parametrize(
+    "block_type,config,field",
+    [
+        (
+            RejectingSourceBlock,
+            {"resource_id": "synthetic-private-value"},
+            "resource_id",
+        ),
+        (
+            CustomCodeSourceBlock,
+            {"resource_id": "synthetic-private-value"},
+            "resource_id",
+        ),
+        (
+            CustomLimitSourceBlock,
+            {"resource_id": "synthetic-private-value"},
+            "resource_id",
+        ),
+        (ChoiceSourceBlock, {"source": {"kind": "synthetic-private-value"}}, "source"),
+        (UuidSourceBlock, {"resource_id": "z-private-uuid"}, "resource_id"),
+        (HexSourceBlock, {"payload": "PRIVATEPAYLOAD"}, "payload"),
+    ],
+)
+def test_validation_api_omits_private_parser_and_validator_details(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    block_type: type[SourceBlock],
+    config: dict[str, Any],
+    field: str,
+):
+    catalog = BlockRegistry()
+    catalog.register(block_type())
+    monkeypatch.setattr("app.pipelines.api.registry", catalog)
+    result = client.post(
+        URL,
+        json={
+            "definition": {
+                "schema_version": 1,
+                "nodes": [
+                    {
+                        "id": "source",
+                        "block_id": "synthetic.source",
+                        "block_version": "1.0.0",
+                        "config": config,
+                    }
+                ],
+                "edges": [],
+            }
+        },
+    )
+    assert result.status_code == 200
+    assert result.json() == {
+        "valid": False,
+        "diagnostics": [
+            {
+                "code": "invalid_config",
+                "message": (
+                    f"Review '{field}' against this block's configuration requirements."
+                ),
+                "node_id": "source",
+                "edge_id": None,
+                "port": None,
+                "field": field,
+            }
+        ],
+    }
 
 
 def test_incompatible_ports_name_the_differing_column():

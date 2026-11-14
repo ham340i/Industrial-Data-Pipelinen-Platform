@@ -33,7 +33,7 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
   const nodes = useEditorStore((state) => state.nodes);
   const edges = useEditorStore((state) => state.edges);
   const generation = useEditorStore((state) => state.generation);
-  const validation = usePipelineValidation(nodes, edges);
+  const validation = usePipelineValidation(nodes, edges, generation);
   useEffect(() => setProject(projectId), [projectId, setProject]);
   return (
     <Stack spacing={3}>
@@ -100,10 +100,14 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
         }}
       >
         <Box sx={{ minWidth: 0 }}>
-          <Canvas diagnostics={validation.report?.diagnostics} />
+          <Canvas
+            diagnostics={validation.report?.diagnostics}
+            staleDiagnostics={!validation.current}
+          />
         </Box>
         <ConfigurationPanel
-          diagnostics={validation.current ? validation.report?.diagnostics : []}
+          diagnostics={validation.report?.diagnostics}
+          staleDiagnostics={!validation.current}
         />
       </Box>
       <PreviewPanel projectId={projectId} />

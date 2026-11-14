@@ -46,6 +46,11 @@ Not recorded for the iteration review. Link actual design decisions and changes;
 
 See [testing evidence](testing-evidence.md). Record commands, commit, environment and observed outcomes; repository checks do not prove the release workflow.
 
+November 9: [#33 validation recovery](../../testing/issue-33-validation-recovery.md)
+has implementation and local verification in draft PR #81. Preview/run
+integration and independent review remain pending; no completed story or
+iteration acceptance is recorded.
+
 ## Risks / Blockers
 
 Review the [existing risk register](../../release-1-plan.md#release-1-risk-register). Iteration-specific findings and mitigation evidence: Not recorded.
@@ -67,7 +72,9 @@ Equivalent contractor estimate: Not calculated. Record rate, currency, source an
 
 ## Individual Contributions
 
-Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Actual personal record links: Not recorded. Assignment is not contribution evidence.
+Use the [contribution registry](../../individual-contributions/README.md) and [template](../../individual-contributions/TEMPLATE.md). Assignment alone is not contribution evidence.
+
+Scoped implementation evidence: [Al-Yousef, error recovery](../../individual-contributions/Al-Yousef-iteration-4.md).
 
 ## Retrospective
 
