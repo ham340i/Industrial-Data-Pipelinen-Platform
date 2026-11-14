@@ -6,10 +6,14 @@ The JSON files under ``tests/fixtures/contracts`` are captured from the real
 validate, execute, run-status and artifact endpoints. For every live
 response this module asserts two things: the recorded *shape* (keys and
 JSON types) is unchanged, and the parser-critical *values and relationships*
-the Builder's ``parseRun`` / ``parseReport`` guards enforce still hold
-(enumerations, identifier formats, ordering, cross-field rules). The same
-files are parsed by ``frontend/src/api/contracts.test.ts``. A drift on either
-side fails CI, including a same-type change such as ``level: "warn"``.
+the Builder's ``parseRun`` / ``parseReport`` / ``listRuns`` guards enforce
+still hold: enumerations, identifier formats, ordering, cross-field rules,
+and that the response is bound to what the Builder asked for (the project,
+pipeline and run ids of the request, and its fixed ``limit=20&offset=0``
+pagination). The same files are parsed by
+``frontend/src/api/contracts.test.ts``. A drift on either side fails CI,
+including a same-type change such as ``level: "warn"`` or a valid UUID that
+belongs to a different project.
 
 Regenerate after an intentional contract change with
 ``LPS_UPDATE_CONTRACT_FIXTURES=1 python -m pytest tests/test_integration_contracts.py``.
@@ -22,6 +26,7 @@ import json
 import os
 import re
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -49,7 +54,29 @@ LEVELS = {"info", "warning", "error"}
 IDENTIFIER = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 )
-Rules = Callable[[Any], None]
+# The Builder's listRuns always asks for this page and rejects any other echo.
+PAGE = {"limit": 20, "offset": 0}
+
+
+@dataclass(frozen=True)
+class Binding:
+    """What the Builder requested; a response must be bound to exactly this."""
+
+    project_id: str
+    pipeline_id: str
+    run_id: str | None = None
+
+
+def binding_of(recorded: Any, fallback: Binding) -> Binding:
+    """The request a recorded fixture answered, read from the fixture itself;
+    fixtures without identifiers (reports, error envelopes) keep ``fallback``."""
+    source = recorded["items"][0] if "items" in recorded else recorded
+    if "project_id" not in source:
+        return fallback
+    return Binding(source["project_id"], source["pipeline_id"], source.get("id"))
+
+
+Rules = Callable[[Any, Binding], None]
 
 
 def shape(value: Any) -> Any:
@@ -85,10 +112,13 @@ def is_failure(value: Any) -> bool:
     )
 
 
-def parsable_summary(run: Any) -> None:
+def parsable_summary(run: Any, bound: Binding) -> None:
     assert run["schema_version"] == 1
     for key in ("id", "project_id", "pipeline_id", "pipeline_revision_id"):
         assert IDENTIFIER.match(run[key]), key
+    # A well-formed id for another project or pipeline is still rejected.
+    assert run["project_id"] == bound.project_id
+    assert run["pipeline_id"] == bound.pipeline_id
     assert is_count(run["revision"])
     assert run["revision"] >= 1
     assert run["state"] in RUN_STATES, run["state"]
@@ -100,9 +130,10 @@ def parsable_summary(run: Any) -> None:
     assert is_failure(run["error"])
 
 
-def parsable_run(run: Any) -> None:
+def parsable_run(run: Any, bound: Binding) -> None:
     """Every rule parseRun applies to GET /runs/{id}."""
-    parsable_summary(run)
+    parsable_summary(run, bound)
+    assert run["id"] == bound.run_id
     seen: set[str] = set()
     for block in run["blocks"]:
         assert isinstance(block["node_id"], str)
@@ -134,17 +165,18 @@ def parsable_run(run: Any) -> None:
         assert is_measurement(output["row_count"])
 
 
-def parsable_run_list(page: Any) -> None:
+def parsable_run_list(page: Any, bound: Binding) -> None:
+    """Every rule listRuns applies to GET /runs?project_id=&pipeline_id=."""
     assert is_count(page["total"])
-    assert is_count(page["offset"])
-    assert is_count(page["limit"])
-    assert len(page["items"]) <= page["limit"]
+    assert page["limit"] == PAGE["limit"]
+    assert page["offset"] == PAGE["offset"]
+    assert len(page["items"]) <= PAGE["limit"]
     for item in page["items"]:
-        parsable_summary(item)
+        parsable_summary(item, bound)
     assert len({item["id"] for item in page["items"]}) == len(page["items"])
 
 
-def parsable_report(report: Any) -> None:
+def parsable_report(report: Any, bound: Binding) -> None:
     """Every rule parseReport applies to POST /pipelines/validate."""
     assert isinstance(report["valid"], bool)
     assert report["valid"] == (len(report["diagnostics"]) == 0)
@@ -156,22 +188,27 @@ def parsable_report(report: Any) -> None:
             assert diagnostic[key] is None or isinstance(diagnostic[key], str), key
 
 
-def parsable_execute(response: Any) -> None:
+def parsable_execute(response: Any, bound: Binding) -> None:
     assert IDENTIFIER.match(response["run_id"])
     assert response["state"] in RUN_STATES
 
 
-def parsable_error(envelope: Any) -> None:
+def shape_only(payload: Any, bound: Binding) -> None:
+    """No Builder parser consumes this response yet; the shape check suffices."""
+
+
+def parsable_error(envelope: Any, bound: Binding) -> None:
     error = envelope["error"]
     assert isinstance(error["code"], str)
     assert isinstance(error["message"], str)
     assert isinstance(error["correlation_id"], str)
 
 
-def check(name: str, actual: Any, rules: Rules | None = None) -> None:
-    """Live response keeps the recorded shape and satisfies the parser rules."""
-    if rules is not None:
-        rules(actual)
+def check(name: str, actual: Any, rules: Rules, bound: Binding) -> None:
+    """Live response keeps the recorded shape and satisfies the parser rules
+    bound to the live request; the recorded fixture satisfies the same rules
+    bound to the request it answered."""
+    rules(actual, bound)
     path = FIXTURES / f"{name}.json"
     if UPDATE:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -181,8 +218,7 @@ def check(name: str, actual: Any, rules: Rules | None = None) -> None:
         f"{name} drifted from tests/fixtures/contracts/{name}.json; "
         "update the frontend parsers and regenerate the fixture together"
     )
-    if rules is not None:
-        rules(recorded)
+    rules(recorded, binding_of(recorded, bound))
 
 
 def csv(bench: Workbench) -> dict[str, Any]:
@@ -197,32 +233,35 @@ def test_succeeded_run_artifact_and_query_contracts(bench: Workbench):
     pipeline_id = bench.save(definition)
     executed = bench.execute(pipeline_id)
     assert executed.status_code == 201, executed.text
-    check("execute-response", executed.json(), parsable_execute)
+    asked = Binding(bench.project_id, pipeline_id, executed.json()["run_id"])
+    check("execute-response", executed.json(), parsable_execute, asked)
 
-    detail = bench.run(executed.json()["run_id"])
+    detail = bench.run(asked.run_id or "")
     assert detail["state"] == "succeeded", detail["error"]
-    check("run-detail-succeeded", detail, parsable_run)
-    page = bench.runs(project_id=bench.project_id, pipeline_id=pipeline_id)
-    check("run-list", page, parsable_run_list)
+    check("run-detail-succeeded", detail, parsable_run, asked)
+    page = bench.runs(project_id=bench.project_id, pipeline_id=pipeline_id, **PAGE)
+    check("run-list", page, parsable_run_list, asked)
 
     (output,) = detail["outputs"]
     metadata = bench.artifact(output["id"])
     assert metadata.status_code == 200, metadata.text
-    check("artifact-metadata", metadata.json())
+    check("artifact-metadata", metadata.json(), shape_only, asked)
     result = bench.query(output["id"], columns=["name", "value"], limit=2)
     assert result.status_code == 200, result.text
-    check("artifact-query", result.json())
+    check("artifact-query", result.json(), shape_only, asked)
 
 
 def test_failed_run_contract_carries_block_and_run_errors(bench: Workbench):
     gate = node("gate", "quality.null_check", {"columns": ["value"]})
-    executed = bench.execute(bench.save(linear(csv(bench), gate, PARQUET_SINK)))
+    pipeline_id = bench.save(linear(csv(bench), gate, PARQUET_SINK))
+    executed = bench.execute(pipeline_id)
     assert executed.status_code == 201, executed.text
-    detail = bench.run(executed.json()["run_id"])
+    asked = Binding(bench.project_id, pipeline_id, executed.json()["run_id"])
+    detail = bench.run(asked.run_id or "")
     assert detail["state"] == "failed"
     assert detail["error"]
     assert detail["blocks"][1]["error"]
-    check("run-detail-failed", detail, parsable_run)
+    check("run-detail-failed", detail, parsable_run, asked)
 
 
 def test_validation_report_and_error_envelope_contracts(bench: Workbench):
@@ -239,11 +278,12 @@ def test_validation_report_and_error_envelope_contracts(bench: Workbench):
     report = bench.validate(draft)
     assert report.status_code == 200, report.text
     assert report.json()["valid"] is False
-    check("validation-report", report.json(), parsable_report)
+    unbound = Binding(bench.project_id, "")
+    check("validation-report", report.json(), parsable_report, unbound)
 
     refused = bench.execute(bench.save(draft))
     assert refused.status_code == 422, refused.text
-    check("error-envelope", refused.json(), parsable_error)
+    check("error-envelope", refused.json(), parsable_error, unbound)
 
 
 def mutate(name: str, apply: Callable[[Any], None]) -> Any:
@@ -268,6 +308,21 @@ def set_valid(value: Any) -> None:
     value["valid"] = True
 
 
+OTHER = "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f"  # well-formed, but not requested
+
+
+def set_other_run(value: Any) -> None:
+    value["id"] = OTHER
+
+
+def set_foreign_project(value: Any) -> None:
+    value["items"][0]["project_id"] = OTHER
+
+
+def set_wider_page(value: Any) -> None:
+    value["limit"] = PAGE["limit"] + 1
+
+
 @pytest.mark.parametrize(
     "name,apply,rules",
     [
@@ -275,20 +330,35 @@ def set_valid(value: Any) -> None:
         ("run-detail-failed", set_state, parsable_run),
         ("run-detail-succeeded", set_sequence, parsable_run),
         ("validation-report", set_valid, parsable_report),
+        ("run-detail-succeeded", set_other_run, parsable_run),
+        ("run-list", set_foreign_project, parsable_run_list),
+        ("run-list", set_wider_page, parsable_run_list),
     ],
-    ids=["event-level", "block-state", "event-order", "valid-flag"],
+    ids=[
+        "event-level",
+        "block-state",
+        "event-order",
+        "valid-flag",
+        "other-run-id",
+        "foreign-project-id",
+        "limit-21",
+    ],
 )
 def test_same_type_incompatible_changes_fail_the_bridge(
     name: str, apply: Callable[[Any], None], rules: Rules
 ):
     """A value the Builder's parser rejects must fail here even when its JSON
-    type is unchanged, so a shape-only comparison cannot wave it through."""
-    broken = mutate(name, apply)
+    type is unchanged, so a shape-only comparison cannot wave it through:
+    unknown enumerations, broken ordering, a contradictory flag, a valid UUID
+    for a run or project the Builder did not ask for, or a page other than
+    the one it requested."""
     recorded = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+    asked = binding_of(recorded, Binding("", ""))
+    broken = mutate(name, apply)
     assert shape(broken) == shape(recorded), "the mutation must be same-type"
-    rules(recorded)
+    rules(recorded, asked)
     with pytest.raises(AssertionError):
-        rules(copy.deepcopy(broken))
+        rules(copy.deepcopy(broken), asked)
 
 
 @pytest.mark.skipif(UPDATE, reason="fixtures are being regenerated")
