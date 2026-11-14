@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Private local workspace settings; never part of portable pipeline definitions."""
 
 import json
@@ -121,6 +122,78 @@ def checked_root(path: Path) -> Path:
             "workspace_invalid_path",
             "Choose an existing folder the API can read and write.",
         ) from None
+
+
+def project_folders(root: Path) -> dict[str, Path]:
+    """Real project directories directly beneath the canonical workspace root.
+
+    Symlinks and junctions are excluded on the listing itself, without
+    following them, so every returned path is canonical by construction.
+    This is the only function that touches the filesystem for project
+    lookup, and it never receives request data.
+    """
+    base = root.resolve(strict=True)
+    with os.scandir(base) as entries:
+        return {
+            entry.name: base / entry.name
+            for entry in entries
+            if not entry.is_symlink()
+            and not entry.is_junction()
+            and entry.is_dir(follow_symlinks=False)
+        }
+
+
+def project_data_folder(root: Path, project_id: str) -> Path:
+    """The prepared ``<root>/<project_id>`` folder, rejecting links and aliases.
+
+    One containment rule for every path that reads or writes project data:
+    preview, execute, timer ticks and artifact queries. ``resource_path``
+    trusts the root it is given, so a symlink or junction installed at the
+    project folder would otherwise redirect reads into another project or
+    outside the workspace (#37 review).
+
+    The request-supplied ``project_id`` is only ever used as a key into the
+    trusted listing from ``project_folders``; it never reaches a filesystem
+    call. Where the workspace filesystem is case-insensitive (NTFS, default
+    APFS) a case-only rename of the folder still addresses the same
+    directory, so the lookup follows the filesystem's own rule instead of a
+    byte comparison (PR #85 review). Raises ``ValueError`` when no real
+    directory of that name exists.
+    """
+    try:
+        folders = project_folders(root)
+    except OSError:
+        raise ValueError("Workspace root is unavailable") from None
+    folder = folders.get(project_id)
+    if folder is None:
+        wanted = project_id.casefold()
+        folder = next(
+            (
+                candidate
+                for name, candidate in folders.items()
+                if name.casefold() == wanted and _case_insensitive(candidate)
+            ),
+            None,
+        )
+    if folder is None:
+        raise ValueError("Project folder is missing or aliases another folder")
+    return folder
+
+
+def _case_insensitive(folder: Path) -> bool:
+    """Whether this directory's filesystem ignores case in its own name.
+
+    Probed with a listing-derived name only (its case-swapped spelling), so
+    nothing from a request is handed to the filesystem.
+    """
+    swapped = folder.with_name(folder.name.swapcase())
+    # Compare the names as strings: WindowsPath equality already ignores case.
+    if swapped.name == folder.name:
+        return False
+    try:
+        return os.path.samefile(folder, swapped)
+    except OSError:
+        return False
 
 
 def prepare_project(root: Path, project_id: str) -> None:

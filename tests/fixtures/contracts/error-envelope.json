@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "block_unavailable",
+    "correlation_id": "ca73b834-e418-4a0c-ad55-97ac913f4d97",
+    "message": "Block 'no.such.block' is not installed. Replace or delete this node.",
+    "node_context": "missing"
+  }
+}

@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Audited linear preview plans. Never call Executor, run(), sinks or timers."""
 
 from pathlib import Path
@@ -16,6 +17,7 @@ from app.metadata.models import Project, WorkspaceBinding
 from app.pipelines.models import GraphDraft, Node
 from app.pipelines.validation import diagnose
 from app.preview.errors import PreviewError
+from app.workspace import project_data_folder
 from app.preview.models import (
     MAX_ANCESTORS,
     MAX_SECONDS,
@@ -222,12 +224,8 @@ def preview(
             "data folder before previewing.",
         )
     try:
-        base = workspace_root.resolve(strict=True)
-        root = (base / project_id).resolve(strict=True)
-        root.relative_to(base)
-        if root == base or not root.is_dir() or root != base / project_id:
-            raise ValueError("Project workspace must not alias another directory")
-    except (OSError, ValueError):
+        root = project_data_folder(workspace_root, project_id)
+    except ValueError:
         raise PreviewError(
             "workspace_required",
             "This project's data folder is missing "

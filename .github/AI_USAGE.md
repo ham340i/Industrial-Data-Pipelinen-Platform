@@ -174,3 +174,75 @@ CI and stakeholder acceptance remain pending. Issue #31 is dependency-blocked
 for preview and artifact inspection. See the
 [verification record](../docs/testing/issue-23-31-sql-workflow.md); this does not
 claim that the student manually authored or independently tested generated code.
+
+## Issue #37 API/engine block integration matrix
+
+AI contribution: 50% or more AI-generated overall, declared per file exactly
+as in the PR description: `50% or more` for `tests/integration_support.py`,
+`tests/test_integration_matrix.py`, `tests/test_integration_failures.py`,
+`tests/test_integration_contracts.py`, `tests/fixtures/contracts/*.json`,
+`frontend/src/api/contracts.test.ts`,
+`docs/testing/issue-37-integration-matrix.md` and
+`docs/individual-contributions/menaboulus-iteration-4.md`; `below 50%` for
+the small edits to `app/artifacts/api.py`, `app/blocks/files.py`,
+`app/workspace.py`, `app/pipelines/api.py`, `app/preview/service.py`,
+`app/runs/scheduler.py`, `tests/test_artifact_api.py`, `tests/conftest.py`,
+`frontend/vite.config.ts` and `.github/workflows/ci.yml`.
+Tool: Claude Code. Assisted with the API-level integration fixtures
+(`tests/integration_support.py`), the source → transform → quality → sink
+compatibility matrix, the malformed-definition / schema-mismatch /
+timeout-response cases, the shared response fixtures parsed by the frontend
+(`tests/test_integration_contracts.py`, `frontend/src/api/contracts.test.ts`),
+the two compatibility fixes below, the CI JUnit capture, and the
+documentation. Verified by 39 new backend tests (880 passing overall), 4
+frontend parser tests, Ruff, mypy, ESLint, Prettier and `tsc`
+([record](../docs/testing/issue-37-integration-matrix.md)). Pull request:
+[PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85); independent review by the planned student reviewer `Al-Yousef`
+is requested and pending.
+
+Problems found and corrected: the artifact query endpoint resolved Parquet
+files beneath the bare workspace root while the execute API publishes them
+under `<root>/<project id>/`, so every artifact from a real run was reported
+unavailable; fixed in `app/artifacts/api.py` and pinned by the Parquet matrix
+cases. File sinks writing into a not-yet-existing `outputs/` folder failed
+with a misleading `write_failed`; the sink now creates the folder inside the
+already-checked project path, pinned by a regression test. Three mistakes in
+the generated tests themselves were caught by running them and corrected
+without touching the product: re-running a no-clobber sink, reusing a
+pipeline name within a project, and a leak assertion that tripped on an
+ordinary `/` in an error message.
+
+Corrections found in `Al-Yousef`'s review of
+[PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85)
+(Claude Code, each verified by a new automated test): the project-scoped
+artifact query handed `<workspace>/<project id>` to `resource_path`, which
+resolves and then trusts the root it is given, so a symlink or junction
+installed at the project folder redirected the query into another project's
+folder (project A's metadata with project B's rows) or outside the workspace
+entirely. The execute and timer paths built the same unchecked folder. One
+shared rule, `project_data_folder` in `app/workspace.py`, now rejects a
+missing or aliased project folder; the artifact query answers
+`409 artifact_unavailable`, execute refuses with `422
+workspace_project_folder` before creating a run, timer ticks fall back to
+running without a workspace so the failure is recorded, and the preview
+service reuses the rule instead of its own copy. Second, the
+backend/frontend contract bridge compared only JSON types, so a same-type
+incompatible change such as `level: "warn"` passed the backend check while
+the Builder parser rejected it; the bridge now also applies the parser's
+own value rules (enumerations, identifier format, event ordering, the
+`valid`/diagnostics relationship) to every live response and to the recorded
+fixtures, with same-type negative cases on both sides. Third, the AI
+declaration above was restated per file to match the PR description.
+
+A second Codex-assisted re-review of PR #85 (at `48adc20`) found that the
+listing-based project lookup compared names byte for byte, so a case-only
+rename of the project folder on NTFS or default APFS, where the original
+path still addresses the same directory, turned preview and execute into
+`422`, artifact queries into `409` and scheduled runs into
+`workspace_required` failures. The lookup now follows the filesystem's own
+case rule, probed with listing-derived names only. It also found the
+contract bridge accepted a `limit: 21` echo, a well-formed UUID for another
+project in a list item and a different run id in a detail response, which
+the Builder's guards reject; the rules are now bound to the requested ids
+and fixed pagination, with negative cases for each reproduction. Both
+corrections by Claude Code, each verified by a new automated test.
