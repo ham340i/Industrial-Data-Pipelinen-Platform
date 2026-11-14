@@ -154,7 +154,11 @@ def project_data_folder(root: Path, project_id: str) -> Path:
 
     The request-supplied ``project_id`` is only ever used as a key into the
     trusted listing from ``project_folders``; it never reaches a filesystem
-    call. Raises ``ValueError`` when no real directory of that name exists.
+    call. Where the workspace filesystem is case-insensitive (NTFS, default
+    APFS) a case-only rename of the folder still addresses the same
+    directory, so the lookup follows the filesystem's own rule instead of a
+    byte comparison (PR #85 review). Raises ``ValueError`` when no real
+    directory of that name exists.
     """
     try:
         folders = project_folders(root)
@@ -162,8 +166,33 @@ def project_data_folder(root: Path, project_id: str) -> Path:
         raise ValueError("Workspace root is unavailable") from None
     folder = folders.get(project_id)
     if folder is None:
+        wanted = project_id.casefold()
+        folder = next(
+            (
+                candidate
+                for name, candidate in folders.items()
+                if name.casefold() == wanted and _case_insensitive(candidate)
+            ),
+            None,
+        )
+    if folder is None:
         raise ValueError("Project folder is missing or aliases another folder")
     return folder
+
+
+def _case_insensitive(folder: Path) -> bool:
+    """Whether this directory's filesystem ignores case in its own name.
+
+    Probed with a listing-derived name only (its case-swapped spelling), so
+    nothing from a request is handed to the filesystem.
+    """
+    swapped = folder.with_name(folder.name.swapcase())
+    if swapped == folder:
+        return False
+    try:
+        return os.path.samefile(folder, swapped)
+    except OSError:
+        return False
 
 
 def prepare_project(root: Path, project_id: str) -> None:

@@ -9,6 +9,7 @@ here may leak a workspace path, a credential or a traceback.
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -362,3 +363,41 @@ def test_execute_refuses_an_unusable_project_folder_before_creating_a_run(
     assert response.json()["error"]["code"] == "workspace_project_folder"
     assert bench.runs()["total"] == 0
     assert not (elsewhere / "result.csv").exists()
+
+
+def test_case_only_rename_of_the_project_folder_follows_the_filesystem_rule(
+    bench: Workbench,
+):
+    """NTFS and default APFS ignore case: a case-only rename of the project
+    folder still addresses the same directory, so preview, execute and the
+    artifact query must keep working there. On a case-sensitive filesystem
+    the original path no longer exists and the same calls must refuse."""
+    sink = node(
+        "sink",
+        "sink.parquet",
+        {"resource_ref": "result.parquet", "overwrite": "replace"},
+    )
+    definition = linear(csv(bench), sink)
+    pipeline_id = bench.save(definition)
+    first = bench.execute(pipeline_id)
+    assert first.status_code == 201, first.text
+    artifact_id = bench.run(first.json()["run_id"])["outputs"][0]["id"]
+
+    renamed = bench.root.with_name(bench.root.name.swapcase())
+    assert renamed != bench.root, "a UUID name always contains hex letters"
+    os.rename(bench.root, renamed)
+    insensitive = bench.root.exists() and os.path.samefile(bench.root, renamed)
+
+    preview = bench.preview(definition, "source", max_rows=2, max_cells=6)
+    again = bench.execute(pipeline_id)
+    query = bench.query(artifact_id, limit=5)
+    if insensitive:
+        assert preview.status_code == 200, preview.text
+        assert again.status_code == 201, again.text
+        assert again.json()["state"] == "succeeded"
+        assert query.status_code == 200, query.text
+    else:
+        assert preview.json()["error"]["code"] == "workspace_required"
+        assert again.status_code == 422, again.text
+        assert again.json()["error"]["code"] == "workspace_project_folder"
+        assert query.status_code == 409, query.text
