@@ -233,3 +233,16 @@ own value rules (enumerations, identifier format, event ordering, the
 `valid`/diagnostics relationship) to every live response and to the recorded
 fixtures, with same-type negative cases on both sides. Third, the AI
 declaration above was restated per file to match the PR description.
+
+A second Codex-assisted re-review of PR #85 (at `48adc20`) found that the
+listing-based project lookup compared names byte for byte, so a case-only
+rename of the project folder on NTFS or default APFS, where the original
+path still addresses the same directory, turned preview and execute into
+`422`, artifact queries into `409` and scheduled runs into
+`workspace_required` failures. The lookup now follows the filesystem's own
+case rule, probed with listing-derived names only. It also found the
+contract bridge accepted a `limit: 21` echo, a well-formed UUID for another
+project in a list item and a different run id in a detail response, which
+the Builder's guards reject; the rules are now bound to the requested ids
+and fixed pagination, with negative cases for each reproduction. Both
+corrections by Claude Code, each verified by a new automated test.

@@ -92,6 +92,11 @@ counts: [verification record](../testing/issue-37-integration-matrix.md#observed
   rule and parser-rule checks on both sides; see the
   [review section](../testing/issue-37-integration-matrix.md#al-yousefs-review-of-pr-85).
 
+- The re-review found the listing-based lookup broke case-only renames on
+  case-insensitive filesystems and that the contract bridge was not bound
+  to the Builder's request ids and pagination; both fixed with tests, see
+  the [re-review section](../testing/issue-37-integration-matrix.md#al-yousefs-re-review-of-pr-85-at-48adc20).
+
 ## Failed Attempts / Experiments
 
 - First version of the status-path test ran the same no-clobber CSV sink

@@ -117,6 +117,39 @@ argued with:
    per file while `.github/AI_USAGE.md` gave one issue-level line; the usage
    entry now carries the identical per-file split.
 
+### `Al-Yousef`'s re-review of PR #85 at `48adc20`
+
+Both earlier fixes were confirmed on Windows (junction reproductions answer
+`409`, the same-type contract cases reject). Two further findings, fixed
+with regression tests:
+
+1. **Case-only renames on case-insensitive filesystems.** NTFS and default
+   APFS ignore case in names, so after a case-only rename of the project
+   folder the original path still addresses the same directory, yet the
+   byte comparison in `project_data_folder` no longer matched: preview and
+   execute changed from success to `422`, artifact queries from `200` to
+   `409`, and a scheduled run failed with `workspace_required`. The lookup
+   now falls back to a case-folded match only when the candidate folder's
+   own filesystem reports its case-swapped spelling as the same file
+   (`os.path.samefile`, probed with listing-derived names only, so nothing
+   from a request reaches the filesystem and the SonarCloud finding stays
+   closed). Symlink and junction checks are unchanged.
+   `test_case_only_rename_of_the_project_folder_follows_the_filesystem_rule`
+   renames the folder and asserts success on a case-insensitive filesystem
+   (Windows CI, macOS) and the structured refusals on a case-sensitive one
+   (Linux CI).
+2. **Contract bridge not bound to the request.** The Python rules accepted a
+   run list echoing `limit: 21`, a well-formed UUID for a different project
+   in a list item, and a different run id in a detail response, all of which
+   the Builder's guards reject. Every rule now takes the `Binding` the
+   Builder asked for (project, pipeline and run ids) and the list is captured
+   with the Builder's fixed `limit=20&offset=0`; recorded fixtures are
+   checked against the request they answered. Three same-type negative
+   cases cover exactly the three reproductions.
+
+The declaration mismatch raised again in this round is between the PR
+description and the repository records; see the pull request thread.
+
 ## Observed results
 
 macOS, Python 3.12.15 virtual environment, Node 22.21.0, November 13, 2026,
