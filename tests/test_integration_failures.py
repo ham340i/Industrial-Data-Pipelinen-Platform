@@ -384,7 +384,8 @@ def test_case_only_rename_of_the_project_folder_follows_the_filesystem_rule(
     artifact_id = bench.run(first.json()["run_id"])["outputs"][0]["id"]
 
     renamed = bench.root.with_name(bench.root.name.swapcase())
-    assert renamed != bench.root, "a UUID name always contains hex letters"
+    # Compare names, not paths: WindowsPath equality already ignores case.
+    assert renamed.name != bench.root.name, "a UUID name always contains hex letters"
     os.rename(bench.root, renamed)
     insensitive = bench.root.exists() and os.path.samefile(bench.root, renamed)
 

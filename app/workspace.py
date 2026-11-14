@@ -187,7 +187,8 @@ def _case_insensitive(folder: Path) -> bool:
     nothing from a request is handed to the filesystem.
     """
     swapped = folder.with_name(folder.name.swapcase())
-    if swapped == folder:
+    # Compare the names as strings: WindowsPath equality already ignores case.
+    if swapped.name == folder.name:
         return False
     try:
         return os.path.samefile(folder, swapped)
