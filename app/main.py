@@ -12,8 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.blocks.catalog import router as blocks_router
+from app.artifacts import ArtifactNotFound, ArtifactNotQueryable, ArtifactUnavailable
+from app.artifacts.api import router as artifacts_router
+from app.blocks.catalog import executor, router as blocks_router
 from app.config import settings
+from app.execution import InvalidPipeline
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
 from app.pipelines.api import (
@@ -22,11 +25,14 @@ from app.pipelines.api import (
     validation_router,
 )
 from app.projects import ProjectNotFound, router as projects_router
+from app.preview.api import PreviewBoundaryMiddleware, router as preview_router
 from app.runs import recover_interrupted
 from app.runs.api import RunNotFound, router as runs_router
+from app.runs.scheduler import TimerScheduler
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
+from app.workspace import WorkspaceError, router as workspace_router
 
 
 _CORRELATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,100}$")
@@ -82,14 +88,23 @@ class CorrelationIdMiddleware:
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     application.state.database = None
+    application.state.scheduler = None
     database = Database(settings.metadata_path)
     try:
+        if settings.workspace_root is not None:
+            settings.workspace_root.mkdir(parents=True, exist_ok=True)
         upgrade(database)
         # Runs a previous process left queued/running can never finish (#27).
         recover_interrupted(database)
         application.state.database = database
+        application.state.scheduler = TimerScheduler(database, executor)
         yield
     finally:
+        # Stop every timer thread (#29) before closing the database it uses.
+        scheduler = application.state.scheduler
+        if scheduler is not None:
+            scheduler.stop_all()
+        application.state.scheduler = None
         database.close()
         application.state.database = None
 
@@ -101,6 +116,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(PreviewBoundaryMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 
 app.add_middleware(
@@ -113,9 +129,12 @@ app.add_middleware(
 
 app.include_router(projects_router)
 app.include_router(blocks_router)
+app.include_router(preview_router)
 app.include_router(pipelines_router)
 app.include_router(validation_router)
 app.include_router(runs_router)
+app.include_router(artifacts_router)
+app.include_router(workspace_router)
 
 
 def error_response(
@@ -137,10 +156,25 @@ def error_response(
         )
     )
 
+    headers = {"X-Correlation-ID": correlation_id}
+    # Unhandled dependency errors can bypass the preview send wrapper.
+    if request.url.path.endswith("/pipelines/preview") or request.url.path.startswith(
+        "/api/v1/settings/"
+    ):
+        headers["Cache-Control"] = "no-store"
     return JSONResponse(
         status_code=status_code,
         content=payload.model_dump(mode="json"),
-        headers={"X-Correlation-ID": correlation_id},
+        headers=headers,
+    )
+
+
+@app.exception_handler(WorkspaceError)
+async def workspace_exception_handler(
+    request: Request, exc: WorkspaceError
+) -> JSONResponse:
+    return error_response(
+        request=request, code=exc.code, message=exc.message, status_code=exc.status
     )
 
 
@@ -153,7 +187,12 @@ async def validation_exception_handler(
         request=request,
         code="validation_error",
         message=(
-            "Invalid validation request. Send a definition object with "
+            "Invalid preview request. Select a node and tabular output "
+            "in a semantic graph "
+            "of at most 100 nodes and 200 connections. Row limits are 1-1000 and cell "
+            "limits are 1-10000. Remove layout, credentials and machine paths."
+            if request.url.path.endswith("/pipelines/preview")
+            else "Invalid validation request. Send a definition object with "
             "schema_version 1 and well-formed nodes and edges. Remove "
             "credentials and machine paths from configuration."
             if request.url.path.endswith("/pipelines/validate")
@@ -195,6 +234,57 @@ async def run_not_found_handler(request: Request, exc: RunNotFound) -> JSONRespo
         code="run_not_found",
         message="Run was not found.",
         status_code=404,
+    )
+
+
+@app.exception_handler(ArtifactNotFound)
+async def artifact_not_found_handler(
+    request: Request, exc: ArtifactNotFound
+) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="artifact_not_found",
+        message="Artifact was not found.",
+        status_code=404,
+    )
+
+
+@app.exception_handler(ArtifactNotQueryable)
+async def artifact_not_queryable_handler(
+    request: Request, exc: ArtifactNotQueryable
+) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="artifact_not_queryable",
+        message=str(exc),
+        status_code=422,
+    )
+
+
+@app.exception_handler(ArtifactUnavailable)
+async def artifact_unavailable_handler(
+    request: Request, exc: ArtifactUnavailable
+) -> JSONResponse:
+    return error_response(
+        request=request,
+        code="artifact_unavailable",
+        message="Registered artifact is unavailable.",
+        status_code=409,
+    )
+
+
+@app.exception_handler(InvalidPipeline)
+async def invalid_pipeline_handler(
+    request: Request, exc: InvalidPipeline
+) -> JSONResponse:
+    """Surface the first diagnostic (#21) the same way ``validate_registry`` does."""
+    first = exc.diagnostics[0]
+    return error_response(
+        request=request,
+        code=first.code,
+        message=first.message,
+        status_code=422,
+        node_context=first.node_id,
     )
 
 

@@ -235,6 +235,8 @@ class BlockDescriptor(Contract):
     block_type: Literal["trigger", "source", "transform", "quality", "sink"]
     name: NonBlank = Field(min_length=1, max_length=128)
     category: NonBlank = Field(min_length=1, max_length=64)
+    # Authoring visibility only; hidden blocks still resolve in saved graphs.
+    library_visible: bool = True
     inputs: tuple[Port, ...] = ()
     outputs: tuple[Port, ...] = ()
     supports_preview: bool = False
@@ -263,6 +265,17 @@ class BlockDescriptor(Contract):
 class PreviewLimits(Contract):
     max_rows: int = Field(default=20, ge=1, le=1000)
     max_cells: int = Field(default=2000, ge=1, le=10000)
+
+
+class PreviewObservation(Contract):
+    """Request-local source evidence; counts describe reading, not a full run."""
+
+    inspected_rows: int = Field(ge=0)
+    full_row_count: int | None = Field(default=None, ge=0)
+    truncated: bool
+    schema_scope: Literal["declared", "header", "sample", "file_metadata"]
+    full_count_scope: Literal["unknown", "observed", "file_metadata"] = "unknown"
+    read_bytes: int = Field(ge=0)
 
 
 class BlockMetadata(BlockDescriptor):

@@ -8,6 +8,7 @@
 - [Data flow](data-flow.md)
 - [Deployment architecture](deployment-architecture.md)
 - [Architecture decision records](decisions/README.md)
+- [Artifact governance and bounded DuckDB queries](artifact-governance.md)
 
 The team-supplied [Release 1 target](release-1-target.md) specifies frameworks and persistence. Current metadata implementation: [models](../../app/metadata/models.py), [migration](../../migrations/versions/0001_initial_metadata_foundation.py), [ADR-0002](decisions/ADR-0002-sqlite-metadata.md) and [tests](../testing/issue-7-sqlite-metadata.md). Implementation does not imply complete release acceptance.
 
@@ -49,3 +50,7 @@ flowchart LR
 ```
 
 Arrows identify parent/child relationships or owned values. Each run retains its exact revision; exporting the definition returns only graph JSON. Private bindings are resolved separately at runtime. See the [metadata integration guide](../metadata.md). `RunBlock` and `RunEvent` hold per-node evidence and the redacted run log; see [run telemetry](run-telemetry.md) (#27).
+
+The [run monitoring UI](../frontend/run-monitoring.md) (#30) reads these persisted
+contracts with bounded polling and keeps runtime evidence separate from graph
+authoring state. Error navigation opens existing block configuration.

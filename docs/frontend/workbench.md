@@ -80,3 +80,10 @@ Tests use MSW at the HTTP boundary and isolated query clients. They cover pendin
 ## Security, performance and review limits
 
 The shell uses no analytics, remote fonts, credentials or persistent browser storage. It contacts the configured API for health only. Dependency security should be rechecked during upgrades. React and MUI vendor chunks are separated from application code for browser caching; no dataset rendering or execution workload has been benchmarked. Keyboard behavior is automated, but assistive-technology and real-backend acceptance require human review. See [verification evidence](../testing/issue-5-workbench.md).
+
+## Run monitoring
+
+Opening a saved pipeline shows [Run monitoring](run-monitoring.md): recent runs,
+per-block states/timings/counts and redacted logs. Select a run or inspect a failed
+block; the monitor preserves unsaved graph edits. Runs originate from the execute
+API or timer. See the linked guide for retention, reconnect and history limits.

@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { useEffect } from "react";
 import {
   Alert,
@@ -8,8 +9,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { RunMonitor } from "./RunMonitor";
 import { PipelineControls } from "./PipelineControls";
+import { RunControls } from "./RunControls";
 import { Canvas } from "./Canvas";
+import { PreviewPanel } from "./PreviewPanel";
 import { ValidationPanel } from "./ValidationPanel";
 import { ConfigurationPanel } from "./configuration/ConfigurationPanel";
 import { useEditorStore } from "./state/editor";
@@ -19,12 +23,16 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
   const draftName = useEditorStore((state) =>
     state.projectId === projectId ? state.draftName : "",
   );
+  const pipelineId = useEditorStore((state) =>
+    state.projectId === projectId ? state.pipelineId : null,
+  );
   const busy = useEditorStore((state) => state.busy);
   const nodeCount = useEditorStore((state) => state.nodes.length);
   const setDraftName = useEditorStore((state) => state.setDraftName);
   const setProject = useEditorStore((state) => state.setProject);
   const nodes = useEditorStore((state) => state.nodes);
   const edges = useEditorStore((state) => state.edges);
+  const generation = useEditorStore((state) => state.generation);
   const validation = usePipelineValidation(nodes, edges);
   useEffect(() => setProject(projectId), [projectId, setProject]);
   return (
@@ -66,6 +74,19 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
       </Paper>
       {projectId && <PipelineControls key={projectId} projectId={projectId} />}
       <ValidationPanel validation={validation} />
+      {projectId && (
+        <RunControls
+          key={`${projectId}-${generation}`}
+          canRun={validation.canRun}
+        />
+      )}
+      {projectId && pipelineId && (
+        <RunMonitor
+          key={`${projectId}:${pipelineId}`}
+          projectId={projectId}
+          pipelineId={pipelineId}
+        />
+      )}
       <Box
         inert={busy}
         sx={{
@@ -85,6 +106,7 @@ export function Builder({ projectId = null }: { projectId?: string | null }) {
           diagnostics={validation.current ? validation.report?.diagnostics : []}
         />
       </Box>
+      <PreviewPanel projectId={projectId} />
     </Stack>
   );
 }

@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from app.metadata.database import Database
 from app.metadata.models import Project
 from app.schemas.projects import ProjectCreate, ProjectPage, ProjectResponse
+from app.workspace import effective_workspace_root, prepare_project, workspace_lock
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
@@ -28,10 +29,13 @@ def database(request: Request) -> Database:
 def create_project(
     payload: ProjectCreate, db: Annotated[Database, Depends(database)]
 ) -> ProjectResponse:
-    with db.transaction() as session:
+    with workspace_lock, db.transaction() as session:
         project = Project(name=payload.name)
         session.add(project)
         session.flush()
+        root = effective_workspace_root(db)
+        if root is not None:
+            prepare_project(root, project.id)
         result = ProjectResponse.model_validate(project)
     return result
 

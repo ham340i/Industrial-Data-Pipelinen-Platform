@@ -1,3 +1,5 @@
+// AI contribution: 50% or more AI-generated
+import { object, invalidResponse } from "./guards";
 import { api, ApiError } from "./client";
 import type { Definition } from "../state/graph";
 
@@ -15,16 +17,10 @@ export interface ValidationReport {
 }
 export type SemanticDefinition = Omit<Definition, "layout">;
 
-function object(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
 const optional = (v: unknown) => v === null || typeof v === "string";
-function invalid(): never {
-  throw new ApiError(
-    "The API returned an unsupported validation response. Your draft is unchanged.",
-    "invalid-response",
-  );
-}
+const invalid = invalidResponse(
+  "The API returned an unsupported validation response. Your draft is unchanged.",
+);
 export function parseReport(v: unknown): ValidationReport {
   if (
     !object(v) ||

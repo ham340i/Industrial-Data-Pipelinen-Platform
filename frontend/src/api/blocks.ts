@@ -18,6 +18,11 @@ export interface BlockMetadata {
   version: string;
   name: string;
   category: string;
+  // Older catalogs omit this field; omission preserves their visible default.
+  library_visible?: boolean;
+  block_type?: "trigger" | "source" | "transform" | "quality" | "sink";
+  supports_preview?: boolean;
+  preview_reason?: string | null;
   inputs: Port[];
   outputs: Port[];
   config_schema: Record<string, unknown>;
@@ -70,6 +75,19 @@ export async function getBlocks(
         ["block_id", "version", "name", "category"].every(
           (k) => typeof b[k] === "string" && b[k].trim(),
         ) &&
+        (b.library_visible === undefined ||
+          typeof b.library_visible === "boolean") &&
+        (b.block_type === undefined ||
+          ["trigger", "source", "transform", "quality", "sink"].includes(
+            String(b.block_type),
+          )) &&
+        (b.supports_preview === undefined ||
+          (typeof b.supports_preview === "boolean" &&
+            (b.supports_preview
+              ? b.preview_reason === null &&
+                ["source", "transform"].includes(String(b.block_type))
+              : typeof b.preview_reason === "string" &&
+                !!b.preview_reason.trim()))) &&
         ports(b.inputs) &&
         ports(b.outputs) &&
         object(b.config_schema),
