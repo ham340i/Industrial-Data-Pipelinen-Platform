@@ -1,0 +1,82 @@
+{
+  "name": "Refactoring",
+  "description": "Technical work that is not naturally a user story.",
+  "title": "[Refactoring] ",
+  "labels": [
+    "type:refactor"
+  ],
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Use a short, specific issue title. Keep secrets, private data and personal contact details out of this form. Pending evidence must be marked Pending."
+      }
+    },
+    {
+      "type": "input",
+      "id": "feature",
+      "attributes": {
+        "label": "Feature and source requirement",
+        "description": "Name the primary feature:* label and source requirement/brief section. Apply the label after creation."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "Files",
+      "attributes": {
+        "label": "Files to refactor",
+        "description": "list all the files that need to be refactored."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "acceptance",
+      "attributes": {
+        "label": "Refactoring iusses",
+        "description": "list all the changes needed for code quality in an unchecked measurable checklist."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "effort",
+      "attributes": {
+        "label": "Estimated Effort",
+        "description": "add up the Estimated times form Sonar Cloud Code and assumptions from other refactoring needs"
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "input",
+      "id": "iteration",
+      "attributes": {
+        "label": "Iteration / Milestone",
+        "description": "Use the exact course milestone title; set the issue milestone and Project iteration after creation. Use Unscheduled for backlog work."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "ai",
+      "attributes": {
+        "label": "AI Assistance Disclosure",
+        "description": "State None or complete Tool, Purpose, Human contribution, Verification performed. Do not claim unperformed review."
+      },
+      "validations": {
+        "required": true
+      }
+    }
+  ]
+}
