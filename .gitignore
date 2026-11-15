@@ -38,4 +38,5 @@ frontend/dist/
 frontend/coverage/
 *.tsbuildinfo
 frontend/test-results/
+/test-results/
 frontend/playwright-report/

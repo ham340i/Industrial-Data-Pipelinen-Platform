@@ -1,0 +1,37 @@
+{
+  "diagnostics": [
+    {
+      "code": "block_unavailable",
+      "edge_id": null,
+      "field": null,
+      "message": "Block 'no.such.block' is not installed. Replace or delete this node.",
+      "node_id": "missing",
+      "port": null
+    },
+    {
+      "code": "missing_config",
+      "edge_id": null,
+      "field": "resource_ref",
+      "message": "Enter a value for 'resource_ref'.",
+      "node_id": "csv",
+      "port": null
+    },
+    {
+      "code": "incompatible_ports",
+      "edge_id": "trigger-sink-table",
+      "field": null,
+      "message": "Output 'signal' cannot feed input 'table': it sends control but the input expects data. Connect a compatible output or add a transform in between.",
+      "node_id": "sink",
+      "port": "table"
+    },
+    {
+      "code": "missing_input",
+      "edge_id": null,
+      "field": null,
+      "message": "Connect an upstream output to the required input 'table'.",
+      "node_id": "gate",
+      "port": "table"
+    }
+  ],
+  "valid": false
+}

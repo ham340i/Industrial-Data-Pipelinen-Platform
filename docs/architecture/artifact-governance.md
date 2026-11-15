@@ -37,8 +37,10 @@ The public operation is a typed projection plus offset and limit. There is no
 arbitrary-SQL API. The artifact ID is resolved in SQLite first; only registered
 Parquet format proceeds. Requested columns must exist in the registered schema
 and are escaped as SQL identifiers. The resolved path comes only from the
-stored logical reference and the existing workspace containment policy. The
-path, limit and offset are bound parameters.
+stored logical reference, the producing run's project folder and the existing
+workspace containment policy, so a query reads exactly the file the sink
+published under `<workspace>/<project id>/`. The path, limit and offset are
+bound parameters.
 
 Each request creates and closes one in-memory DuckDB connection. It uses one
 thread, a 64 MB memory limit and disabled insertion-order preservation. SQL has

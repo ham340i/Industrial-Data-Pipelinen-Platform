@@ -1,0 +1,249 @@
+{
+  "blocks": [
+    {
+      "block_id": "source.csv",
+      "block_version": "1.0.0",
+      "duration_ms": 3,
+      "ended_at": "2026-11-12T23:41:23.916679",
+      "error": null,
+      "node_id": "source",
+      "position": 0,
+      "rows_in": 0,
+      "rows_out": 4,
+      "started_at": "2026-11-12T23:41:23.914097",
+      "state": "completed"
+    },
+    {
+      "block_id": "transform.null_handling",
+      "block_version": "1.0.0",
+      "duration_ms": 1,
+      "ended_at": "2026-11-12T23:41:23.918291",
+      "error": null,
+      "node_id": "gate",
+      "position": 1,
+      "rows_in": 4,
+      "rows_out": 3,
+      "started_at": "2026-11-12T23:41:23.917459",
+      "state": "completed"
+    },
+    {
+      "block_id": "sink.parquet",
+      "block_version": "1.0.0",
+      "duration_ms": 2,
+      "ended_at": "2026-11-12T23:41:23.920673",
+      "error": null,
+      "node_id": "sink",
+      "position": 2,
+      "rows_in": 3,
+      "rows_out": 1,
+      "started_at": "2026-11-12T23:41:23.918828",
+      "state": "completed"
+    }
+  ],
+  "created_at": "2026-11-12T23:41:23.909749",
+  "duration_ms": 9,
+  "ended_at": "2026-11-12T23:41:23.922545",
+  "error": null,
+  "events": [
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.910605",
+      "kind": "state",
+      "level": "info",
+      "message": "Run queued",
+      "node_id": null,
+      "sequence": 0
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.911562",
+      "kind": "state",
+      "level": "info",
+      "message": "Node source queued",
+      "node_id": "source",
+      "sequence": 1
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.912112",
+      "kind": "state",
+      "level": "info",
+      "message": "Node gate queued",
+      "node_id": "gate",
+      "sequence": 2
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.912749",
+      "kind": "state",
+      "level": "info",
+      "message": "Node sink queued",
+      "node_id": "sink",
+      "sequence": 3
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.913799",
+      "kind": "state",
+      "level": "info",
+      "message": "Run running",
+      "node_id": null,
+      "sequence": 4
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.914527",
+      "kind": "state",
+      "level": "info",
+      "message": "Node source running",
+      "node_id": "source",
+      "sequence": 5
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.917141",
+      "kind": "state",
+      "level": "info",
+      "message": "Node source completed",
+      "node_id": "source",
+      "sequence": 6
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.917737",
+      "kind": "state",
+      "level": "info",
+      "message": "Node gate running",
+      "node_id": "gate",
+      "sequence": 7
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.918569",
+      "kind": "state",
+      "level": "info",
+      "message": "Node gate completed",
+      "node_id": "gate",
+      "sequence": 8
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.919065",
+      "kind": "state",
+      "level": "info",
+      "message": "Node sink running",
+      "node_id": "sink",
+      "sequence": 9
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.920983",
+      "kind": "state",
+      "level": "info",
+      "message": "Node sink completed",
+      "node_id": "sink",
+      "sequence": 10
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.921335",
+      "kind": "state",
+      "level": "info",
+      "message": "Run completed",
+      "node_id": null,
+      "sequence": 11
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923608",
+      "kind": "block",
+      "level": "info",
+      "message": "Block source.csv@1.0.0 started",
+      "node_id": "source",
+      "sequence": 12
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923612",
+      "kind": "block",
+      "level": "info",
+      "message": "Block source.csv@1.0.0 succeeded",
+      "node_id": "source",
+      "sequence": 13
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923615",
+      "kind": "block",
+      "level": "info",
+      "message": "Block transform.null_handling@1.0.0 started",
+      "node_id": "gate",
+      "sequence": 14
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923617",
+      "kind": "block",
+      "level": "info",
+      "message": "Block transform.null_handling@1.0.0 quality",
+      "node_id": "gate",
+      "sequence": 15
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923620",
+      "kind": "block",
+      "level": "info",
+      "message": "Block transform.null_handling@1.0.0 succeeded",
+      "node_id": "gate",
+      "sequence": 16
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923622",
+      "kind": "block",
+      "level": "info",
+      "message": "Block sink.parquet@1.0.0 started",
+      "node_id": "sink",
+      "sequence": 17
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923624",
+      "kind": "block",
+      "level": "info",
+      "message": "Block sink.parquet@1.0.0 succeeded",
+      "node_id": "sink",
+      "sequence": 18
+    },
+    {
+      "code": null,
+      "created_at": "2026-11-12T23:41:23.923626",
+      "kind": "state",
+      "level": "info",
+      "message": "Run succeeded",
+      "node_id": null,
+      "sequence": 19
+    }
+  ],
+  "id": "2d2a2598-7d60-41cd-b3c3-b2efaf041185",
+  "outputs": [
+    {
+      "artifact_ref": "outputs/result.parquet",
+      "created_at": "2026-11-12T23:41:23.923203",
+      "format": "parquet",
+      "id": "76afabdd-988a-47dd-9714-8e0f4c0d306e",
+      "name": "artifact",
+      "node_id": "sink",
+      "row_count": 3
+    }
+  ],
+  "pipeline_id": "52222d00-ab6d-4648-8202-97a4486bf26e",
+  "pipeline_revision_id": "de432afe-2525-4f19-b183-736bdb005e27",
+  "project_id": "fbe59f10-468f-4dfb-b98d-cf626218c0ab",
+  "revision": 1,
+  "row_count": 3,
+  "schema_version": 1,
+  "started_at": "2026-11-12T23:41:23.913098",
+  "state": "succeeded"
+}

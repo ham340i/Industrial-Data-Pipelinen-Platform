@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Artifact metadata and bounded-query HTTP contracts (#28)."""
 
 from typing import cast
@@ -12,7 +13,7 @@ from fastapi.testclient import TestClient
 from app.blocks.contracts import Column, DataSchema
 from app.config import settings
 from app.metadata.database import Database
-from app.metadata.models import OutputEndpoint, Run
+from app.metadata.models import OutputEndpoint, PipelineRevision, Run
 from tests.run_support import chain, seed_revision
 
 SCHEMA = DataSchema(
@@ -27,12 +28,26 @@ def db_of(client: TestClient) -> Database:
     return cast(Database, client.app.state.database)  # type: ignore[attr-defined]
 
 
+def project_folder(project_id: str) -> Path:
+    assert settings.workspace_root is not None
+    return settings.workspace_root / project_id
+
+
+def artifact_folder(client: TestClient, artifact_id: str) -> Path:
+    project_id = client.get(f"/api/v1/artifacts/{artifact_id}").json()["project_id"]
+    return project_folder(str(project_id))
+
+
 def registered(client: TestClient, *, format_: str = "parquet") -> str:
     db = db_of(client)
     revision_id = seed_revision(db, chain("test.source"))
     run_id, artifact_id = str(uuid4()), str(uuid4())
-    assert settings.workspace_root is not None
-    output = settings.workspace_root / "outputs"
+    with db.transaction() as session:
+        revision = session.get(PipelineRevision, revision_id)
+        assert revision is not None
+        project_id = revision.pipeline.project_id
+    # Execute publishes sink files under <workspace>/<project>/ (#29, #37).
+    output = project_folder(project_id) / "outputs"
     output.mkdir(parents=True, exist_ok=True)
     pq.write_table(
         pa.Table.from_pylist(
@@ -126,8 +141,7 @@ def test_csv_and_missing_files_are_not_queryable(client: TestClient):
     )
 
     parquet_id = registered(client)
-    assert settings.workspace_root is not None
-    (settings.workspace_root / "outputs" / "result.parquet").unlink()
+    (artifact_folder(client, parquet_id) / "outputs" / "result.parquet").unlink()
     missing = client.post(f"/api/v1/artifacts/{parquet_id}/query", json={})
     assert (missing.status_code, missing.json()["error"]["code"]) == (
         409,
@@ -143,7 +157,8 @@ def test_artifact_query_uses_saved_root_and_handles_unconfigured_workspace(
     assert original is not None
     selected = tmp_path / "selected"
     selected.mkdir()
-    (original / "outputs").rename(selected / "outputs")
+    project = artifact_folder(client, artifact_id)
+    project.rename(selected / project.name)
     monkeypatch.setattr(settings, "allowed_workspace_roots", [selected])
     client.put(
         "/api/v1/settings/workspace", json={"root_path": str(selected)}

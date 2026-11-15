@@ -8,8 +8,11 @@ SQLite and artifact bytes remain beneath the configured workspace root.
 ## Configuration
 
 `LPS_WORKSPACE_ROOT` selects the private local workspace. Its default is
-`local-data/workspace`. Immediate and timer execution use this same root, and
-artifact queries resolve stored logical resource references beneath it. API
+`local-data/workspace`. Immediate and timer execution publish sink files under
+`<root>/<project id>/<resource_ref>`, and artifact queries resolve the stored
+logical resource reference inside that same project folder (aligned by the
+issue #37 integration matrix; previously the query looked beneath the bare
+root and reported every executed artifact as unavailable). API
 clients never submit or receive a resolved machine path.
 
 ## Metadata endpoint
