@@ -42,7 +42,7 @@ from pathlib import Path
 from fastapi import Request
 from sqlalchemy import select
 
-from app.workspace import effective_workspace_root
+from app.workspace import effective_workspace_root, project_data_folder
 from app.metadata.models import Pipeline, PipelineRevision
 
 from app.execution import Cancellation, Executor
@@ -158,12 +158,25 @@ class _Timer:
                     .where(PipelineRevision.id == self.status.revision_id)
                 ).scalar_one()
             root = self._workspace_root or effective_workspace_root(self._db)
+            folder: Path | None = None
+            if root is not None:
+                try:
+                    folder = project_data_folder(root, project_id)
+                except ValueError:
+                    # Run without a workspace so the tick is still recorded as
+                    # a failed run (workspace_required) rather than writing
+                    # through an aliased folder (#37 review).
+                    logger.warning(
+                        "Timer for pipeline %s: project data folder is missing "
+                        "or aliased; running without a workspace",
+                        self.status.pipeline_id,
+                    )
             execute_revision(
                 self._db,
                 self._executor,
                 self.status.revision_id,
                 cancellation=token,
-                workspace_root=root / project_id if root is not None else None,
+                workspace_root=folder,
             )
         except Exception:
             # The run row itself already records a truthful failed/cancelled

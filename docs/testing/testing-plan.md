@@ -40,3 +40,16 @@ Backend Ruff, mypy and pytest configuration, a hash-pinned lockfile, shared API 
 ## Issue #5 frontend foundation
 
 The first implemented feature adds Vitest/Testing Library/MSW tests and Playwright production-shell smoke tests. See [actual verification](issue-5-workbench.md) and [runnable commands](../frontend/workbench.md). Synthetic health mocks verify the UI boundary; they do not establish backend/engine integration or release acceptance.
+
+## Issue #37 API/engine integration matrix
+
+Cross-feature compatibility is checked through the real API rather than by
+calling blocks directly: `tests/integration_support.py` prepares a project,
+its workspace folder and synthetic CSV/JSON/Parquet/SQLite inputs, and the
+matrix in `tests/test_integration_matrix.py` and
+`tests/test_integration_failures.py` runs representative source → transform
+→ quality → sink pipelines plus malformed, mismatched and failing cases.
+Response fixtures captured from those runs are shape-checked by
+`tests/test_integration_contracts.py` and parsed by
+`frontend/src/api/contracts.test.ts`. Both CI jobs upload JUnit results.
+Record: [issue #37 verification](issue-37-integration-matrix.md).

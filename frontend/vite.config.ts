@@ -1,3 +1,4 @@
+// AI contribution: below 50% AI-generated
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
@@ -26,5 +27,9 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     restoreMocks: true,
     clearMocks: true,
+    // CI uploads the JUnit file as a workflow artifact (#37); local runs
+    // keep the console reporter only.
+    reporters: process.env.CI ? ["default", "junit"] : ["default"],
+    outputFile: { junit: "test-results/vitest.xml" },
   },
 });
