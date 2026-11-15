@@ -24,6 +24,28 @@ when `stop()` is called is not killed - cancellation is cooperative, so it
 finishes and is recorded as `succeeded`, not `cancelled`
 (`test_stop_waits_for_an_in_flight_block_to_finish_rather_than_killing_it`).
 
+The API timer test waits with a bounded deadline for two successful runs instead
+of assuming a fixed sleep is enough on CI. It checks start/stop responses, unique
+run IDs, non-overlapping recorded intervals and terminal states after Stop. Only
+the final tick may be cancelled by Stop; failed runs remain test failures, with
+run states, timestamps and errors included in assertion output. Cleanup always
+stops the timer.
+
+`test_stop_after_tick_is_accepted_cancels_before_block_execution` uses events to
+hold an accepted tick before execution, stops it, then releases it. It verifies
+the cancellation token, a persisted cancelled run, no block execution, no later
+tick and thread termination. This distinguishes cancellation before block start
+from successful completion of a block already executing. Production scheduler
+and recorder behavior are unchanged.
+
+Local verification on 2026-11-13 (Windows, Python 3.13): the targeted execute API
+and scheduler suite passed 22 tests. Both changed timing cases passed five
+additional repetitions. The full backend suite passed 842 tests using
+`python -m pytest -q -p no:cacheprovider --basetemp=.venv/pytest-timer-full`.
+Ruff lint/format, mypy (100 files), documentation and diff whitespace checks
+passed. Existing deprecation warnings remain. OpenAI Codex implemented and
+verified this approved test repair; these are local results, not a new CI run.
+
 ### `ham340i`'s review of PR #76
 
 Four correctness gaps in the shutdown/stop path, all fixed with `_Timer` and

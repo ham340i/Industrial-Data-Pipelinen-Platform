@@ -18,7 +18,7 @@ from app.blocks.contracts import (
     PortValues,
 )
 from app.blocks.registry import BlockRegistry
-from app.execution import Executor
+from app.execution import Cancellation, Executor
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
 from app.metadata.models import Run
@@ -262,6 +262,47 @@ def test_stop_at_the_interval_boundary_never_lets_a_new_run_start(db: Database):
     stop_thread.join(timeout=5)
 
     assert trigger.calls == []  # no run ever started after stop() began
+
+
+def test_stop_after_tick_is_accepted_cancels_before_block_execution(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+):
+    """An accepted tick need not succeed when Stop arrives before its block."""
+    trigger = RecordingTrigger()
+    revision_id = seed_revision(db, chain("test.trigger"))
+    timer = _Timer(db, executor_for(trigger), "pipeline", revision_id, 1)
+    accepted = threading.Event()
+    release = threading.Event()
+    tokens: list[Cancellation] = []
+    original_run_once = timer._run_once
+
+    def paused_run_once(token: Cancellation) -> None:
+        tokens.append(token)
+        accepted.set()
+        if release.wait(timeout=5):
+            original_run_once(token)
+
+    monkeypatch.setattr(timer, "_run_once", paused_run_once)
+    timer.start()
+    try:
+        assert accepted.wait(timeout=5)
+        # This sets cancellation synchronously while the accepted tick is held.
+        assert timer.stop(join_timeout=0) is False
+        assert tokens[0].is_cancelled()
+        release.set()
+        timer._thread.join(timeout=5)
+        assert not timer.is_alive()
+        assert len(tokens) == 1  # no subsequent tick after stopping
+        assert trigger.calls == []
+        with db.transaction() as session:
+            runs = list(session.scalars(select(Run)))
+            assert len(runs) == 1
+            assert runs[0].state == "cancelled"
+            assert runs[0].error_code == "cancelled"
+            assert runs[0].ended_at is not None
+    finally:
+        release.set()
+        assert timer.stop(join_timeout=5)
 
 
 def test_stop_all_cleans_up_every_running_timer(db: Database):
