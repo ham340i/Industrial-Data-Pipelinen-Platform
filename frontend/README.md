@@ -18,3 +18,10 @@ See [SQL source and workspace setup](../docs/sql-source.md). Run
 `npm run test:release` with the backend Python interpreter in `LPS_PYTHON` for
 an isolated, real SQL author/save/open/run/rerun/failure browser test. This does
 not establish the complete #31 preview/artifact acceptance scenario.
+
+Issue #31's full real-service acceptance test runs with `npm run test:release`.
+Set `LPS_PYTHON` to the repository virtual environment's Python if necessary.
+It starts isolated API/Vite services, creates synthetic CSV/SQLite fixtures,
+authors the release graph in the UI and verifies preview, execution, Parquet
+rows, persistence and failure recovery. See
+[workflow verification](../docs/testing/issue-31-workflow.md).

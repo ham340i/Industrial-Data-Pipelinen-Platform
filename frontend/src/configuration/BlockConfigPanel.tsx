@@ -67,7 +67,7 @@ function RecoveryNotice({
   );
 }
 
-function ArrayField({
+function StructuredField({
   field,
   value,
   onChange,
@@ -89,7 +89,12 @@ function ArrayField({
         ? value
         : JSON.stringify(value);
   const parseError =
-    value !== undefined && value !== null && !Array.isArray(value);
+    value !== undefined &&
+    value !== null &&
+    (field.type === "array"
+      ? !Array.isArray(value)
+      : typeof value !== "object" || Array.isArray(value));
+  const kind = field.type === "array" ? "list" : "object";
   return (
     <TextField
       label={field.label}
@@ -103,7 +108,7 @@ function ArrayField({
       error={parseError || Boolean(issue)}
       helperText={
         parseError
-          ? "Enter a valid JSON list."
+          ? `Enter a valid JSON ${kind}.`
           : (issue ??
             previousIssue ??
             field.description ??
@@ -117,7 +122,14 @@ function ArrayField({
         }
         try {
           const parsed: unknown = JSON.parse(next);
-          if (!Array.isArray(parsed)) throw new Error();
+          if (
+            field.type === "array"
+              ? !Array.isArray(parsed)
+              : parsed === null ||
+                typeof parsed !== "object" ||
+                Array.isArray(parsed)
+          )
+            throw new Error();
           onChange(parsed as JsonValue[]);
         } catch {
           onChange(next);
@@ -266,8 +278,8 @@ function ConfigForm({
               : undefined;
           return (
             <Stack key={field.name} spacing={1}>
-              {field.type === "array" ? (
-                <ArrayField
+              {field.type === "array" || field.type === "object" ? (
+                <StructuredField
                   key={`${selected.nodeId}:${field.name}:${JSON.stringify(field.schema)}`}
                   field={field}
                   value={current}
