@@ -29,21 +29,24 @@ import { markEdges, placeDiagnostics } from "./state/validation";
 
 const Catalog = createContext<BlockMetadata[]>([]);
 const NodeProblems = createContext<Map<string, Diagnostic[]>>(new Map());
+const StaleDiagnostics = createContext(false);
 function BlockCard({ id, data, selected }: NodeProps<BlockNode>) {
   const block = useContext(Catalog).find(
     (b) => b.block_id === data.block_id && b.version === data.block_version,
   );
   const problems = useContext(NodeProblems).get(id) ?? [];
+  const stale = useContext(StaleDiagnostics);
+  const problemColor = stale ? "text.secondary" : "error.main";
   return (
     <Paper
       variant="outlined"
-      aria-invalid={problems.length > 0}
+      aria-invalid={!stale && problems.length > 0}
       sx={{
         p: 2,
         minWidth: 210,
         maxWidth: 280,
         borderColor: problems.length
-          ? "error.main"
+          ? problemColor
           : selected
             ? "primary.main"
             : "divider",
@@ -80,7 +83,7 @@ function BlockCard({ id, data, selected }: NodeProps<BlockNode>) {
                 color={
                   direction === "inputs" &&
                   problems.some((p) => p.port === port.name)
-                    ? "error"
+                    ? problemColor
                     : undefined
                 }
               >
@@ -93,7 +96,7 @@ function BlockCard({ id, data, selected }: NodeProps<BlockNode>) {
       {problems.length > 0 && (
         <Box
           component="ul"
-          aria-label={`Problems in ${block?.name ?? data.block_id}`}
+          aria-label={`${stale ? "Previous problems" : "Problems"} in ${block?.name ?? data.block_id}`}
           sx={{ m: 0, mt: 1, pl: 2 }}
         >
           {problems.map((p, index) => (
@@ -101,7 +104,7 @@ function BlockCard({ id, data, selected }: NodeProps<BlockNode>) {
               key={index}
               component="li"
               variant="caption"
-              color="error"
+              color={problemColor}
               sx={{ display: "list-item" }}
             >
               {p.message}
@@ -116,14 +119,21 @@ const nodeTypes = { block: BlockCard };
 function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
   const state = useEditorStore();
   const theme = useTheme();
+  const stale = useContext(StaleDiagnostics);
   const placed = useMemo(
     () => placeDiagnostics(diagnostics, state.nodes, state.edges),
     [diagnostics, state.nodes, state.edges],
   );
   // Highlighting is derived for display only; the stored draft is untouched.
   const edges = useMemo(
-    () => markEdges(state.edges, placed.byEdge, theme.palette.error.main),
-    [state.edges, placed, theme],
+    () =>
+      markEdges(
+        state.edges,
+        placed.byEdge,
+        stale ? theme.palette.text.secondary : theme.palette.error.main,
+        stale,
+      ),
+    [state.edges, placed, theme, stale],
   );
   const [search, setSearch] = useState("");
   const { screenToFlowPosition } = useReactFlow();
@@ -285,10 +295,18 @@ function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
     </Stack>
   );
 }
-export function Canvas({ diagnostics = [] }: { diagnostics?: Diagnostic[] }) {
+export function Canvas({
+  diagnostics = [],
+  staleDiagnostics = false,
+}: {
+  diagnostics?: Diagnostic[];
+  staleDiagnostics?: boolean;
+}) {
   return (
     <ReactFlowProvider>
-      <GraphCanvas diagnostics={diagnostics} />
+      <StaleDiagnostics value={staleDiagnostics}>
+        <GraphCanvas diagnostics={diagnostics} />
+      </StaleDiagnostics>
     </ReactFlowProvider>
   );
 }

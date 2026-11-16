@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { Edge } from "@xyflow/react";
 import {
   validatePipeline,
@@ -60,6 +60,7 @@ export function markEdges(
   edges: Edge[],
   byEdge: Map<string, Diagnostic[]>,
   color: string,
+  stale = false,
 ): Edge[] {
   return edges.map((e) => {
     const problems = byEdge.get(e.id);
@@ -67,7 +68,7 @@ export function markEdges(
     return {
       ...e,
       className: "invalid-connection",
-      ariaLabel: `Connection problem: ${problems.map((p) => p.message).join(" ")}`,
+      ariaLabel: `${stale ? "Previous connection problem" : "Connection problem"}: ${problems.map((p) => p.message).join(" ")}`,
       label: problems.length > 1 ? `${problems.length} problems` : "Problem",
       style: { stroke: color, strokeWidth: 2 },
       labelStyle: { fill: color, fontWeight: 600 },
@@ -80,7 +81,7 @@ export function fieldMessages(
   diagnostics: Diagnostic[],
   nodeId: string,
 ): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
+  const result: Record<string, string[]> = Object.create(null);
   for (const d of diagnostics)
     if (d.node_id === nodeId && d.field !== null)
       (result[d.field] ??= []).push(d.message);
@@ -94,6 +95,7 @@ export interface ValidationState {
   error: Error | null;
   /** Execution stays disabled until the current graph is known to be valid. */
   canRun: boolean;
+  retry: () => void;
 }
 
 /**
@@ -103,31 +105,43 @@ export interface ValidationState {
 export function usePipelineValidation(
   nodes: BlockNode[],
   edges: Edge[],
+  generation: number,
   delay = 300,
 ): ValidationState {
   const key = useMemo(
     () => JSON.stringify(semanticDefinition(nodes, edges)),
     [nodes, edges],
   );
-  const [checked, setChecked] = useState(key);
+  const [debounced, setDebounced] = useState({ generation, key });
+  const checked = debounced.generation === generation ? debounced.key : key;
   useEffect(() => {
-    const timer = setTimeout(() => setChecked(key), delay);
+    const timer = setTimeout(() => setDebounced({ generation, key }), delay);
     return () => clearTimeout(timer);
-  }, [key, delay]);
+  }, [generation, key, delay]);
   const query = useQuery({
-    queryKey: ["validation", checked],
+    queryKey: ["validation", generation, checked],
     queryFn: ({ signal }) =>
       validatePipeline(JSON.parse(checked) as SemanticDefinition, signal),
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === generation ? previous : undefined,
     retry: false,
     staleTime: Infinity,
-    placeholderData: keepPreviousData,
   });
   const current =
-    checked === key && query.isSuccess && !query.isPlaceholderData;
+    checked === key &&
+    query.isSuccess &&
+    !query.isPlaceholderData &&
+    !query.isFetching;
   return {
     report: query.data,
     current,
-    error: checked === key && query.isError ? query.error : null,
+    error:
+      checked === key && query.isError && !query.isFetching
+        ? query.error
+        : null,
     canRun: current && query.data?.valid === true,
+    retry: () => {
+      if (checked === key && query.isError) void query.refetch();
+    },
   };
 }

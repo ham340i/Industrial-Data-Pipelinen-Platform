@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Alert,
   Button,
   List,
+  ListItem,
   ListItemButton,
   ListItemText,
   Paper,
@@ -54,12 +55,15 @@ export function ValidationPanel({
   const hasNode = (id: string | null) => nodes.some((n) => n.id === id);
   const subject = useSubject();
   const [ran, setRan] = useState(false);
-  const { report, current, error, canRun } = validation;
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  const { report, current, error, canRun, retry } = validation;
   const problems = report?.diagnostics ?? [];
   const status = error
     ? null
     : !current
-      ? "Checking pipeline…"
+      ? problems.length
+        ? "Checking pipeline… Showing problems from the last check."
+        : "Checking pipeline…"
       : canRun
         ? "Ready to run. No problems found."
         : `${problems.length} ${problems.length === 1 ? "problem" : "problems"} must be fixed before running.`;
@@ -87,13 +91,24 @@ export function ValidationPanel({
             Run pipeline
           </Button>
         </Stack>
-        {status && (
-          <Typography role="status" aria-live="polite">
-            {status}
-          </Typography>
-        )}
+        <Typography ref={statusRef} tabIndex={-1} role="status">
+          {status}
+        </Typography>
         {error && (
-          <Alert severity="warning">
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                onClick={() => {
+                  statusRef.current?.focus();
+                  retry();
+                }}
+              >
+                Retry pipeline check
+              </Button>
+            }
+          >
             {error.message} Running stays disabled until the check succeeds.
           </Alert>
         )}
@@ -106,24 +121,40 @@ export function ValidationPanel({
         {problems.length > 0 && (
           <List
             dense
-            aria-label="Pipeline problems"
-            sx={{ opacity: current ? 1 : 0.6 }}
+            aria-label={
+              current ? "Pipeline problems" : "Previous pipeline problems"
+            }
           >
-            {problems.map((d, index) => (
-              <ListItemButton
-                key={`${index}-${d.code}-${d.node_id}-${d.edge_id}-${d.field}`}
-                disabled={!hasNode(d.node_id)}
-                onClick={() =>
-                  d.node_id && focusConfiguration(d.node_id, d.field)
-                }
-              >
+            {problems.map((d, index) => {
+              const { node_id: nodeId } = d;
+              const canFocus = current && nodeId !== null && hasNode(nodeId);
+              const text = (
                 <ListItemText
                   primary={d.message}
                   secondary={subject(d)}
-                  slotProps={{ primary: { color: "error" } }}
+                  slotProps={{
+                    primary: { color: current ? "error" : "text.secondary" },
+                  }}
                 />
-              </ListItemButton>
-            ))}
+              );
+              return (
+                <ListItem
+                  key={`${index}-${d.code}-${d.node_id}-${d.edge_id}-${d.field}`}
+                  disablePadding={canFocus}
+                >
+                  {canFocus ? (
+                    <ListItemButton
+                      component="button"
+                      onClick={() => focusConfiguration(nodeId, d.field)}
+                    >
+                      {text}
+                    </ListItemButton>
+                  ) : (
+                    text
+                  )}
+                </ListItem>
+              );
+            })}
           </List>
         )}
       </Stack>

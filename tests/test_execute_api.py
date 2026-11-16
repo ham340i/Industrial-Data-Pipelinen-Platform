@@ -12,8 +12,11 @@ from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.main import app
+from app.metadata.database import Database
+from app.pipelines import api as pipelines_api
 from app.runs.scheduler import TimerStopTimedOut
 from app.runs.scheduler import scheduler as scheduler_dependency
+from app.workspace import effective_workspace_root
 
 
 def manual_graph() -> dict[str, Any]:
@@ -77,6 +80,90 @@ def test_execute_unknown_pipeline_is_structured_404(client: TestClient):
     response = client.post(f"{path}/00000000-0000-0000-0000-000000000000/execute")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "pipeline_not_found"
+
+
+def test_execute_revision_conflict_creates_no_run(client: TestClient):
+    path = pipelines_path(client)
+    pipeline_id = create(client, path, manual_graph())
+    saved = client.patch(
+        f"{path}/{pipeline_id}", json={"name": "Updated", "expected_revision": 1}
+    )
+    assert saved.status_code == 200
+    assert saved.json()["revision"] == 2
+
+    response = client.post(
+        f"{path}/{pipeline_id}/execute", json={"expected_revision": 1}
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "revision_conflict"
+    assert client.get("/api/v1/runs").json()["total"] == 0
+
+
+def test_execute_exact_revision(client: TestClient):
+    path = pipelines_path(client)
+    pipeline_id = create(client, path, manual_graph())
+    response = client.post(
+        f"{path}/{pipeline_id}/execute", json={"expected_revision": 1}
+    )
+    assert response.status_code == 201, response.text
+    assert set(response.json()) == {"run_id", "state"}
+    detail = client.get(f"/api/v1/runs/{response.json()['run_id']}").json()
+    assert detail["revision"] == 1
+    assert detail["state"] == "succeeded"
+
+
+@pytest.mark.parametrize("value", [0, -1, True, False, "1", 1.0, 1.5, [], {}])
+def test_execute_rejects_invalid_expected_revision(client: TestClient, value: Any):
+    path = pipelines_path(client)
+    pipeline_id = create(client, path, manual_graph())
+    response = client.post(
+        f"{path}/{pipeline_id}/execute", json={"expected_revision": value}
+    )
+    assert response.status_code == 422
+    assert client.get("/api/v1/runs").json()["total"] == 0
+
+
+@pytest.mark.parametrize("payload", [None, {}, {"expected_revision": None}])
+def test_execute_without_guard_runs_latest(client: TestClient, payload: Any):
+    path = pipelines_path(client)
+    pipeline_id = create(client, path, invalid_graph())
+    saved = client.put(
+        f"{path}/{pipeline_id}",
+        json={"name": "P", "expected_revision": 1, "definition": manual_graph()},
+    )
+    assert saved.status_code == 200
+    response = client.post(f"{path}/{pipeline_id}/execute", json=payload)
+    assert response.status_code == 201, response.text
+    detail = client.get(f"/api/v1/runs/{response.json()['run_id']}").json()
+    assert detail["revision"] == 2
+    assert detail["state"] == "succeeded"
+
+
+def test_execute_uses_captured_revision_if_latest_changes(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    path = pipelines_path(client)
+    pipeline_id = create(client, path, manual_graph())
+
+    def save_after_capture(db: Database) -> Path | None:
+        # This boundary is after the guarded read and before execute_revision.
+        saved = client.put(
+            f"{path}/{pipeline_id}",
+            json={"name": "P", "expected_revision": 1, "definition": invalid_graph()},
+        )
+        assert saved.status_code == 200
+        assert saved.json()["revision"] == 2
+        return effective_workspace_root(db)
+
+    monkeypatch.setattr(pipelines_api, "effective_workspace_root", save_after_capture)
+    response = client.post(
+        f"{path}/{pipeline_id}/execute", json={"expected_revision": 1}
+    )
+    assert response.status_code == 201, response.text
+    detail = client.get(f"/api/v1/runs/{response.json()['run_id']}").json()
+    assert detail["revision"] == 1
+    assert detail["state"] == "succeeded"
+    assert client.get(f"{path}/{pipeline_id}").json()["revision"] == 2
 
 
 def test_execute_invalid_pipeline_is_structured_422_and_creates_no_run(

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
   Button,
@@ -37,8 +37,34 @@ export interface BlockConfigPanelProps {
   onChange: (nodeId: string, value: Configuration) => void;
   disabled?: boolean;
   serverErrors?: Record<string, string[]>;
+  staleDiagnostics?: boolean;
   focusRequest?: { nodeId: string; field: string | null } | null;
   onRetry?: () => void;
+}
+
+function RecoveryNotice({
+  focusRequest,
+  disabled,
+  loading = false,
+  children,
+}: Pick<BlockConfigPanelProps, "focusRequest" | "disabled"> & {
+  loading?: boolean;
+  children: ReactNode;
+}) {
+  const noticeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focusRequest && !disabled) noticeRef.current?.focus();
+  }, [focusRequest, disabled]);
+  return (
+    <Alert
+      ref={noticeRef}
+      tabIndex={-1}
+      severity={loading ? "info" : "error"}
+      role={loading ? "status" : "alert"}
+    >
+      {children}
+    </Alert>
+  );
 }
 
 function ArrayField({
@@ -46,12 +72,14 @@ function ArrayField({
   value,
   onChange,
   issue,
+  previousIssue,
   disabled,
 }: {
   field: ConfigField;
   value: JsonValue | undefined;
   onChange: (value: JsonValue | undefined) => void;
   issue?: string;
+  previousIssue?: string;
   disabled?: boolean;
 }) {
   const text =
@@ -77,6 +105,7 @@ function ArrayField({
         parseError
           ? "Enter a valid JSON list."
           : (issue ??
+            previousIssue ??
             field.description ??
             'Enter a JSON list, such as ["column_a"].')
       }
@@ -105,6 +134,7 @@ function ConfigForm({
   onChange,
   disabled = false,
   serverErrors = {},
+  staleDiagnostics = false,
   focusRequest,
 }: {
   selected: SelectedBlock;
@@ -113,6 +143,7 @@ function ConfigForm({
   onChange: BlockConfigPanelProps["onChange"];
   disabled?: boolean;
   serverErrors?: Record<string, string[]>;
+  staleDiagnostics?: boolean;
   focusRequest?: BlockConfigPanelProps["focusRequest"];
 }) {
   const headingId = useId();
@@ -122,30 +153,31 @@ function ConfigForm({
     if (!focusRequest || disabled) return;
     const controls = Array.from(
       formRef.current?.querySelectorAll<HTMLElement>(
-        "input, textarea, select",
+        "input[data-config-field]:not([type=hidden]):not([readonly]):not(:disabled), textarea[data-config-field]:not([readonly]):not(:disabled), select[data-config-field]:not(:disabled)",
       ) ?? [],
+    ).filter(
+      (input) => !input.closest("[hidden], [aria-hidden=true], [inert]"),
     );
     const field = focusRequest.field?.split(/[.[]/, 1)[0];
-    (
-      controls.find(
-        (input) => input.dataset.configField === focusRequest.field,
-      ) ??
-      controls.find((input) => input.dataset.configField === field) ??
-      controls.find((input) => input.getAttribute("aria-invalid") === "true") ??
-      controls[0] ??
-      formRef.current
-    )?.focus();
+    const input = field
+      ? (controls.find(
+          (input) => input.dataset.configField === focusRequest.field,
+        ) ?? controls.find((input) => input.dataset.configField === field))
+      : (controls.find(
+          (input) => input.getAttribute("aria-invalid") === "true",
+        ) ?? controls[0]);
+    (input ?? formRef.current)?.focus();
   }, [focusRequest, disabled]);
   let fields: ConfigField[];
   try {
     fields = fieldsFromSchema(block.config_schema);
   } catch {
     return (
-      <Alert severity="error">
+      <RecoveryNotice focusRequest={focusRequest} disabled={disabled}>
         This block has an unsupported or unsafe configuration schema. Existing
         values have been preserved. Ask the block owner to provide a supported
         public schema.
-      </Alert>
+      </RecoveryNotice>
     );
   }
   const effective = { ...defaultsFor(fields), ...value };
@@ -211,10 +243,20 @@ function ConfigForm({
             )
             .flatMap(([, messages]) => messages);
           const issue =
-            [...new Set([localIssue, ...remote].filter(Boolean))].join(" ") ||
-            undefined;
+            [
+              ...new Set(
+                [localIssue, ...(staleDiagnostics ? [] : remote)].filter(
+                  Boolean,
+                ),
+              ),
+            ].join(" ") || undefined;
+          const previousIssue =
+            staleDiagnostics && remote.length > 0
+              ? `Previous check: ${[...new Set(remote)].join(" ")}`
+              : undefined;
           const helper =
             issue ??
+            previousIssue ??
             field.description ??
             (field.required ? "Required" : "Optional");
           const options = Array.isArray(field.schema.enum)
@@ -230,6 +272,7 @@ function ConfigForm({
                   field={field}
                   value={current}
                   issue={issue}
+                  previousIssue={previousIssue}
                   disabled={disabled}
                   onChange={(next) => update(field.name, next)}
                 />
@@ -279,7 +322,11 @@ function ConfigForm({
                   }
                   required={field.required}
                   error={Boolean(issue)}
-                  helperText={current === null ? "Explicit null value" : helper}
+                  helperText={
+                    issue ??
+                    previousIssue ??
+                    (current === null ? "Explicit null value" : helper)
+                  }
                   type={
                     field.type === "number" || field.type === "integer"
                       ? "number"
@@ -342,18 +389,25 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
     );
   if (props.registry.status === "loading")
     return (
-      <Alert severity="info" role="status">
+      <RecoveryNotice
+        focusRequest={props.focusRequest}
+        disabled={props.disabled}
+        loading
+      >
         Loading block definitions. Your configuration is preserved.
-      </Alert>
+      </RecoveryNotice>
     );
   if (props.registry.status === "error")
     return (
-      <Alert severity="error">
+      <RecoveryNotice
+        focusRequest={props.focusRequest}
+        disabled={props.disabled}
+      >
         Block definitions could not be loaded. Your configuration is preserved.
         {props.onRetry && (
           <Button onClick={props.onRetry}>Retry definitions</Button>
         )}
-      </Alert>
+      </RecoveryNotice>
     );
   const matches = props.registry.blocks.filter(
     (item) =>
@@ -362,10 +416,13 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
   );
   if (matches.length !== 1)
     return (
-      <Alert severity="error">
+      <RecoveryNotice
+        focusRequest={props.focusRequest}
+        disabled={props.disabled}
+      >
         The exact block version is unavailable or duplicated. Your configuration
         is preserved.
-      </Alert>
+      </RecoveryNotice>
     );
   return (
     <ConfigForm
@@ -376,6 +433,7 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
       onChange={props.onChange}
       disabled={props.disabled}
       serverErrors={props.serverErrors}
+      staleDiagnostics={props.staleDiagnostics}
       focusRequest={props.focusRequest}
     />
   );

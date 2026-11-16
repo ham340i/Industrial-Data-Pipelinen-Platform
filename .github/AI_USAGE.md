@@ -155,6 +155,39 @@ unbounded join so it never returns early. See
 for the four regression tests, including a deterministic one that drives
 the exact lock race instead of relying on timing.
 
+## Issue #33 validation recovery
+
+OpenAI Codex implemented the validation recovery slice and its regression
+tests using the team's existing Builder, configuration and validation
+contracts. See the [verification record](../docs/testing/issue-33-validation-recovery.md)
+for checks and integration dependencies. The issue requirements came from
+the team. Independent teammate review and acceptance remain pending.
+
+On November 9, Yousef requested completion of his remaining capstone work.
+Codex audited the draft, reproduced and fixed private-error disclosure and
+missing keyboard-focus cases, added regressions, ran the recorded checks and
+updated iteration/contribution evidence. See the same verification record for
+failed attempts, final results and unresolved preview/run dependencies.
+
+On November 11 (UTC), Codex reconciled PR #81 with current main, retained both
+contributors' documentation, and reran the checks recorded above. The work
+updates the existing draft branch; it does not claim independent approval or
+completion of the remaining preview/run error-recovery acceptance cases.
+
+After preview #83 merged on November 11, Yousef asked to complete the recovery
+work. Codex extended the existing preview and saved-run controls, added the
+transactional saved-revision precondition, wrote regressions and real-browser
+recovery cases, and ran the checks in the verification record. The work preserves
+the team's preview and telemetry implementation rather than claiming its authorship.
+Independent student review, human assistive-technology observations and stakeholder
+acceptance are separate and remain pending.
+
+OpenAI Codex integrated the run monitor from main and implemented the fixes for
+Mena's six review comments, including backend diagnostic redaction, editor focus,
+stale validation and execution recovery. Review comments and acceptance criteria
+came from the team. The automated checks are recorded in the issue #33 verification
+record.
+
 ## Issue #30 run monitoring
 
 Codex designed and implemented the run API client, Builder monitoring panel,

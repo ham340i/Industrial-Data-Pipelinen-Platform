@@ -24,6 +24,10 @@ The record also links Al-Yousef's allocated review of merged executor PR #70
 and the November 2 current-main verification. UI/stakeholder acceptance remains
 unverified.
 
+Issue #33 validation-slice evidence: [Al-Yousef, Iteration 4 error recovery](Al-Yousef-iteration-4.md).
+Draft PR #81 includes implementation, recovery tests and current integration
+limits. Preview/run integration, independent review and acceptance remain pending.
+
 Issue #23 local preparation: [aboudka2003, Iteration 3 SQL source](aboudka2003-iteration-3.md).
 This records AI-assisted implementation and local verification; PR, CI and
 independent review remain pending. Related #31 integration is incomplete.

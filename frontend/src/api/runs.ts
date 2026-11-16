@@ -1,5 +1,5 @@
 // AI contribution: 50% or more AI-generated
-import { api } from "./client";
+import { api, ApiError } from "./client";
 import { object, invalidResponse } from "./guards";
 import { isProjectId } from "./projects";
 
@@ -192,18 +192,76 @@ export function parseRun(
     outputs: data.outputs as RunDetail["outputs"],
   };
 }
+
+/** A refused execution is distinct from an uncertain transport failure. */
+export class ExecutionRequestError extends ApiError {
+  constructor(
+    message: string,
+    status: number,
+    public readonly nodeId: string | null = null,
+  ) {
+    super(message, "http", status);
+  }
+}
+
 export const isActiveRun = (state: RunState) =>
   state === "queued" || state === "running";
 
 export async function executePipeline(
   projectId: string,
   pipelineId: string,
+  expectedRevision?: number,
 ): Promise<string> {
-  if (!isProjectId(projectId) || !isProjectId(pipelineId)) return invalid();
-  const { data } = await api.post<unknown>(
-    `/projects/${projectId}/pipelines/${pipelineId}/execute`,
-  );
   if (
+    !isProjectId(projectId) ||
+    !isProjectId(pipelineId) ||
+    (expectedRevision !== undefined &&
+      (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1))
+  )
+    return invalid();
+  const response = await api.post<unknown>(
+    `/projects/${projectId}/pipelines/${pipelineId}/execute`,
+    expectedRevision === undefined
+      ? undefined
+      : { expected_revision: expectedRevision },
+    { validateStatus: () => true },
+  );
+  const { data, status } = response;
+  if (status >= 400) {
+    const error = object(data) && object(data.error) ? data.error : null;
+    if (status === 409 && error?.code === "revision_conflict")
+      throw new ExecutionRequestError(
+        "This pipeline changed since it was opened. Open the latest version or save a copy before running.",
+        status,
+      );
+    if (status === 422) {
+      const nodeId =
+        typeof error?.node_context === "string" &&
+        error.node_context.length > 0 &&
+        error.node_context.length <= 128
+          ? error.node_context
+          : null;
+      throw new ExecutionRequestError(
+        "The saved pipeline could not run. Check its configuration and validation problems.",
+        status,
+        nodeId,
+      );
+    }
+    if (status < 500)
+      throw new ExecutionRequestError(
+        `The API rejected the execution request (HTTP ${status}).`,
+        status,
+      );
+    // An unexpected server failure can happen after a run has been recorded.
+    throw new ApiError(
+      `The execution request failed (HTTP ${status}).`,
+      "http",
+      status,
+    );
+  }
+  if (
+    status < 200 ||
+    status >= 300 ||
     !object(data) ||
     typeof data.run_id !== "string" ||
     !isProjectId(data.run_id) ||

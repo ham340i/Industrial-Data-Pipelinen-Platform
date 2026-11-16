@@ -9,8 +9,10 @@ import { assertPublic } from "./schema";
 
 export function ConfigurationPanel({
   diagnostics = [],
+  staleDiagnostics = false,
 }: {
   diagnostics?: Diagnostic[];
+  staleDiagnostics?: boolean;
 }) {
   const selectedId = useEditorStore((s) => s.selectedNodeId);
   const node = useEditorStore((s) =>
@@ -62,6 +64,7 @@ export function ConfigurationPanel({
         onChange={onChange}
         disabled={busy}
         serverErrors={node ? fieldMessages(diagnostics, node.id) : {}}
+        staleDiagnostics={staleDiagnostics}
         focusRequest={focus?.nodeId === node?.id ? focus : null}
         onRetry={() => void catalog.refetch()}
       />

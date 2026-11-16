@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { expect, it } from "vitest";
+import { ConfigurationPanel } from "./configuration/ConfigurationPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import type { PreviewRequest } from "./api/preview";
 import { server } from "./test/server";
@@ -19,7 +20,15 @@ function seed() {
   useEditorStore.getState().selectNode(nodes[0].id);
   server.use(
     http.get("http://127.0.0.1:8000/api/v1/blocks", () =>
-      HttpResponse.json([csvBlock]),
+      HttpResponse.json([
+        {
+          ...csvBlock,
+          config_schema: {
+            ...csvBlock.config_schema,
+            additionalProperties: false,
+          },
+        },
+      ]),
     ),
   );
   return nodes.map((n) => n.id);
@@ -31,6 +40,7 @@ function mount(projectId: string | null = "project") {
   const result = render(
     <QueryClientProvider client={client}>
       <PreviewPanel projectId={projectId} />
+      <ConfigurationPanel />
     </QueryClientProvider>,
   );
   return { ...result, client };
@@ -344,3 +354,203 @@ it("explains unsupported blocks, no selection and missing project without reques
     screen.getByText("Open a project to preview its local data."),
   ).toBeVisible();
 });
+
+const failure = (node: string) =>
+  HttpResponse.json(
+    {
+      error: {
+        code: "file_unavailable",
+        message: "Raw private exception /private/file.csv",
+        node_context: node,
+        field: "resource_ref",
+        port: null,
+        correlation_id: "safe-reference",
+      },
+    },
+    { status: 422 },
+  );
+
+it("keyboard recovery focuses an upstream field without changing unsaved configuration", async () => {
+  const [a, b] = seed();
+  act(() =>
+    useEditorStore
+      .getState()
+      .setNodeConfiguration(b, { resource_ref: "unsaved.csv" }),
+  );
+  act(() =>
+    useEditorStore.setState({
+      edges: [
+        {
+          id: "upstream",
+          source: b,
+          sourceHandle: "table",
+          target: a,
+          targetHandle: "table",
+        },
+      ],
+    }),
+  );
+  const before = useEditorStore.getState().nodes.map((node) => node.data);
+  const edgesBefore = useEditorStore.getState().edges;
+  server.use(http.post(url, () => failure(b)));
+  mount();
+  await userEvent.click(await start());
+  const configure = await screen.findByRole("button", {
+    name: "Configure node",
+  });
+  expect(screen.queryByText(/Raw private exception/)).not.toBeInTheDocument();
+  configure.focus();
+  await userEvent.keyboard("{Enter}");
+  await waitFor(() =>
+    expect(document.activeElement).toHaveAttribute(
+      "data-config-field",
+      "resource_ref",
+    ),
+  );
+  expect(useEditorStore.getState().selectedNodeId).toBe(b);
+  expect(useEditorStore.getState().nodes.map((node) => node.data)).toEqual(
+    before,
+  );
+  expect(useEditorStore.getState().edges).toEqual(edgesBefore);
+  expect(a).not.toBe(b);
+});
+
+it("keeps unknown-node errors readable without a dead Configure action", async () => {
+  seed();
+  server.use(http.post(url, () => failure("absent-node")));
+  mount();
+  await userEvent.click(await start());
+  expect(
+    await screen.findByText("Input file is missing or unreadable."),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Configure node" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/Field:/)).not.toBeInTheDocument();
+});
+
+it("keeps keyboard focus meaningful through repeated retry, loading and cancel", async () => {
+  const [a] = seed();
+  server.use(http.post(url, () => failure(a)));
+  mount();
+  await userEvent.click(await start());
+  const retry = await screen.findByRole("button", { name: "Retry preview" });
+  const releases: (() => void)[] = [];
+  server.use(
+    http.post(url, async () => {
+      await new Promise<void>((resolve) => releases.push(resolve));
+      return failure(a);
+    }),
+  );
+  retry.focus();
+  await userEvent.keyboard("{Enter}{Enter}");
+  await waitFor(() => expect(releases).toHaveLength(1));
+  expect(
+    screen.getByRole("button", { name: "Preview selected node" }),
+  ).toHaveFocus();
+  for (let i = 0; i < 3; i++) {
+    await userEvent.tab();
+    expect(
+      screen.getByRole("button", { name: "Cancel preview" }),
+    ).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(await start()).toHaveFocus();
+    await userEvent.keyboard("{Enter}{Enter}");
+    await waitFor(() => expect(releases).toHaveLength(i + 2));
+  }
+  await userEvent.tab();
+  await act(async () => releases.forEach((release) => release()));
+  expect(
+    await screen.findByRole("button", { name: "Retry preview" }),
+  ).toHaveFocus();
+});
+
+it.each(["selection", "edit", "project"])(
+  "ignores a late failure after %s changes",
+  async (change) => {
+    const [a, b] = seed();
+    let release!: () => void;
+    let received = false;
+    server.use(
+      http.post(url, async () => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+          received = true;
+        });
+        return failure(a);
+      }),
+    );
+    const mounted = mount();
+    await userEvent.click(await start());
+    await waitFor(() => expect(received).toBe(true));
+    if (change === "selection")
+      act(() => useEditorStore.getState().selectNode(b));
+    else if (change === "edit")
+      act(() =>
+        useEditorStore
+          .getState()
+          .setNodeConfiguration(a, { resource_ref: "new.csv" }),
+      );
+    else
+      mounted.rerender(
+        <QueryClientProvider client={mounted.client}>
+          <PreviewPanel projectId="new-project" />
+        </QueryClientProvider>,
+      );
+    await act(async () => release());
+    expect(
+      screen.queryByRole("button", { name: "Configure node" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Input file is missing or unreadable."),
+    ).not.toBeInTheDocument();
+    expect(await start()).toBeEnabled();
+  },
+);
+it.each([false, true])(
+  "completes a preview with meaningful focus without stealing it (moved away: %s)",
+  async (moveAway) => {
+    seed();
+    let release!: () => void;
+    let received = false;
+    server.use(
+      http.post(url, async ({ request }) => {
+        const body = (await request.json()) as PreviewRequest;
+        await new Promise<void>((resolve) => {
+          release = resolve;
+          received = true;
+        });
+        return HttpResponse.json(previewResult(body));
+      }),
+    );
+    mount();
+    const button = await start();
+    button.focus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(received).toBe(true));
+    await userEvent.tab();
+    expect(
+      screen.getByRole("button", { name: "Cancel preview" }),
+    ).toHaveFocus();
+    if (moveAway) {
+      await userEvent.tab();
+      expect(
+        screen.getByRole("textbox", { name: "resource_ref" }),
+      ).toHaveFocus();
+    }
+    const previousFocus = document.activeElement;
+    await act(async () => release());
+    expect(await screen.findByText("sample-value")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Full row count unknown",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Cancel preview" }),
+    ).not.toBeInTheDocument();
+    if (moveAway) expect(previousFocus).toHaveFocus();
+    else
+      expect(
+        screen.getByRole("button", { name: "Refresh preview" }),
+      ).toHaveFocus();
+  },
+);
