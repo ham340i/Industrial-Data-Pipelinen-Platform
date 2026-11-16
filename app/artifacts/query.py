@@ -138,6 +138,32 @@ def _scalar(value: object) -> Scalar:
     raise ArtifactUnavailable("Artifact contains an unsupported result value")
 
 
+def locked_connection(path: Path) -> Any:
+    """An in-memory DuckDB connection that can read only ``path`` (#32).
+
+    The query text is a fixed template, but the engine itself is also locked:
+    no extension install/autoload, no file access other than the resolved
+    artifact (no other files, COPY, ATTACH or writes), and the configuration
+    cannot be changed back by a later statement.
+    """
+    import duckdb
+
+    connection = duckdb.connect(database=":memory:")
+    try:
+        connection.execute("SET threads = 1")
+        connection.execute("SET memory_limit = '64MB'")
+        connection.execute("SET preserve_insertion_order = false")
+        connection.execute("SET autoinstall_known_extensions = false")
+        connection.execute("SET autoload_known_extensions = false")
+        connection.execute("SET allowed_paths = ?", [[str(path)]])
+        connection.execute("SET enable_external_access = false")
+        connection.execute("SET lock_configuration = true")
+    except BaseException:
+        connection.close()
+        raise
+    return connection
+
+
 def query_artifact(
     db: Database,
     artifact_id: str,
@@ -145,9 +171,8 @@ def query_artifact(
     query: ArtifactQuery,
 ) -> ArtifactQueryResult:
     """Read a bounded projection without loading the full Parquet artifact."""
-    # Keep the native query engine out of API startup and non-query processes.
-    import duckdb
-
+    # The native query engine is imported lazily by locked_connection, keeping
+    # it out of API startup and non-query processes.
     artifact = get_artifact(db, artifact_id)
     if artifact.format != "parquet":
         raise ArtifactNotQueryable("Only registered Parquet artifacts are queryable")
@@ -171,10 +196,7 @@ def query_artifact(
 
     connection: Any = None
     try:
-        connection = duckdb.connect(database=":memory:")
-        connection.execute("SET threads = 1")
-        connection.execute("SET memory_limit = '64MB'")
-        connection.execute("SET preserve_insertion_order = false")
+        connection = locked_connection(path)
         projection = ", ".join(_quoted(name) for name in columns)
         cursor = connection.execute(
             f"SELECT {projection} FROM read_parquet(?) LIMIT ? OFFSET ?",

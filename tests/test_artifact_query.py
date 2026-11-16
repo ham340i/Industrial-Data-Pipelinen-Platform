@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -16,6 +17,7 @@ from app.artifacts import (
     get_artifact,
     query_artifact,
 )
+from app.artifacts.query import locked_connection
 from app.blocks.contracts import Column, DataSchema
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
@@ -155,3 +157,44 @@ def test_legacy_metadata_remains_readable_but_not_queryable(
     assert get_artifact(db, "artifact").schema is None
     with pytest.raises(ArtifactNotQueryable, match="not available"):
         query_artifact(db, "artifact", workspace, ArtifactQuery())
+
+
+def locked(workspace: Path) -> tuple[Any, Path, Path]:
+    allowed, other = workspace / "allowed.parquet", workspace / "other.parquet"
+    pq.write_table(pa.table({"x": [1, 2]}), allowed)
+    pq.write_table(pa.table({"x": [9]}), other)
+    return locked_connection(allowed.resolve()), allowed.resolve(), other.resolve()
+
+
+def test_locked_connection_reads_only_the_resolved_artifact(workspace: Path):
+    connection, allowed, other = locked(workspace)
+    try:
+        query = "SELECT x FROM read_parquet(?)"
+        assert connection.execute(query, [str(allowed)]).fetchall() == [(1,), (2,)]
+        with pytest.raises(Exception, match="Permission"):
+            connection.execute(query, [str(other)])
+    finally:
+        connection.close()
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "SET enable_external_access = true",
+        "SET allowed_paths = []",
+        "COPY (SELECT 1 AS x) TO 'escape.csv'",
+        "ATTACH 'escape.duckdb'",
+        "INSTALL httpfs",
+    ],
+)
+def test_locked_connection_refuses_reconfiguration_writes_and_extensions(
+    workspace: Path, statement: str
+):
+    connection, _, _ = locked(workspace)
+    try:
+        with pytest.raises(Exception):  # noqa: B017 - DuckDB raises several types
+            connection.execute(statement)
+    finally:
+        connection.close()
+    assert not (workspace / "escape.csv").exists()
+    assert not (workspace / "escape.duckdb").exists()
