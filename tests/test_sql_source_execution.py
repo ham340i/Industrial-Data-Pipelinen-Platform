@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from app.sources.sql import (
     SqlSourceConfig,
@@ -60,7 +61,7 @@ def test_special_filename_reads_the_intended_database(
             connection.close()
 
     config = make_config(target, "SELECT COUNT(*) AS row_count FROM measurements")
-    assert read_sqlite_source(config).rows == [{"row_count": 3}]
+    assert read_in(synthetic_sqlite_db.parent, config).rows == [{"row_count": 3}]
 
 
 def test_special_filename_keeps_real_connection_read_only(
@@ -75,6 +76,7 @@ def test_special_filename_keeps_real_connection_read_only(
         connection: sqlite3.Connection,
         query: str,
         parameters: dict[str, object] | None = None,
+        **budgets: object,
     ) -> SqlQueryResult:
         connection.execute("UPDATE measurements SET asset_id = 9999")
         return SqlQueryResult(columns=[], rows=[])
@@ -82,7 +84,10 @@ def test_special_filename_keeps_real_connection_read_only(
     # Bypass query policy entirely: mode=ro must still protect the actual file.
     monkeypatch.setattr("app.sources.sql.execute_read_only_sqlite", unchecked_write)
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
-        read_sqlite_source(make_config(target, "SELECT asset_id FROM measurements"))
+        read_in(
+            synthetic_sqlite_db.parent,
+            make_config(target, "SELECT asset_id FROM measurements"),
+        )
 
 
 @pytest.mark.parametrize(
@@ -100,7 +105,7 @@ def test_quoted_sql_value_is_preserved(synthetic_sqlite_db: Path, value: str) ->
     query = f"SELECT '{quoted}' AS marker"
     config = make_config(synthetic_sqlite_db, query)
     assert config.query == query
-    assert read_sqlite_source(config).rows == [{"marker": value}]
+    assert read_in(synthetic_sqlite_db.parent, config).rows == [{"marker": value}]
 
 
 @pytest.mark.parametrize(
@@ -115,7 +120,9 @@ def test_quoted_sql_value_is_preserved(synthetic_sqlite_db: Path, value: str) ->
 def test_quoted_result_name_is_preserved(
     synthetic_sqlite_db: Path, query: str, name: str
 ) -> None:
-    result = read_sqlite_source(make_config(synthetic_sqlite_db, query))
+    result = read_in(
+        synthetic_sqlite_db.parent, make_config(synthetic_sqlite_db, query)
+    )
     assert result.columns == [name]
     assert result.rows == [{name: 1}]
 
@@ -128,7 +135,9 @@ def test_comments_and_read_only_cte_remain_supported(
         "(SELECT 'sensor/*A*/B') -- UPDATE is a comment\n"
         "SELECT marker FROM sample"
     )
-    result = read_sqlite_source(make_config(synthetic_sqlite_db, query))
+    result = read_in(
+        synthetic_sqlite_db.parent, make_config(synthetic_sqlite_db, query)
+    )
     assert result.rows == [{"marker": "sensor/*A*/B"}]
 
 
@@ -140,14 +149,15 @@ def test_duplicate_result_names_are_rejected(
     if empty:
         query += " WHERE 0"
     with pytest.raises(SqlSourceError, match="unique.*aliases"):
-        read_sqlite_source(make_config(synthetic_sqlite_db, query))
+        read_in(synthetic_sqlite_db.parent, make_config(synthetic_sqlite_db, query))
 
 
 def test_distinct_case_aliases_keep_their_positional_values(
     synthetic_sqlite_db: Path,
 ) -> None:
-    result = read_sqlite_source(
-        make_config(synthetic_sqlite_db, "SELECT 1 AS value, 2 AS VALUE")
+    result = read_in(
+        synthetic_sqlite_db.parent,
+        make_config(synthetic_sqlite_db, "SELECT 1 AS value, 2 AS VALUE"),
     )
     assert result.columns == ["value", "VALUE"]
     assert result.rows == [{"value": 1, "VALUE": 2}]
@@ -195,6 +205,11 @@ def test_quoted_contents_do_not_hide_real_unsafe_statements(
         connection.close()
 
 
+def read_in(root: Path, config: SqlSourceConfig) -> SqlQueryResult:
+    """Run the standalone reader with ``root`` as its workspace (#32)."""
+    return read_sqlite_source(config, workspace_root=root)
+
+
 def make_config(
     database_path: Path,
     query: str,
@@ -203,7 +218,7 @@ def make_config(
     return SqlSourceConfig.model_validate(
         {
             "dialect": "sqlite",
-            "database_path": str(database_path),
+            "database_path": database_path.name,
             "read_only": True,
             "query": query,
             "parameters": parameters or {},
@@ -226,7 +241,7 @@ def test_read_sqlite_source_returns_deterministic_result(
         {"asset_id": 1001},
     )
 
-    result = read_sqlite_source(config)
+    result = read_in(synthetic_sqlite_db.parent, config)
 
     assert result.columns == [
         "asset_id",
@@ -262,7 +277,7 @@ def test_parameter_binding_does_not_interpolate_sql(
         {"asset_id": "1001 OR 1=1"},
     )
 
-    result = read_sqlite_source(config)
+    result = read_in(synthetic_sqlite_db.parent, config)
 
     assert result.rows == []
 
@@ -308,3 +323,99 @@ def test_read_only_connection_rejects_write_even_if_boundary_is_bypassed(
             )
     finally:
         connection.close()
+
+
+@pytest.mark.parametrize(
+    "database_path",
+    [
+        "/etc/passwd.sqlite3",
+        "~/plant.sqlite3",
+        "~operator/plant.sqlite3",
+        "../outside.sqlite3",
+        "inputs/../../outside.sqlite3",
+        "inputs\\..\\..\\outside.sqlite3",
+        "C:\\plant\\data.sqlite3",
+        "C:data.sqlite3",
+        "\\\\server\\share\\data.sqlite3",
+        "data\x00.sqlite3",
+        "notes.txt",
+        "metadata.sqlite3.json",
+    ],
+)
+def test_database_path_must_be_a_workspace_relative_database(
+    database_path: str,
+) -> None:
+    with pytest.raises(ValidationError):
+        SqlSourceConfig.model_validate(
+            {"database_path": database_path, "query": "SELECT 1 AS one"}
+        )
+
+
+def test_symlink_escaping_the_workspace_is_refused_without_its_path(
+    tmp_path: Path, synthetic_sqlite_db: Path
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    try:
+        (workspace / "linked.sqlite3").symlink_to(synthetic_sqlite_db)
+    except OSError:
+        pytest.skip("Symlinks are unavailable on this filesystem")
+    config = make_config(workspace / "linked.sqlite3", "SELECT 1 AS one")
+    with pytest.raises(SqlSourceError) as error:
+        read_in(workspace, config)
+    assert "outside the workspace" in str(error.value)
+    assert str(tmp_path) not in str(error.value)
+
+
+def test_missing_database_error_does_not_echo_the_machine_path(
+    synthetic_sqlite_db: Path,
+) -> None:
+    config = make_config(synthetic_sqlite_db.parent / "absent.sqlite3", "SELECT 1")
+    with pytest.raises(SqlSourceError) as error:
+        read_in(synthetic_sqlite_db.parent, config)
+    assert str(synthetic_sqlite_db.parent) not in str(error.value)
+    assert "absent" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        # Value-length limit: one gigabyte allocated before the fix (#32).
+        "SELECT randomblob(1000000000) AS blob",
+        # VM step budget: an unbounded recursive CTE.
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n) "
+        "SELECT max(i) AS i FROM n",
+    ],
+)
+def test_engine_budgets_stop_resource_exhausting_queries(
+    synthetic_sqlite_db: Path, query: str
+) -> None:
+    with pytest.raises(SqlSourceError, match="SQLite rejected"):
+        read_in(synthetic_sqlite_db.parent, make_config(synthetic_sqlite_db, query))
+
+
+def test_row_and_file_budgets_are_enforced(synthetic_sqlite_db: Path) -> None:
+    config = make_config(synthetic_sqlite_db, "SELECT asset_id FROM measurements")
+    with pytest.raises(SqlSourceError, match="row budget"):
+        read_sqlite_source(
+            config, workspace_root=synthetic_sqlite_db.parent, max_rows=2
+        )
+    with pytest.raises(SqlSourceError, match="byte budget"):
+        read_sqlite_source(
+            config, workspace_root=synthetic_sqlite_db.parent, max_bytes=16
+        )
+
+
+def test_query_and_parameters_are_bounded() -> None:
+    with pytest.raises(ValidationError):
+        SqlSourceConfig.model_validate(
+            {"database_path": "a.sqlite3", "query": "SELECT 1" + " " * 20000}
+        )
+    with pytest.raises(ValidationError):
+        SqlSourceConfig.model_validate(
+            {
+                "database_path": "a.sqlite3",
+                "query": "SELECT 1",
+                "parameters": {f"p{i}": i for i in range(101)},
+            }
+        )
