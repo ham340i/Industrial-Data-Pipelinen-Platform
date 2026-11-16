@@ -1,6 +1,7 @@
 # AI contribution: below 50% AI-generated
 """Timer scheduler: start/stop, no-overlap and shutdown cleanup (#29)."""
 
+import logging
 import threading
 import time
 from collections.abc import Iterator
@@ -394,3 +395,27 @@ def test_failed_start_does_not_leave_registered_timer(
     with pytest.raises(RuntimeError, match="cannot start"):
         scheduler.start("pipeline", "revision", 30)
     assert scheduler.status("pipeline") is None
+
+
+def test_failed_tick_logs_the_exception_type_without_its_text(
+    db: Database, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """Tick failures must not copy paths or credentials into logs (#32)."""
+    revision_id = seed_revision(db, chain("test.trigger"))
+    leaking = RuntimeError("open /home/operator/plant.sqlite3 password=SYNTHETIC")
+
+    def failing_execute(*args: object, **kwargs: object) -> None:
+        raise leaking
+
+    monkeypatch.setattr("app.runs.scheduler.execute_revision", failing_execute)
+    timer = _Timer(db, executor_for(RecordingTrigger()), "pipeline", revision_id, 1)
+    with caplog.at_level(logging.DEBUG, logger="app.runs.scheduler"):
+        timer._run_once(Cancellation())
+
+    records = [r for r in caplog.records if r.name == "app.runs.scheduler"]
+    assert records, "the failed tick must still be logged"
+    for record in records:
+        assert record.exc_info is None
+        text = record.getMessage()
+        assert "RuntimeError" in text
+        assert "/home/operator" not in text and "SYNTHETIC" not in text

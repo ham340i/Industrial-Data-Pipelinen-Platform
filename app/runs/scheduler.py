@@ -178,13 +178,16 @@ class _Timer:
                 cancellation=token,
                 workspace_root=folder,
             )
-        except Exception:
+        except Exception as exc:
             # The run row itself already records a truthful failed/cancelled
             # state; this just keeps one bad tick from killing the timer.
-            logger.exception(
-                "Timer tick failed for pipeline %s revision %s",
+            # Log the type only, as execute_revision does: exception text and
+            # tracebacks can carry machine paths or bound SQL values (#32).
+            logger.error(
+                "Timer tick failed for pipeline %s revision %s (%s)",
                 self.status.pipeline_id,
                 self.status.revision_id,
+                type(exc).__name__,
             )
         finally:
             with self._lock:
