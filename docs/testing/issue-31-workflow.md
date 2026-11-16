@@ -55,7 +55,13 @@ release scenario passed. Follow-up `b20fcc2` fixes that selector and strengthens
 all seven block row-count assertions and log checks. Both OS jobs rerun the
 complete release and standalone scenarios; the live PR checks expose their
 results, HTML/JUnit reports, failure traces and success screenshot attachments.
-No successful browser test is inferred from the earlier timed-out attempt.
+A subsequent attempt passed reload/reopen/rerun and persisted-history output
+inspection, then found that the test's SQL-node center click was obstructed
+in its compact canvas layout. The test now uses Run monitoring's accessible
+Inspect action to open that block, and checks focus on the first configuration
+field (the run contract identifies a node, not a field). It also waits for the
+repaired output query before comparing rows. No successful complete browser
+test is inferred from the earlier timed-out attempts.
 
 Measured fixture flow: CSV `0 → 6`, SQL `0 → 2`, schema validation `6 → 6`,
 filter `6 → 5`, join `7 → 4`, aggregate `4 → 2`, sink `2 → 1` (one artifact).

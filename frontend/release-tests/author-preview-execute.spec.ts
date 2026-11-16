@@ -276,8 +276,10 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     monitor.getByRole("table", { name: "Parquet output rows" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Fit View", exact: true }).click();
-  await page.locator(`.react-flow__node[data-id="${sql}"]`).click();
+  await monitor
+    .getByRole("region", { name: `Block ${sql}`, exact: true })
+    .getByRole("button", { name: `Inspect ${sql}`, exact: true })
+    .click();
   await page
     .getByRole("region", { name: "Configure SQL Source", exact: true })
     .getByRole("textbox", { name: "Query", exact: true })
@@ -299,7 +301,11 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
   const query = page
     .getByRole("region", { name: "Configure SQL Source", exact: true })
     .getByRole("textbox", { name: "Query", exact: true });
-  await expect(query).toBeFocused();
+  await expect(
+    page
+      .getByRole("region", { name: "Configure SQL Source", exact: true })
+      .getByRole("textbox", { name: "Resource Ref", exact: true }),
+  ).toBeFocused();
   await query.fill(
     "SELECT asset_id, label FROM assets WHERE label IS NOT NULL ORDER BY asset_id",
   );
