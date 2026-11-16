@@ -56,17 +56,11 @@ it("inspects and pages governed outputs, rendering nulls and zero", async () => 
   await user.click(
     screen.getByRole("button", { name: "Inspect output result.parquet" }),
   );
-  expect(
-    await screen.findByRole("cell", { name: "30" }),
-  ).toBeVisible();
+  expect(await screen.findByRole("cell", { name: "30" })).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Next output rows" }));
-  expect(
-    await screen.findByRole("cell", { name: "0" }),
-  ).toBeVisible();
+  expect(await screen.findByRole("cell", { name: "0" })).toBeVisible();
   expect(screen.getByRole("cell", { name: "null" })).toBeVisible();
-  expect(
-    screen.queryByRole("cell", { name: "A" }),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("cell", { name: "A" })).not.toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Next output rows" }),
   ).toBeDisabled();
