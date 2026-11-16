@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.secret_policy import is_credential_key
+
 
 _CREDENTIAL_KEYS = {
     "username",
@@ -102,7 +104,7 @@ class SqlSourceConfig(BaseModel):
     @model_validator(mode="after")
     def reject_credential_parameters(self) -> SqlSourceConfig:
         for key in self.parameters:
-            if key.lower() in _CREDENTIAL_KEYS:
+            if key.lower() in _CREDENTIAL_KEYS or is_credential_key(key):
                 raise ValueError(
                     "credential-like parameters are not allowed in portable definitions"
                 )
