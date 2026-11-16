@@ -2,6 +2,7 @@
 
 Date: November 16, 2026. Issue: [#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31).
 Branch: `feature/31-author-preview-execute`.
+PR: [#89](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/89).
 
 The user selected this integration task and requested its implementation.
 OpenAI Codex inspected current main and dependencies, designed and implemented
