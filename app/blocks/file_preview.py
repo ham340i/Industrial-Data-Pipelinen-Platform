@@ -26,7 +26,13 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
-from app.blocks.files import JsonConfig, SourceConfig, resource_path, unique_object
+from app.blocks.files import (
+    JsonConfig,
+    SourceConfig,
+    decoded_bytes,
+    resource_path,
+    unique_object,
+)
 from app.blocks.preview_policy import (
     MAX_COLUMN_CHARS,
     MAX_COLUMNS,
@@ -418,13 +424,25 @@ def preview_parquet(
                 rows: list[dict[str, Scalar]] = []
                 inspected = 0
                 if total:
-                    for batch in file.iter_batches(
+                    # Keep strings dictionary-encoded until their expanded
+                    # size is known to fit the decode budget (#32).
+                    dictionary_file = pq.ParquetFile(
+                        source,
+                        metadata=metadata,
+                        memory_map=False,
+                        buffer_size=0,
+                        pre_buffer=False,
+                        read_dictionary=[
+                            c.name for c in schema.columns if c.dtype == "string"
+                        ],
+                    )
+                    for batch in dictionary_file.iter_batches(
                         batch_size=min(count, total),
                         row_groups=groups,
                         use_threads=False,
                     ):
                         context.check_cancelled()
-                        if batch.nbytes > MAX_DECODE_BYTES:
+                        if decoded_bytes(batch) > MAX_DECODE_BYTES:
                             raise BlockError(
                                 "preview_decode_limit", "Decoded batch is too large."
                             )

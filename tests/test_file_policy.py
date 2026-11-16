@@ -12,7 +12,13 @@ import pytest
 from app.blocks.context import BlockEvent
 from app.blocks.contracts import Table
 from app.blocks.errors import BlockError
-from app.blocks.files import CsvSink, CsvSource, JsonSource, ParquetSource
+from app.blocks.files import (
+    CsvSink,
+    CsvSource,
+    JsonSource,
+    ParquetSource,
+    decoded_bytes,
+)
 from app.blocks.registry import RegisteredBlock
 from tests.test_file_blocks import run, scalar_table
 
@@ -117,3 +123,73 @@ def test_input_numeric_range_and_precision(tmp_path: Path):
         with pytest.raises(BlockError) as error:
             run(JsonSource(), tmp_path, {"resource_ref": "numbers.json"})
         assert error.value.failure.code == "unsupported_value"
+
+
+def write_repetitive_parquet(path: Path, rows: int, width: int) -> None:
+    """A few hundred bytes on disk; ``rows * width`` bytes once decoded (#32)."""
+    pq.write_table(
+        pa.table({"payload": pa.array(["A" * width] * rows)}),
+        path,
+        compression="zstd",
+    )
+
+
+def test_parquet_dictionary_bomb_is_refused_before_expansion(tmp_path: Path):
+    write_repetitive_parquet(tmp_path / "data.parquet", rows=2000, width=50_000)
+    assert (tmp_path / "data.parquet").stat().st_size < 4096
+    with pytest.raises(BlockError) as error:
+        # Budget 16 x 1 MiB = 16 MiB; the file decodes to 100 MB.
+        run(
+            ParquetSource(),
+            tmp_path,
+            {"resource_ref": "data.parquet", "max_bytes": 1024 * 1024},
+        )
+    assert error.value.failure.code == "file_limit"
+
+
+def test_parquet_large_declared_pages_are_refused_before_reading(tmp_path: Path):
+    pq.write_table(
+        pa.table({"payload": ["A" * 200_000]}),
+        tmp_path / "data.parquet",
+        compression="zstd",
+        use_dictionary=False,
+    )
+    with patch.object(pq.ParquetFile, "read", side_effect=AssertionError("read")):
+        with pytest.raises(BlockError) as error:
+            run(
+                ParquetSource(),
+                tmp_path,
+                {"resource_ref": "data.parquet", "max_bytes": 4096},
+            )
+    assert error.value.failure.code == "file_limit"
+
+
+def test_parquet_row_count_is_checked_from_metadata_before_decoding(tmp_path: Path):
+    pq.write_table(pa.table({"a": list(range(50))}), tmp_path / "data.parquet")
+    with patch.object(pq.ParquetFile, "read", side_effect=AssertionError("read")):
+        with pytest.raises(BlockError) as error:
+            run(
+                ParquetSource(),
+                tmp_path,
+                {"resource_ref": "data.parquet", "max_rows": 10},
+            )
+    assert error.value.failure.code == "table_limit"
+
+
+def test_dictionary_strings_within_budget_decode_to_plain_values(tmp_path: Path):
+    pq.write_table(
+        pa.table({"label": ["x", "y", None, "x"], "n": [1, 2, 3, 4]}),
+        tmp_path / "data.parquet",
+    )
+    table = run(ParquetSource(), tmp_path, {"resource_ref": "data.parquet"})
+    assert [row["label"] for row in table.rows] == ["x", "y", None, "x"]
+    assert [c.dtype for c in table.data_schema.columns] == ["string", "integer"]
+
+
+def test_decoded_bytes_counts_dictionary_expansion(tmp_path: Path):
+    write_repetitive_parquet(tmp_path / "data.parquet", rows=1000, width=10_000)
+    encoded = pq.ParquetFile(
+        tmp_path / "data.parquet", read_dictionary=["payload"]
+    ).read()
+    assert encoded.nbytes < 100_000
+    assert decoded_bytes(encoded) >= 1000 * 10_000
