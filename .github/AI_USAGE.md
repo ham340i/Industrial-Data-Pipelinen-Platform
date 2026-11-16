@@ -279,3 +279,19 @@ project in a list item and a different run id in a detail response, which
 the Builder's guards reject; the rules are now bound to the requested ids
 and fixed pagination, with negative cases for each reproduction. Both
 corrections by Claude Code, each verified by a new automated test.
+
+## Issue #32 file, SQL and configuration security boundaries
+
+Tool: Claude Code (Claude Opus 5.5). AI contribution: 50% or more
+AI-generated overall. Claude Code probed the existing controls with
+synthetic inputs, found the gaps listed in the
+[verification record](../docs/testing/issue-32-security-boundaries.md),
+drafted the fixes in `app/secret_policy.py`, `app/runs/redaction.py`,
+`app/runs/scheduler.py`, `app/sources/sql.py`, `app/blocks/files.py`,
+`app/blocks/file_preview.py`, `app/artifacts/query.py`,
+`app/blocks/contracts.py`, `app/metadata/portable.py` and
+`scripts/check_repository.py`, wrote the tests and documentation, and ran
+the dependency audits and lockfile updates. The issue owner directed scope
+and reviewed the result. Every fix has a regression test; all backend,
+frontend, repository and documentation checks were run locally. Independent
+student review is pending.
