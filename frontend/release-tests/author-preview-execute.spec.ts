@@ -264,6 +264,11 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     .click();
   await expect(page.locator(".react-flow__node")).toHaveCount(7);
   expect(await executeAndInspect()).toEqual(firstRows);
+  await page.getByRole("button", { name: "Fit View", exact: true }).click();
+  for (const id of [csv, validate, filter, sql, joinId, aggregate, sink])
+    await expect(
+      page.locator(`.react-flow__node[data-id="${id}"]`),
+    ).toBeInViewport({ ratio: 1 });
   const monitor = page.getByRole("region", {
     name: "Run monitoring",
     exact: true,

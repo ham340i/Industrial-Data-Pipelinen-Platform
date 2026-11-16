@@ -57,8 +57,11 @@ complete release and standalone scenarios; the live PR checks expose their
 results, HTML/JUnit reports, failure traces and success screenshot attachments.
 A subsequent attempt passed reload/reopen/rerun and persisted-history output
 inspection, then found that the test's SQL-node center click was obstructed
-in its compact canvas layout. The test now uses Run monitoring's accessible
-Inspect action to open that block, and checks focus on the first configuration
+in its compact canvas layout. The screenshot showed that React Flow's default
+minimum zoom of 0.5 clipped the outer nodes even after Fit View. The canvas now
+allows zooming to 0.1, and the browser scenario asserts all seven nodes are fully
+inside the viewport after reopening and fitting. The test uses Run monitoring's
+accessible Inspect action to open that block, and checks focus on the first configuration
 field (the run contract identifies a node, not a field). It also waits for the
 repaired output query before comparing rows. No successful complete browser
 test is inferred from the earlier timed-out attempts.
