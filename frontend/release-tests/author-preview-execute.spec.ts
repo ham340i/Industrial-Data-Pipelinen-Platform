@@ -268,7 +268,7 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
   for (const id of [csv, validate, filter, sql, joinId, aggregate, sink])
     await expect(
       page.locator(`.react-flow__node[data-id="${id}"]`),
-    ).toBeInViewport({ ratio: 1 });
+    ).toBeInViewport({ ratio: 0.99 });
   const monitor = page.getByRole("region", {
     name: "Run monitoring",
     exact: true,

@@ -60,7 +60,9 @@ inspection, then found that the test's SQL-node center click was obstructed
 in its compact canvas layout. The screenshot showed that React Flow's default
 minimum zoom of 0.5 clipped the outer nodes even after Fit View. The canvas now
 allows zooming to 0.1, and the browser scenario asserts all seven nodes are fully
-inside the viewport after reopening and fitting. The test uses Run monitoring's
+inside the viewport after reopening and fitting (99% intersection threshold
+tolerates fractional-pixel browser rounding; the first strict 100% assertion
+reported 99.999535%). The test uses Run monitoring's
 accessible Inspect action to open that block, and checks focus on the first configuration
 field (the run contract identifies a node, not a field). It also waits for the
 repaired output query before comparing rows. No successful complete browser
