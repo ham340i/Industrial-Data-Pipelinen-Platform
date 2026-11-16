@@ -208,10 +208,25 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     await expect(
       controls.getByText(/Duration: \d+ ms · Output rows:/),
     ).toBeVisible();
-    for (const nodeId of [csv, validate, filter, sql, joinId, aggregate, sink])
+    for (const [nodeId, rowsIn, rowsOut] of [
+      [csv, 0, 6],
+      [validate, 6, 6],
+      [filter, 6, 5],
+      [sql, 0, 2],
+      [joinId, 7, 4],
+      [aggregate, 4, 2],
+      [sink, 2, 1],
+    ])
       await expect(
-        controls.getByText(new RegExp(`${nodeId}: completed · \\d+ ms · rows`)),
+        controls.getByText(
+          new RegExp(
+            `${nodeId}: completed · \\d+ ms · rows ${rowsIn} → ${rowsOut}`,
+          ),
+        ),
       ).toBeVisible();
+    await expect(
+      controls.getByText("Run succeeded", { exact: true }),
+    ).toBeVisible();
     await expect(
       controls.getByRole("heading", { name: "Run log", exact: true }),
     ).toBeVisible();
@@ -239,7 +254,7 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
   // Reopen the project via the UI, not an API-loaded graph.
   await page.goto("/#/projects");
   await page
-    .getByRole("button", { name: "Open Release acceptance", exact: true })
+    .getByRole("link", { name: "Open Release acceptance", exact: true })
     .click();
   await page
     .getByRole("button", {

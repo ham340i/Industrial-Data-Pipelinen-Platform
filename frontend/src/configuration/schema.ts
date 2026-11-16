@@ -203,7 +203,9 @@ function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
 // Registry references are local definitions only; cycles and expansion are bounded.
 function resolveDefinitions(input: unknown): unknown {
   const definitions = object(input) && object(input.$defs) ? input.$defs : {};
+  let remaining = 5000;
   function visit(value: unknown, trail: string[] = [], depth = 0): unknown {
+    if (--remaining < 0) throw new Error("Schema expansion is too large.");
     if (depth > 20) throw new Error("Schema is too deeply nested.");
     if (Array.isArray(value))
       return value.map((v) => visit(v, trail, depth + 1));

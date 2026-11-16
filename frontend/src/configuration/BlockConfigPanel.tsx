@@ -112,7 +112,9 @@ function StructuredField({
           : (issue ??
             previousIssue ??
             field.description ??
-            'Enter a JSON list, such as ["column_a"].')
+            (field.type === "object"
+              ? "Enter a JSON object."
+              : 'Enter a JSON list, such as ["column_a"].'))
       }
       onChange={(event) => {
         const next = event.target.value;
@@ -130,7 +132,7 @@ function StructuredField({
                 Array.isArray(parsed)
           )
             throw new Error();
-          onChange(parsed as JsonValue[]);
+          onChange(parsed as JsonValue);
         } catch {
           onChange(next);
         }
