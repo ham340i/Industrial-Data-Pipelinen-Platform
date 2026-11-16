@@ -312,6 +312,9 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     controls.getByText("Run succeeded · revision 3", { exact: true }),
   ).toBeVisible();
   await controls.getByRole("button", { name: /Inspect output/ }).click();
+  await expect(
+    controls.getByRole("table", { name: "Parquet output rows" }),
+  ).toBeVisible();
   expect(await controls.getByRole("row").allTextContents()).toEqual([
     "labeltotal",
     "A30",
