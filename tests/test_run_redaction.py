@@ -69,6 +69,65 @@ def test_quoted_values_with_embedded_or_escaped_quotes_are_fully_masked(
     assert "[REDACTED]" in result
 
 
+@pytest.mark.parametrize(
+    "raw,leak,expected",
+    [
+        # Compound keys ending with a credential word (#32).
+        ("client_secret=abc123", "abc123", "client_secret=[REDACTED]"),
+        ("db_password=hunter2 rejected", "hunter2", "db_password=[REDACTED] rejected"),
+        ("access_token=xyz", "xyz", "access_token=[REDACTED]"),
+        ("refresh_token: xyz", "xyz", "refresh_token: [REDACTED]"),
+        ("aws_secret_access_key=AKIA0", "AKIA0", "aws_secret_access_key=[REDACTED]"),
+        ("ssh_passphrase=open sesame", "open", "ssh_passphrase=[REDACTED] sesame"),
+        ("private_key=BEGIN0", "BEGIN0", "private_key=[REDACTED]"),
+        (
+            '{"db_password": "synthetic-secret"}',
+            "synthetic-secret",
+            '{"db_password": "[REDACTED]"}',
+        ),
+        (
+            "{'client_secret': 'synthetic-secret'}",
+            "synthetic-secret",
+            "{'client_secret': \"[REDACTED]\"}",
+        ),
+        # Non-Bearer Authorization schemes; Basic is reversible user:password.
+        (
+            "Authorization: Basic dXNlcjpwYXNz",
+            "dXNlcjpwYXNz",
+            "Authorization: Basic [REDACTED]",
+        ),
+        (
+            "proxy-authorization=Digest abc123",
+            "abc123",
+            "proxy-authorization=Digest [REDACTED]",
+        ),
+        (
+            "Authorization: Token t0k3n",
+            "t0k3n",
+            "Authorization: Token [REDACTED]",
+        ),
+    ],
+)
+def test_compound_keys_and_auth_schemes_are_masked(raw: str, leak: str, expected: str):
+    result = redact(raw)
+    assert leak not in result
+    assert result == expected
+    assert redact(result) == result
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "tokenizer=word split failed",
+        "secret_name: plant-a",
+        "basic validation failed for column token_count",
+        "Authorization header missing",
+    ],
+)
+def test_lookalike_words_are_not_redacted(text: str):
+    assert redact(text) == text
+
+
 def test_relative_names_and_ordinary_text_are_kept():
     text = "Node join: column value missing in data/input.csv"
     assert redact(text) == text
