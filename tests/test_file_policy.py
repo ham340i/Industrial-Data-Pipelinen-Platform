@@ -12,8 +12,8 @@ import pytest
 from app.blocks.context import BlockEvent
 from app.blocks.contracts import Table
 from app.blocks.errors import BlockError
-from app.blocks.file_sinks import CsvSink
-from app.blocks.files import CsvSource, JsonSource, ParquetSource
+from app.blocks.file_sinks import CsvSink, FileSink
+from app.blocks.files import CsvSource, FileSource, JsonSource, ParquetSource
 from app.blocks.parquet_decode import decoded_bytes
 from app.blocks.registry import RegisteredBlock
 from tests.test_file_blocks import run, scalar_table
@@ -189,3 +189,13 @@ def test_decoded_bytes_counts_dictionary_expansion(tmp_path: Path):
     ).read()
     assert encoded.nbytes < 100_000
     assert decoded_bytes(encoded) >= 1000 * 10_000
+
+
+@pytest.mark.parametrize(
+    ("base", "hook"), [(FileSource, "_read"), (FileSink, "_write")]
+)
+def test_file_block_hooks_are_abstract(base: type[Any], hook: str):
+    """The format hooks are abstract methods, not runtime NotImplementedError."""
+    assert hook in base.__abstractmethods__
+    with pytest.raises(TypeError, match=hook):
+        base()

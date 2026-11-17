@@ -7,6 +7,7 @@ import csv
 import io
 import json
 import re
+from abc import abstractmethod
 from pathlib import Path
 from typing import Any, Literal
 
@@ -175,10 +176,11 @@ def check_source_file(path: Path, max_bytes: int) -> None:
 class FileSource[SourceT: SourceConfig](Block[SourceT]):
     suffix = ""
 
+    @abstractmethod
     def _read(
         self, path: Path, config: SourceT
     ) -> tuple[pl.DataFrame, DataSchema | None]:
-        raise NotImplementedError
+        """Parse ``path`` within ``config`` limits; each source format implements it."""
 
     def _execute(
         self, config: SourceT, inputs: PortValues, context: BlockContext

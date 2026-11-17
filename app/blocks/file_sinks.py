@@ -9,6 +9,7 @@ resource_path rule the readers use.
 from __future__ import annotations
 
 import os
+from abc import abstractmethod
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Literal
@@ -59,8 +60,9 @@ class FileSink(Block[SinkConfig]):
     config_model = SinkConfig
     suffix = ""
 
+    @abstractmethod
     def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        raise NotImplementedError
+        """Serialize ``table`` to the temporary ``path``; each format implements it."""
 
     def _execute(
         self, config: SinkConfig, inputs: PortValues, context: BlockContext
