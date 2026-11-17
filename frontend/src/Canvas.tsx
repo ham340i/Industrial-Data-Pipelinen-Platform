@@ -271,6 +271,7 @@ function GraphCanvas({ diagnostics }: { diagnostics: Diagnostic[] }) {
                 onNodeClick={(_, n) => state.selectNode(n.id)}
                 onPaneClick={() => state.selectNode(null)}
                 deleteKeyCode={["Backspace", "Delete"]}
+                minZoom={0.1}
                 fitView
                 fitViewOptions={{ maxZoom: 1 }}
               >

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import {
   Alert,
   Button,
@@ -54,7 +54,6 @@ export function ValidationPanel({
   const nodes = useEditorStore((state) => state.nodes);
   const hasNode = (id: string | null) => nodes.some((n) => n.id === id);
   const subject = useSubject();
-  const [ran, setRan] = useState(false);
   const statusRef = useRef<HTMLParagraphElement>(null);
   const { report, current, error, canRun, retry } = validation;
   const problems = report?.diagnostics ?? [];
@@ -85,10 +84,13 @@ export function ValidationPanel({
           </Typography>
           <Button
             variant="contained"
-            disabled={!canRun}
-            onClick={() => setRan(true)}
+            disabled={!current && !error}
+            onClick={() => {
+              statusRef.current?.focus();
+              retry();
+            }}
           >
-            Run pipeline
+            Validate pipeline
           </Button>
         </Stack>
         <Typography ref={statusRef} tabIndex={-1} role="status">
@@ -110,12 +112,6 @@ export function ValidationPanel({
             }
           >
             {error.message} Running stays disabled until the check succeeds.
-          </Alert>
-        )}
-        {ran && canRun && (
-          <Alert severity="info" onClose={() => setRan(false)}>
-            The pipeline is valid. Running it becomes available with the local
-            executor.
           </Alert>
         )}
         {problems.length > 0 && (
