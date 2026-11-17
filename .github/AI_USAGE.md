@@ -354,7 +354,7 @@ What ham340i did with it: split `app/blocks/transforms.py` into row and column t
 
 AI-assisted files: `app/blocks/relational.py`, `transforms.py`, `files.py`, `file_preview.py`, `file_sinks.py`, `base.py`, `quality.py`, `sql.py`, `tabular.py`, `context.py`, `app/pipelines/validation.py`, `app/execution/runtime.py`, `app/preview/service.py`, `app/preview/api.py`, `app/artifacts/query.py`, `app/sources/sql.py`, `app/workspace.py`, `app/main.py`, `app/config.py`, `app/logging_config.py`, `tests/test_logging_config.py`, `scripts/check_repository.py`, `scripts/check_release_plan.py`, `scripts/check_docs.py`, `scripts/smoke_workspace.py`, `scripts/check_ai_declarations.py`, `frontend/src/api/artifacts.ts`.
 
-Verification: the refactor changed structure, not behaviour. After merging the team's #88, #89 and #90, all 1,070 backend tests pass (including four new logging tests), the 226 frontend tests pass, and Ruff, Ruff format, mypy strict, ESLint, Prettier, the TypeScript compiler and the repository and documentation checks are clean. The Compose smoke script was restructured without a local Docker run; the CI Compose job exercises it.
+Verification: the refactor changed structure, not behaviour. After merging the team's #88, #89, #90 and #93, all 1,109 backend tests pass (including four new logging tests), the 226 frontend tests pass, and Ruff, Ruff format, mypy strict, ESLint, Prettier, the TypeScript compiler and the repository and documentation checks are clean. The Compose smoke script was restructured without a local Docker run; the CI Compose job exercises it.
 
 Problems found and corrected during the work: an automatic unused-import fix removed `typing` imports that a moved class still needed, caught by mypy and restored; the first logging configuration disabled propagation and broke an existing telemetry test that captures log records, so propagation was kept on; a repository-tool test pinned the exact contents of `.env.example` and was updated for the new non-secret `LPS_LOG_LEVEL` default.
 
@@ -362,13 +362,13 @@ Not verified: no human review has taken place yet. The documentation states fact
 
 ## Source-file declarations added at Release 1
 
-Before this work, 58 of 201 source files carried a declaration. ham340i added declarations, with AI assistance, using evidence only, never a guess; after the team's #88 to #90 merged, 179 of 213 files declare:
+Before this work, 58 of 201 source files carried a declaration. ham340i added declarations, with AI assistance, using evidence only, never a guess; after the team's #88 to #93 merged, 179 of 214 files declare:
 
 1. For each undeclared file, `git log --first-parent -m` on `main` listed every merged pull request that changed it.
 2. Each of those pull requests' own "AI Assistance" section was read. Pull requests #3, #39, #43, #46, #47, #59, #61, #62, #63, #64, #66, #67, #69, #70, #71, #77, #81, #82, #83, #88, #89 and #90 state that an AI tool generated the implementation, tests or tooling.
 3. A file received `50% or more AI-generated` only when every pull request that changed it is in that list. Repository scripts committed directly to `main` before pull requests were used are covered by the "This repository foundation" entry above.
 4. `app/blocks/relational.py` holds the Join and Aggregate logic from #72, whose author reports AI help only with tests, documentation and formatting; it is declared `below 50% AI-generated` even though it was restructured with AI assistance.
-5. Files changed by #44, #48, #51, #52, #65 or #72 were left undeclared, because those pull requests do not say how much code AI generated. Their authors must declare them.
+5. Files changed by #44, #48, #51, #52, #65, #72 or #93 were left undeclared, because those pull requests do not say how much code AI generated. Their authors must declare them.
 
 Authors who find a declaration wrong for their file should correct it; the pull request record is the evidence used, not the final word.
 

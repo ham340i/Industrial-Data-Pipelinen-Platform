@@ -8,7 +8,8 @@ leaves a ``running`` row that ``recover_interrupted`` closes on next startup.
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -138,14 +139,26 @@ class RunRecorder:
         self._marks: dict[str | None, float] = {}
         self._sequence = 0
 
-    def on_state(self, event: StateEvent) -> None:
-        """Executor callback. The executor ignores callback errors, so log them."""
+    @contextmanager
+    def _transaction(self) -> Iterator[Session]:
+        """Advance recorder bookkeeping only with a committed evidence write."""
+        sequence = self._sequence
         try:
             with self.db.transaction(write=True) as session:
                 if not self.created:
                     self._create(session)
-                self._apply(session, event)
+                yield session
+        except BaseException:
+            self._sequence = sequence
+            raise
+        else:
             self.created = True
+
+    def on_state(self, event: StateEvent) -> None:
+        """Executor callback. The executor ignores callback errors, so log them."""
+        try:
+            with self._transaction() as session:
+                self._apply(session, event)
         except Exception as exc:
             # No exc_info: SQL errors echo bound values into the message.
             logger.warning(
@@ -158,10 +171,7 @@ class RunRecorder:
 
     def finish(self, context: ExecutionContext, *, cancelled: bool) -> str:
         """Write final block evidence and the run's terminal state; returns it."""
-        with self.db.transaction(write=True) as session:
-            if not self.created:
-                self._create(session)
-                self.created = True
+        with self._transaction() as session:
             run = self._run(session)
             for block in run.blocks:
                 self._finish_block(block, context)
@@ -181,7 +191,8 @@ class RunRecorder:
                 context,
             )
             self._finish_run(session, run, context, cancelled)
-            return run.state
+            state = run.state
+        return state
 
     def abort(self, code: str, reason: str) -> None:
         """Close the run after an unexpected executor failure."""

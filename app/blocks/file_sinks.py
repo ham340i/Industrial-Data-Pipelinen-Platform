@@ -8,6 +8,7 @@ resource_path rule the readers use.
 
 from __future__ import annotations
 
+import logging
 import os
 from abc import abstractmethod
 from pathlib import Path
@@ -38,6 +39,9 @@ ARROW_TYPES = {
     "number": pa.float64(),
     "boolean": pa.bool_(),
 }
+
+
+logger = logging.getLogger(__name__)
 
 
 class SinkConfig(ResourceConfig):
@@ -77,20 +81,35 @@ class FileSink(Block[SinkConfig]):
             ),
         )
 
-    def _write_temporary(self, target: Path, table: Table, config: SinkConfig) -> Path:
-        """Write and flush a sibling temporary file; the caller publishes it."""
+    @staticmethod
+    def _temporary_beside(target: Path) -> Path:
         with NamedTemporaryFile(
             dir=target.parent, prefix=".lps-", suffix=".tmp", delete=False
         ) as stream:
-            temporary = Path(stream.name)
+            return Path(stream.name)
+
+    def _write_flushed(
+        self, temporary: Path, table: Table, config: SinkConfig, context: BlockContext
+    ) -> None:
+        self._write(temporary, table, config)
+        context.check_cancelled()
+        with temporary.open("r+b") as stream:
+            os.fsync(stream.fileno())
+
+    @staticmethod
+    def _discard(temporary: Path, context: BlockContext) -> None:
         try:
-            self._write(temporary, table, config)
-            with temporary.open("r+b") as stream:
-                os.fsync(stream.fileno())
-        except BaseException:
             temporary.unlink(missing_ok=True)
-            raise
-        return temporary
+        except OSError as exc:
+            # Publication is already final after link/replace. A
+            # cleanup-only failure cannot revoke it or mask a primary
+            # failure. Never log exception text or the private path.
+            logger.warning(
+                "Run %s node %s: temporary cleanup failed (%s)",
+                context.run_id,
+                context.node_id,
+                type(exc).__name__,
+            )
 
     def _execute(
         self, config: SinkConfig, inputs: PortValues, context: BlockContext
@@ -103,6 +122,7 @@ class FileSink(Block[SinkConfig]):
         artifact = self._artifact(config, table)
         temporary: Path | None = None
         try:
+            context.check_cancelled()
             if target.exists() and config.overwrite == "error":
                 raise BlockError(
                     "output_exists", "Output already exists; choose replace explicitly."
@@ -111,7 +131,9 @@ class FileSink(Block[SinkConfig]):
             # workspace; only inputs/ is pre-created, so make output folders
             # such as outputs/ on demand instead of failing the publication.
             target.parent.mkdir(parents=True, exist_ok=True)
-            temporary = self._write_temporary(target, table, config)
+            temporary = self._temporary_beside(target)
+            self._write_flushed(temporary, table, config, context)
+            context.check_cancelled()
             if config.overwrite == "replace":
                 os.replace(temporary, target)
                 temporary = None
@@ -131,7 +153,7 @@ class FileSink(Block[SinkConfig]):
             ) from None
         finally:
             if temporary is not None:
-                temporary.unlink(missing_ok=True)
+                self._discard(temporary, context)
 
 
 class CsvSink(FileSink):

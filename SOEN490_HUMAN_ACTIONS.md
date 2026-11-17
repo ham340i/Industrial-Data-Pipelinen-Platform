@@ -4,9 +4,10 @@ Updated November 17, 2026. These items need a person: a decision, a real event, 
 
 ## Blocking a grade category
 
-1. **AI declarations in source files.** 179 of 213 applicable source files (84%) declare their AI contribution; the rubric needs 90%. Declarations added at Release 1 use only the level each file's own pull requests disclosed (method in [AI_USAGE.md](.github/AI_USAGE.md#source-file-declarations-added-at-release-1)). The 34 that remain were written in pull requests whose authors did not state how much AI generated, so only those authors can declare them:
+1. **AI declarations in source files.** 179 of 214 applicable source files (83%) declare their AI contribution; the rubric needs 90%. Declarations added at Release 1 use only the level each file's own pull requests disclosed (method in [AI_USAGE.md](.github/AI_USAGE.md#source-file-declarations-added-at-release-1)). The 35 that remain were written in pull requests whose authors did not state how much AI generated, so only those authors can declare them:
    - **adamoug:** files from [#44](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/44) (FastAPI shell), [#52](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/52) (SQL spike) and [#72](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/72) (join, aggregate and sort tests)
    - **Al-Yousef:** files from [#48](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/48) (metadata) and [#51](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/51) (API integration fix)
+   - **joedaswagger:** `tests/test_execution_failures.py` from [#93](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/93)
    - **menaboulus:** files from [#65](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/65) (graph validation)
 
    Run `python3 scripts/check_ai_declarations.py` for the exact list. Add as the first line one of `# AI contribution: no substantial AI-generated code`, `# AI contribution: below 50% AI-generated` or `# AI contribution: 50% or more AI-generated` (`//` in TypeScript). If a declaration added at Release 1 is wrong for your file, correct it.
@@ -27,7 +28,7 @@ Updated November 17, 2026. These items need a person: a decision, a real event, 
 
 ## Engineering still open
 
-13. Review and merge [#104](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/104) (this readiness work) and [#93](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/93) (execution failures, [#34](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/34)), and finish packaging [#36](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/36).
+13. Review and merge [#105](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/105) (this readiness work), and finish packaging [#36](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/36).
 14. **Required checks.** Branch protection requires only the repository and documentation checks. In Settings → Branches → `main`, add `Backend checks`, `Frontend checks`, `Compose workspace smoke` and both `Standalone workspace smoke` jobs as required.
 15. **Merge method.** In Settings → General → Pull Requests, untick "Allow squash merging" and "Allow rebase merging" so only merge commits are possible.
 16. **Reviews.** From now on every approval must say what was examined. An approval without a technical comment does not count.

@@ -31,7 +31,7 @@ from app.projects import ProjectNotFound, router as projects_router
 from app.preview.api import PreviewBoundaryMiddleware, router as preview_router
 from app.runs import recover_interrupted
 from app.runs.api import RunNotFound, router as runs_router
-from app.runs.scheduler import TimerScheduler
+from app.runs.scheduler import TimerScheduler, TimerShutdownTimedOut
 from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
@@ -42,6 +42,7 @@ configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
 _CORRELATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,100}$")
+logger = logging.getLogger(__name__)
 
 
 def get_correlation_id(request: Request) -> str:
@@ -117,10 +118,21 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         logger.info("API %s started; metadata migrated", settings.api_version)
         yield
     finally:
-        # Stop every timer thread (#29) before closing the database it uses.
+        # Stop every timer thread before closing the database it uses.
         scheduler = application.state.scheduler
         if scheduler is not None:
-            scheduler.stop_all()
+            try:
+                scheduler.stop_all()
+            except TimerShutdownTimedOut as exc:
+                # Keep ownership and the database available to active workers.
+                # A caller may retry draining; process exit reclaims resources
+                # if a block never cooperates. Startup recovers interrupted runs.
+                logger.error(
+                    "Shutdown incomplete: %d timer worker(s) remain; "
+                    "database disposal deferred",
+                    len(exc.pipeline_ids),
+                )
+                raise
         application.state.scheduler = None
         database.close()
         application.state.database = None

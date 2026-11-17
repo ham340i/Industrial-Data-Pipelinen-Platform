@@ -6,15 +6,16 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.blocks.contracts import Table
 from app.blocks.file_sinks import ARTIFACT_SCHEMA
 from app.blocks.sample import VALUE_SCHEMA
-from app.execution import ExecutionContext, Frame
+from app.execution import ExecutionContext, Frame, StateEvent
 from app.execution.runtime import State
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
-from app.metadata.models import OutputEndpoint, Run
+from app.metadata.models import OutputEndpoint, Run, RunEvent
 from app.pipelines.models import Node, PipelineDefinition
 from app.runs import RunRecorder
 from tests.run_support import seed_revision
@@ -109,3 +110,36 @@ def test_mismatched_sink_format_is_rejected_atomically(db: Database):
     with db.transaction() as session:
         assert session.scalars(select(OutputEndpoint)).all() == []
         assert session.get(Run, "run") is None
+
+
+def test_recorder_can_retry_after_initial_finalization_rolls_back(db: Database):
+    writer = recorder(db)
+    with pytest.raises(ValueError, match="format"):
+        writer.finish(context("csv"), cancelled=False)
+    assert writer.created is False
+    assert writer.finish(context(), cancelled=False) == "succeeded"
+    with db.transaction() as session:
+        events = session.scalars(select(RunEvent).order_by(RunEvent.sequence)).all()
+        assert [e.sequence for e in events] == list(range(len(events)))
+        assert len(session.scalars(select(OutputEndpoint)).all()) == 1
+
+
+def test_live_transaction_rollback_does_not_consume_event_sequences(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+):
+    writer = recorder(db)
+    original = writer._apply
+
+    def fail_after_event(session: Session, state: StateEvent) -> None:
+        original(session, state)
+        raise RuntimeError("injected callback failure")
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(writer, "_apply", fail_after_event)
+        writer.on_state(StateEvent(run_id="run", state="queued"))
+    assert writer.created is False
+    writer.on_state(StateEvent(run_id="run", state="running"))
+    writer.finish(context(), cancelled=False)
+    with db.transaction() as session:
+        events = session.scalars(select(RunEvent).order_by(RunEvent.sequence)).all()
+        assert [e.sequence for e in events] == list(range(len(events)))

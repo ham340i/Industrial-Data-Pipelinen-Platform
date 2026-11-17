@@ -62,4 +62,4 @@ Guidelines: [refactoring guidelines](https://github.com/ham340i/Industrial-Data-
 
 ## AI-generated code
 
-Each source file declares its AI contribution level on its first line, each pull request declares it in its description, and the [AI usage record](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/.github/AI_USAGE.md) lists the tools, the AI-assisted features, how each was verified and problems found. At Release 1, 179 of 213 files carry one; the rest need their authors and are listed in [remaining actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/SOEN490_HUMAN_ACTIONS.md).
+Each source file declares its AI contribution level on its first line, each pull request declares it in its description, and the [AI usage record](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/.github/AI_USAGE.md) lists the tools, the AI-assisted features, how each was verified and problems found. At Release 1, 179 of 214 files carry one; the rest need their authors and are listed in [remaining actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/SOEN490_HUMAN_ACTIONS.md).

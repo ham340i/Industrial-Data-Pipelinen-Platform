@@ -17,7 +17,7 @@ Mocks and stubs: MSW intercepts HTTP in frontend tests; pytest's `monkeypatch` a
 
 ## Results at Release 1
 
-- Backend: 1,070 tests pass (one Linux-only benchmark test is skipped elsewhere). Line coverage measured with `pytest --cov=app` is 96%. Coverage is measured on demand and is not yet a CI gate.
+- Backend: 1,109 tests pass (one Linux-only benchmark test is skipped elsewhere). Line coverage measured with `pytest --cov=app` is 96%. Coverage is measured on demand and is not yet a CI gate.
 - Frontend: 226 unit and HTTP-mock tests pass.
 - Every closed Release 1 feature has at least one test of its behaviour and one failure or boundary case. Per-feature evidence is in [docs/testing](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/testing/testing-plan.md).
 - End to end: the author, preview, execute and output-inspection workflow and the SQL workflow run in Playwright against the real stack ([#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31), [release-tests](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/frontend/release-tests/author-preview-execute.spec.ts)).
