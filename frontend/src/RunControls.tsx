@@ -1,5 +1,6 @@
 // AI contribution: 50% or more AI-generated
 import { useRef, useState } from "react";
+import { OutputInspection } from "./OutputInspection";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import {
@@ -247,19 +248,7 @@ export function RunControls({ canRun }: { canRun: boolean }) {
           {result.events.map((e) => (
             <Typography key={e.sequence}>{e.message}</Typography>
           ))}
-          <Typography component="h2" variant="h2">
-            Output artifacts
-          </Typography>
-          {result.outputs.length === 0 && (
-            <Typography>
-              No indexed artifacts are available for this run.
-            </Typography>
-          )}
-          {result.outputs.map((o) => (
-            <Typography key={o.id}>
-              {o.name} · {o.row_count ?? "unknown"} rows · {o.artifact_ref}
-            </Typography>
-          ))}
+          <OutputInspection run={result} />
         </Stack>
       )}
     </Stack>

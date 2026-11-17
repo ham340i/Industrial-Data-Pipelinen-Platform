@@ -20,6 +20,12 @@ const servers = standalone.webServer as {
 export default defineConfig({
   ...standalone,
   testDir: "./release-tests",
+  outputDir: "./test-results/release",
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: "playwright-report/release", open: "never" }],
+    ["junit", { outputFile: "test-results/release.xml" }],
+  ],
   webServer: servers.map((server) => ({
     ...server,
     env: {

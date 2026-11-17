@@ -40,3 +40,5 @@ frontend/coverage/
 frontend/test-results/
 /test-results/
 frontend/playwright-report/
+
+/playwright-browsers/
