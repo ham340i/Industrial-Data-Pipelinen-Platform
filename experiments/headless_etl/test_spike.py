@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Logical golden output and failure-boundary regression tests."""
 
 import json

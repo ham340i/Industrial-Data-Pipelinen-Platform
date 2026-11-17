@@ -1,5 +1,7 @@
 # Testing plan
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Testing Plan and Continuous Integration](../wiki/Testing-Plan-and-Continuous-Integration.md).
+
 ## Current state and philosophy
 
 No application or product tests exist. Repository tooling is checked with Python standard-library unit tests, syntax validation, local Markdown links and configuration checks. Product testing must demonstrate observable correctness under representative inputs, including failure paths; passing repository CI is not product validation.
@@ -23,7 +25,7 @@ Use deterministic synthetic fixtures by default. Stakeholder data requires expli
 
 ## CI integration
 
-Current commands are in [README](../../README.md#running-tests); results belong in [validation](repository-validation.md). Workflows run on PRs and pushes to main with read-only permissions. No runtime dependencies exist, so installation/caching, product lint/format/type checks, application tests, build and dependency audits are not applicable yet. With the first application PR, commit the chosen ecosystem lockfile, use frozen installs and dependency caching keyed by it, and add actual lint/format/type/test/build commands. Add integration checks when the components exist.
+Current commands are in [README](../../README.md#developer-getting-started-guide); results belong in [validation](repository-validation.md). Workflows run on PRs and pushes to main with read-only permissions. No runtime dependencies exist, so installation/caching, product lint/format/type checks, application tests, build and dependency audits are not applicable yet. With the first application PR, commit the chosen ecosystem lockfile, use frozen installs and dependency caching keyed by it, and add actual lint/format/type/test/build commands. Add integration checks when the components exist.
 
 ## Ownership and review
 

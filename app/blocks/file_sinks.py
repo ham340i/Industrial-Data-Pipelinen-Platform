@@ -68,15 +68,8 @@ class FileSink(Block[SinkConfig]):
     def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
         """Serialize ``table`` to the temporary ``path``; each format implements it."""
 
-    def _execute(
-        self, config: SinkConfig, inputs: PortValues, context: BlockContext
-    ) -> PortValues:
-        target = resource_path(context, config.resource_ref, self.suffix)
-        table = inputs["table"][0]
-        assert isinstance(table, Table)
-        # Validate serializability and construct metadata before publication.
-        to_frame(table)
-        artifact = Table(
+    def _artifact(self, config: SinkConfig, table: Table) -> Table:
+        return Table(
             data_schema=ARTIFACT_SCHEMA,
             rows=(
                 {
@@ -87,6 +80,46 @@ class FileSink(Block[SinkConfig]):
                 },
             ),
         )
+
+    @staticmethod
+    def _temporary_beside(target: Path) -> Path:
+        with NamedTemporaryFile(
+            dir=target.parent, prefix=".lps-", suffix=".tmp", delete=False
+        ) as stream:
+            return Path(stream.name)
+
+    def _write_flushed(
+        self, temporary: Path, table: Table, config: SinkConfig, context: BlockContext
+    ) -> None:
+        self._write(temporary, table, config)
+        context.check_cancelled()
+        with temporary.open("r+b") as stream:
+            os.fsync(stream.fileno())
+
+    @staticmethod
+    def _discard(temporary: Path, context: BlockContext) -> None:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError as exc:
+            # Publication is already final after link/replace. A
+            # cleanup-only failure cannot revoke it or mask a primary
+            # failure. Never log exception text or the private path.
+            logger.warning(
+                "Run %s node %s: temporary cleanup failed (%s)",
+                context.run_id,
+                context.node_id,
+                type(exc).__name__,
+            )
+
+    def _execute(
+        self, config: SinkConfig, inputs: PortValues, context: BlockContext
+    ) -> PortValues:
+        target = resource_path(context, config.resource_ref, self.suffix)
+        table = inputs["table"][0]
+        assert isinstance(table, Table)
+        # Validate serializability and construct metadata before publication.
+        to_frame(table)
+        artifact = self._artifact(config, table)
         temporary: Path | None = None
         try:
             context.check_cancelled()
@@ -98,14 +131,8 @@ class FileSink(Block[SinkConfig]):
             # workspace; only inputs/ is pre-created, so make output folders
             # such as outputs/ on demand instead of failing the publication.
             target.parent.mkdir(parents=True, exist_ok=True)
-            with NamedTemporaryFile(
-                dir=target.parent, prefix=".lps-", suffix=".tmp", delete=False
-            ) as stream:
-                temporary = Path(stream.name)
-            self._write(temporary, table, config)
-            context.check_cancelled()
-            with temporary.open("r+b") as stream:
-                os.fsync(stream.fileno())
+            temporary = self._temporary_beside(target)
+            self._write_flushed(temporary, table, config, context)
             context.check_cancelled()
             if config.overwrite == "replace":
                 os.replace(temporary, target)
@@ -126,18 +153,7 @@ class FileSink(Block[SinkConfig]):
             ) from None
         finally:
             if temporary is not None:
-                try:
-                    temporary.unlink(missing_ok=True)
-                except OSError as exc:
-                    # Publication is already final after link/replace. A
-                    # cleanup-only failure cannot revoke it or mask a primary
-                    # failure. Never log exception text or the private path.
-                    logger.warning(
-                        "Run %s node %s: temporary cleanup failed (%s)",
-                        context.run_id,
-                        context.node_id,
-                        type(exc).__name__,
-                    )
+                self._discard(temporary, context)
 
 
 class CsvSink(FileSink):

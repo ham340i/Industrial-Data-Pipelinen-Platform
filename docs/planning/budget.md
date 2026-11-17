@@ -1,5 +1,7 @@
 # Budget
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Budget](../wiki/Budget.md).
+
 No spending, plan prices or credits have been verified. Unknown cost is not zero. Confirm currency, plan limits, receipts and responsibility with the owner before commitments.
 
 | Resource | Purpose | Normal Cost | Student/Free Cost | Actual Cost | Notes |

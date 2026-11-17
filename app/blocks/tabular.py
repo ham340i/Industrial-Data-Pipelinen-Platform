@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Bounded SDK/Polars adapter shared by the Iteration 2 file blocks."""
 
 from typing import Any, Literal
@@ -71,6 +72,27 @@ def from_frame(frame: pl.DataFrame, schema: DataSchema | None = None) -> Table:
         ) from None
 
 
+def _lossy(original: pl.Series, converted: pl.Series, kind: DType) -> pl.Series:
+    """Mark the values a cast to ``kind`` would change or lose."""
+    invalid = original.is_not_null() & converted.is_null()
+    if kind == "boolean" and original.dtype.is_numeric():
+        invalid = invalid | (~original.is_in([0, 1])).fill_null(False)
+    if kind == "integer" and original.dtype.is_float():
+        invalid = invalid | (original != converted.cast(original.dtype)).fill_null(
+            False
+        )
+    if kind == "number":
+        invalid = invalid | (~converted.is_finite()).fill_null(False)
+    # Converting large integers to float must not silently lose precision.
+    if kind == "number" and original.dtype.is_integer():
+        bad = [
+            source is not None and target is not None and int(target) != source
+            for source, target in zip(original, converted, strict=True)
+        ]
+        invalid = invalid | pl.Series(bad, dtype=pl.Boolean)
+    return invalid
+
+
 def cast_column(
     frame: pl.DataFrame, name: str, kind: DType, failure: str = "error"
 ) -> pl.DataFrame:
@@ -82,23 +104,7 @@ def cast_column(
             )
         else:
             converted = original.cast(POLARS_TYPES[kind], strict=False)
-        invalid = original.is_not_null() & converted.is_null()
-        if kind == "boolean" and original.dtype.is_numeric():
-            invalid = invalid | (~original.is_in([0, 1])).fill_null(False)
-        if kind == "integer" and original.dtype.is_float():
-            invalid = invalid | (original != converted.cast(original.dtype)).fill_null(
-                False
-            )
-        if kind == "number":
-            invalid = invalid | (~converted.is_finite()).fill_null(False)
-        # Converting large integers to float must not silently lose precision.
-        if kind == "number" and original.dtype.is_integer():
-            bad: list[bool] = []
-            for source, target in zip(original, converted, strict=True):
-                bad.append(
-                    source is not None and target is not None and int(target) != source
-                )
-            invalid = invalid | pl.Series(bad, dtype=pl.Boolean)
+        invalid = _lossy(original, converted, kind)
         if invalid.any():
             if failure == "error":
                 raise BlockError(

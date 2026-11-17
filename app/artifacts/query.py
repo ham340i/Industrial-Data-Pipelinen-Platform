@@ -165,6 +165,21 @@ def locked_connection(path: Path) -> Any:
     return connection
 
 
+def _artifact_path(run_id: str, artifact_ref: str, workspace_root: Path) -> Path:
+    """Resolve a registered artifact inside the workspace, or report it missing."""
+    try:
+        path = resource_path(
+            BlockContext(run_id, "artifact-query", workspace_root=workspace_root),
+            artifact_ref,
+            ".parquet",
+        )
+        if not path.is_file():
+            raise ArtifactUnavailable("Registered artifact is unavailable")
+    except BlockError:
+        raise ArtifactUnavailable("Registered artifact is unavailable") from None
+    return path
+
+
 def query_artifact(
     db: Database,
     artifact_id: str,
@@ -182,19 +197,7 @@ def query_artifact(
     columns = _projection(artifact.schema, query.columns)
     if len(columns) * (query.limit + 1) > MAX_CELLS:
         raise ArtifactNotQueryable("Requested result exceeds the cell limit")
-    try:
-        path = resource_path(
-            BlockContext(
-                artifact.run_id, "artifact-query", workspace_root=workspace_root
-            ),
-            artifact.artifact_ref,
-            ".parquet",
-        )
-        if not path.is_file():
-            raise ArtifactUnavailable("Registered artifact is unavailable")
-    except BlockError:
-        raise ArtifactUnavailable("Registered artifact is unavailable") from None
-
+    path = _artifact_path(artifact.run_id, artifact.artifact_ref, workspace_root)
     connection: Any = None
     try:
         connection = locked_connection(path)

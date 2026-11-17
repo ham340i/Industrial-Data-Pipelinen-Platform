@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Issue #22 scheduling, failure isolation and shared primitive integration."""
 
 import json

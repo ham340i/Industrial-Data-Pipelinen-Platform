@@ -171,7 +171,7 @@ Compared with baseline `609b617`; application code was not present or rewritten.
 | Created | [docs/traceability.md](traceability.md) |
 | Created | [docs/user-consent-eula.md](user-consent-eula.md) |
 | Modified | [docs/wiki/Getting-Started.md](wiki/Getting-Started.md) |
-| Modified | [docs/wiki/SOEN-490-Evaluation.md](wiki/SOEN-490-Evaluation.md) |
+| Modified | `docs/wiki/SOEN-490-Evaluation.md` (retired in Release 1) |
 | Modified | [scripts/check_docs.py](../scripts/check_docs.py) |
 | Modified | [scripts/github-setup/README.md](../scripts/github-setup/README.md) |
 | Modified | [scripts/github-setup/branch-protection.md](../scripts/github-setup/branch-protection.md) |

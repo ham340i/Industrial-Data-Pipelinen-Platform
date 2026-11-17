@@ -1,6 +1,6 @@
 # Documentation index
 
-Start with the [October 4 team delivery audit](team-readiness-2026-10-04.md), [project setup summary](project-setup-summary.md), [historical compliance audit](SOEN490_COMPLIANCE_AUDIT.md), [developer guide](getting-started.md), [project README](../README.md), [baseline audit](../SOEN490_REPO_AUDIT.md), [requirements matrix](SOEN490_REQUIREMENTS_MATRIX.md) and [human actions](../SOEN490_HUMAN_ACTIONS.md). Frontend/API shells, Compose packaging and application CI are implemented; metadata has an open PR and complete ETL remains planned. Templates are not completed evidence.
+The maintained project documentation is the Wiki, whose source is [docs/wiki](wiki/Home.md). Start there, then see the [project README](../README.md), the [Release 1 notes](releases/iteration-4-release-1.md) and the [remaining actions](../SOEN490_HUMAN_ACTIONS.md). The planning documents below were written before the product existed and are kept as history; where they disagree with the Wiki, the Wiki is current.
 
 | Topic | Reference |
 |---|---|

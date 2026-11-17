@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import type { BlockMetadata, Port } from "../api/blocks";
 export const tablePort: Port = {
   name: "table",

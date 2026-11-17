@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Headless Block SDK. Importing it performs no registration or I/O."""
 
 from app.blocks.base import Block

@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Private settings persistence and immediate preview/project integration."""
 
 from pathlib import Path

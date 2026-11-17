@@ -1,5 +1,7 @@
 # Independent learning record
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Missing Knowledge and Independent Learning](../wiki/Missing-Knowledge-and-Independent-Learning.md).
+
 No learning records are asserted. Add a dated section per real investigation using the fields below; link experiments, including failed attempts, to engineering decisions.
 
 ## TODO topic / date

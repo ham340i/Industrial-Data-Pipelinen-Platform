@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """SDK contract and synthetic integration checks for issue #8."""
 
 from __future__ import annotations

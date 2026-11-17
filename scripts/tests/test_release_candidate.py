@@ -62,6 +62,14 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(config.settings["API_PORT"], "8000")
         self.assertEqual(config.settings["FRONTEND_PORT"], "3000")
 
+    def test_every_accepted_setting_is_consumed_by_compose(self):
+        compose_file = (rc.ROOT / "compose.yml").read_text(encoding="utf-8")
+        for key in sorted(rc.SETTING_KEYS):
+            with self.subTest(key=key):
+                self.assertIn("${" + key, compose_file)
+        api_env = json.loads(compose_file)["services"]["api"]["environment"]
+        self.assertEqual(api_env["LPS_LOG_LEVEL"], "${LPS_LOG_LEVEL:-INFO}")
+
     def test_log_level_setting_is_accepted(self):
         config = self.load("API_PORT=8100\nFRONTEND_PORT=3100\nLPS_LOG_LEVEL=debug\n")
         self.assertEqual(config.settings["LPS_LOG_LEVEL"], "debug")

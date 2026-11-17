@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 export type JsonValue =
   null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type Configuration = Record<string, JsonValue>;

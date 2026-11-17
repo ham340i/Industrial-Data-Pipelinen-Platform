@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Lossless SDK v1 scalar-schema adapters for eager Polars execution."""
 
 from dataclasses import dataclass

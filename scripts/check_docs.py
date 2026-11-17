@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI contribution: 50% or more AI-generated
 """Check local and maintained repository/Wiki links, anchors and whitespace.
 
 External URLs are not fetched; maintained GitHub links use local source files.
@@ -37,6 +38,39 @@ def heading_anchors(text):
     return anchors
 
 
+REPO_PREFIX = '/ham340i/Industrial-Data-Pipelinen-Platform/'
+
+
+def maintained_target(target):
+    """Map an absolute repository or Wiki URL to a local path; None if external."""
+    parsed = urlsplit(target)
+    if parsed.netloc != 'github.com':
+        return None
+    if parsed.path.startswith(REPO_PREFIX + 'blob/main/'):
+        local = unquote(parsed.path.removeprefix(REPO_PREFIX + 'blob/main/'))
+    elif parsed.path.startswith(REPO_PREFIX + 'wiki/'):
+        local = 'docs/wiki/' + unquote(parsed.path.removeprefix(REPO_PREFIX + 'wiki/')) + '.md'
+    else:
+        return None
+    return '/' + local + ('#' + parsed.fragment if parsed.fragment else '')
+
+
+def link_error(path, root, target):
+    """Return the problem with one local link, or None when it resolves."""
+    parsed = urlsplit(target)
+    dest = (root / unquote(parsed.path).lstrip('/') if parsed.path.startswith('/')
+            else path.parent / unquote(parsed.path)) if parsed.path else path
+    dest = dest.resolve()
+    if not dest.is_relative_to(root.resolve()):
+        return 'local link escapes repository'
+    if not dest.exists():
+        return f'missing local target: {target}'
+    if parsed.fragment and dest.suffix.lower() == '.md':
+        if unquote(parsed.fragment) not in heading_anchors(dest.read_text(encoding='utf-8')):
+            return f'missing heading: {target}'
+    return None
+
+
 def check_markdown(path, root=ROOT):
     text = path.read_text(encoding='utf-8')
     errors = []
@@ -46,27 +80,14 @@ def check_markdown(path, root=ROOT):
         target = target.strip().strip('<>')
         parsed = urlsplit(target)
         if parsed.scheme or parsed.netloc:
-            repo_prefix = '/ham340i/Industrial-Data-Pipelinen-Platform/'
-            if parsed.netloc == 'github.com' and parsed.path.startswith(repo_prefix + 'blob/main/'):
-                local = unquote(parsed.path.removeprefix(repo_prefix + 'blob/main/'))
-            elif parsed.netloc == 'github.com' and parsed.path.startswith(repo_prefix + 'wiki/'):
-                local = 'docs/wiki/' + unquote(parsed.path.removeprefix(repo_prefix + 'wiki/')) + '.md'
-            else:
-                continue
             # Validate maintained absolute links against this checkout, even
             # on a PR whose files are not yet on main or the live Wiki.
-            target = '/' + local + ('#' + parsed.fragment if parsed.fragment else '')
-            parsed = urlsplit(target)
-        dest = (root / unquote(parsed.path).lstrip('/') if parsed.path.startswith('/')
-                else path.parent / unquote(parsed.path)) if parsed.path else path
-        dest = dest.resolve()
-        if not dest.is_relative_to(root.resolve()):
-            errors.append('local link escapes repository')
-        elif not dest.exists():
-            errors.append(f'missing local target: {target}')
-        elif parsed.fragment and dest.suffix.lower() == '.md':
-            if unquote(parsed.fragment) not in heading_anchors(dest.read_text(encoding='utf-8')):
-                errors.append(f'missing heading: {target}')
+            target = maintained_target(target)
+            if target is None:
+                continue
+        error = link_error(path, root, target)
+        if error:
+            errors.append(error)
     return errors
 
 

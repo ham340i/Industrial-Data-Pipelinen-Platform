@@ -12,10 +12,16 @@ from collections.abc import Iterable
 
 from pydantic import Field, ValidationError
 
-from app.blocks.contracts import Contract, Port, ports_compatible
+from app.blocks.contracts import (
+    Column,
+    Contract,
+    DataSchema,
+    Port,
+    ports_compatible,
+)
 from app.blocks.errors import BlockError
 from app.blocks.registry import BlockRegistry, RegisteredBlock
-from app.pipelines.models import GraphDraft, kahn_order
+from app.pipelines.models import Edge, GraphDraft, Node, PortReference, kahn_order
 
 
 class Diagnostic(Contract):
@@ -92,6 +98,7 @@ def validate(draft: GraphDraft, registry: BlockRegistry) -> ValidationReport:
 
 
 def diagnose(draft: GraphDraft, registry: BlockRegistry) -> tuple[Diagnostic, ...]:
+    """Run every static check; each helper reports one group of problems."""
     found: list[Diagnostic] = []
     if not draft.nodes:
         found.append(
@@ -100,9 +107,19 @@ def diagnose(draft: GraphDraft, registry: BlockRegistry) -> tuple[Diagnostic, ..
                 message="Add at least one block before running the pipeline.",
             )
         )
+    nodes = _unique_nodes(draft, found)
+    edges = _usable_edges(draft, nodes, found)
+    found.extend(_layout_diagnostics(draft, nodes))
+    found.extend(_cycle_diagnostics(nodes, edges))
+    blocks = _resolve_blocks(nodes, registry, found)
+    incoming = _connection_diagnostics(edges, blocks, found)
+    found.extend(_input_diagnostics(blocks, incoming))
+    return tuple(sorted(found, key=_sort_key))
 
+
+def _unique_nodes(draft: GraphDraft, found: list[Diagnostic]) -> dict[str, Node]:
     # Later duplicates are reported; the first occurrence is checked further.
-    nodes = {}
+    nodes: dict[str, Node] = {}
     for node in draft.nodes:
         if node.id in nodes:
             found.append(
@@ -115,86 +132,106 @@ def diagnose(draft: GraphDraft, registry: BlockRegistry) -> tuple[Diagnostic, ..
             )
         else:
             nodes[node.id] = node
+    return nodes
 
-    edges = []
+
+def _edge_problem(
+    edge: Edge,
+    nodes: dict[str, Node],
+    edge_ids: set[str],
+    connections: set[tuple[str, str, str, str]],
+) -> Diagnostic | None:
+    """Return why ``edge`` cannot be checked further, or record it as usable."""
+    if edge.id in edge_ids:
+        return Diagnostic(
+            code="duplicate_edge",
+            message="Another connection already uses this ID.",
+            edge_id=edge.id,
+        )
+    edge_ids.add(edge.id)
+    missing = [
+        end.node_id for end in (edge.source, edge.target) if end.node_id not in nodes
+    ]
+    if missing:
+        return Diagnostic(
+            code="dangling_edge",
+            message=f"This connection references node '{missing[0]}', "
+            "which does not exist. Delete the connection.",
+            edge_id=edge.id,
+        )
+    key = (
+        edge.source.node_id,
+        edge.source.port,
+        edge.target.node_id,
+        edge.target.port,
+    )
+    if key in connections:
+        return Diagnostic(
+            code="duplicate_connection",
+            message="These ports are already connected. Delete the "
+            "repeated connection.",
+            node_id=edge.target.node_id,
+            edge_id=edge.id,
+        )
+    connections.add(key)
+    return None
+
+
+def _usable_edges(
+    draft: GraphDraft, nodes: dict[str, Node], found: list[Diagnostic]
+) -> list[Edge]:
+    edges: list[Edge] = []
     edge_ids: set[str] = set()
     connections: set[tuple[str, str, str, str]] = set()
     for edge in sorted(draft.edges, key=lambda e: e.id):
-        if edge.id in edge_ids:
-            found.append(
-                Diagnostic(
-                    code="duplicate_edge",
-                    message="Another connection already uses this ID.",
-                    edge_id=edge.id,
-                )
-            )
-            continue
-        edge_ids.add(edge.id)
-        missing = [
-            end.node_id
-            for end in (edge.source, edge.target)
-            if end.node_id not in nodes
-        ]
-        if missing:
-            found.append(
-                Diagnostic(
-                    code="dangling_edge",
-                    message=f"This connection references node '{missing[0]}', "
-                    "which does not exist. Delete the connection.",
-                    edge_id=edge.id,
-                )
-            )
-            continue
-        key = (
-            edge.source.node_id,
-            edge.source.port,
-            edge.target.node_id,
-            edge.target.port,
+        problem = _edge_problem(edge, nodes, edge_ids, connections)
+        if problem is None:
+            edges.append(edge)
+        else:
+            found.append(problem)
+    return edges
+
+
+def _layout_diagnostics(draft: GraphDraft, nodes: dict[str, Node]) -> list[Diagnostic]:
+    if draft.layout is None:
+        return []
+    return [
+        Diagnostic(
+            code="dangling_layout",
+            message=f"The layout positions node '{node_id}', which does not exist.",
+            node_id=node_id,
         )
-        if key in connections:
-            found.append(
-                Diagnostic(
-                    code="duplicate_connection",
-                    message="These ports are already connected. Delete the "
-                    "repeated connection.",
-                    node_id=edge.target.node_id,
-                    edge_id=edge.id,
-                )
-            )
-            continue
-        connections.add(key)
-        edges.append(edge)
+        for node_id in sorted(draft.layout.positions.keys() - nodes.keys())
+    ]
 
-    if draft.layout is not None:
-        for node_id in sorted(draft.layout.positions.keys() - nodes.keys()):
-            found.append(
-                Diagnostic(
-                    code="dangling_layout",
-                    message=f"The layout positions node '{node_id}', which does "
-                    "not exist.",
-                    node_id=node_id,
-                )
-            )
 
-    # Cycles: reuse the scheduler's ordering, then name exactly the edges that
-    # lie on a loop (not those merely downstream of one).
+def _cycle_diagnostics(nodes: dict[str, Node], edges: list[Edge]) -> list[Diagnostic]:
+    # Reuse the scheduler's ordering, then name exactly the edges that lie on a
+    # loop (not those merely downstream of one).
     pairs = [(edge.source.node_id, edge.target.node_id) for edge in edges]
     _, blocked = kahn_order(nodes, pairs)
-    if blocked:
-        component = _components(blocked, pairs)
-        for edge in edges:
-            source, target = edge.source.node_id, edge.target.node_id
-            if source in component and component.get(target) == component[source]:
-                found.append(
-                    Diagnostic(
-                        code="cycle",
-                        message="This connection is part of a cycle. Remove a "
-                        "connection in the loop so data flows one way.",
-                        node_id=source,
-                        edge_id=edge.id,
-                    )
+    if not blocked:
+        return []
+    component = _components(blocked, pairs)
+    found = []
+    for edge in edges:
+        source, target = edge.source.node_id, edge.target.node_id
+        if source in component and component.get(target) == component[source]:
+            found.append(
+                Diagnostic(
+                    code="cycle",
+                    message="This connection is part of a cycle. Remove a "
+                    "connection in the loop so data flows one way.",
+                    node_id=source,
+                    edge_id=edge.id,
                 )
+            )
+    return found
 
+
+def _resolve_blocks(
+    nodes: dict[str, Node], registry: BlockRegistry, found: list[Diagnostic]
+) -> dict[str, RegisteredBlock]:
     blocks: dict[str, RegisteredBlock] = {}
     for node in nodes.values():
         try:
@@ -204,7 +241,24 @@ def diagnose(draft: GraphDraft, registry: BlockRegistry) -> tuple[Diagnostic, ..
             continue
         blocks[node.id] = block
         found.extend(_config_diagnostics(block, node.id, node.config))
+    return blocks
 
+
+def _unknown_port(edge: Edge, end: PortReference, direction: str) -> Diagnostic:
+    return Diagnostic(
+        code="unknown_port",
+        message=f"This block has no {direction} named "
+        f"'{end.port}'. Delete the connection and reconnect it.",
+        node_id=end.node_id,
+        edge_id=edge.id,
+        port=end.port,
+    )
+
+
+def _connection_diagnostics(
+    edges: list[Edge], blocks: dict[str, RegisteredBlock], found: list[Diagnostic]
+) -> dict[tuple[str, str], list[str]]:
+    """Check each edge's ports; return edge IDs grouped by (node, input port)."""
     incoming: dict[tuple[str, str], list[str]] = {}
     for edge in edges:
         source_block = blocks.get(edge.source.node_id)
@@ -213,21 +267,10 @@ def diagnose(draft: GraphDraft, registry: BlockRegistry) -> tuple[Diagnostic, ..
             continue  # Already reported as an unavailable block.
         out = _port(source_block.descriptor.outputs, edge.source.port)
         inp = _port(target_block.descriptor.inputs, edge.target.port)
-        for end, port, direction in (
-            (edge.source, out, "output"),
-            (edge.target, inp, "input"),
-        ):
-            if port is None:
-                found.append(
-                    Diagnostic(
-                        code="unknown_port",
-                        message=f"This block has no {direction} named "
-                        f"'{end.port}'. Delete the connection and reconnect it.",
-                        node_id=end.node_id,
-                        edge_id=edge.id,
-                        port=end.port,
-                    )
-                )
+        if out is None:
+            found.append(_unknown_port(edge, edge.source, "output"))
+        if inp is None:
+            found.append(_unknown_port(edge, edge.target, "input"))
         if out is None or inp is None:
             continue
         incoming.setdefault((edge.target.node_id, inp.name), []).append(edge.id)
@@ -241,7 +284,13 @@ def diagnose(draft: GraphDraft, registry: BlockRegistry) -> tuple[Diagnostic, ..
                     port=inp.name,
                 )
             )
+    return incoming
 
+
+def _input_diagnostics(
+    blocks: dict[str, RegisteredBlock], incoming: dict[tuple[str, str], list[str]]
+) -> list[Diagnostic]:
+    found = []
     for node_id, block in blocks.items():
         for port in block.descriptor.inputs:
             connected = sorted(incoming.get((node_id, port.name), ()))
@@ -255,20 +304,19 @@ def diagnose(draft: GraphDraft, registry: BlockRegistry) -> tuple[Diagnostic, ..
                         port=port.name,
                     )
                 )
-            if not port.many:
-                for edge_id in connected[1:]:
-                    found.append(
-                        Diagnostic(
-                            code="input_cardinality",
-                            message=f"Input '{port.name}' accepts one "
-                            "connection. Delete the extra connection.",
-                            node_id=node_id,
-                            edge_id=edge_id,
-                            port=port.name,
-                        )
-                    )
-
-    return tuple(sorted(found, key=_sort_key))
+            extra = [] if port.many else connected[1:]
+            found.extend(
+                Diagnostic(
+                    code="input_cardinality",
+                    message=f"Input '{port.name}' accepts one "
+                    "connection. Delete the extra connection.",
+                    node_id=node_id,
+                    edge_id=edge_id,
+                    port=port.name,
+                )
+                for edge_id in extra
+            )
+    return found
 
 
 def _port(ports: tuple[Port, ...], name: str) -> Port | None:
@@ -356,6 +404,34 @@ def _config_constraint_diagnostic(
     )
 
 
+def _column_difference(name: str, actual: Column, expected: Column) -> list[str]:
+    if actual.dtype != expected.dtype:
+        return [f"column {name} is {actual.dtype}, expected {expected.dtype}"]
+    if actual.nullable and not expected.nullable:
+        return [f"column {name} may be empty but the input requires values"]
+    return []
+
+
+def _schema_differences(out_schema: DataSchema, inp_schema: DataSchema) -> list[str]:
+    produced = {column.name: column for column in out_schema.columns}
+    expected = {column.name: column for column in inp_schema.columns}
+    reasons = []
+    missing = [name for name in expected if name not in produced]
+    if missing:
+        reasons.append(f"missing column(s) {', '.join(missing)}")
+    for name, column in expected.items():
+        actual = produced.get(name)
+        if actual is not None:
+            reasons.extend(_column_difference(name, actual, column))
+    if not inp_schema.allow_extra_columns:
+        extra = [name for name in produced if name not in expected]
+        if extra:
+            reasons.append(f"unexpected column(s) {', '.join(extra)}")
+        if out_schema.allow_extra_columns:
+            reasons.append("it may add undeclared columns")
+    return reasons
+
+
 def describe_incompatibility(out: Port, inp: Port) -> str:
     """Explain why ``ports_compatible`` rejected a connection, with a fix."""
     prefix = f"Output '{out.name}' cannot feed input '{inp.name}': "
@@ -366,41 +442,13 @@ def describe_incompatibility(out: Port, inp: Port) -> str:
         return f"{prefix}it produces several tables but the input accepts one.{fix}"
     if out.data_schema is None or inp.data_schema is None:
         return f"{prefix}their port contracts differ.{fix}"
-    produced = {column.name: column for column in out.data_schema.columns}
-    expected = {column.name: column for column in inp.data_schema.columns}
-    reasons = []
-    missing = [name for name in expected if name not in produced]
-    if missing:
-        reasons.append(f"missing column(s) {', '.join(missing)}")
-    for name, column in expected.items():
-        actual = produced.get(name)
-        if actual is None:
-            continue
-        if actual.dtype != column.dtype:
-            reasons.append(f"column {name} is {actual.dtype}, expected {column.dtype}")
-        elif actual.nullable and not column.nullable:
-            reasons.append(f"column {name} may be empty but the input requires values")
-    if not inp.data_schema.allow_extra_columns:
-        extra = [name for name in produced if name not in expected]
-        if extra:
-            reasons.append(f"unexpected column(s) {', '.join(extra)}")
-        if out.data_schema.allow_extra_columns:
-            reasons.append("it may add undeclared columns")
+    reasons = _schema_differences(out.data_schema, inp.data_schema)
     detail = "; ".join(reasons) or "their table schemas differ"
     return f"{prefix}{detail}.{fix}"
 
 
-def _components(
-    nodes: Iterable[str], pairs: Iterable[tuple[str, str]]
-) -> dict[str, int]:
-    """Kosaraju's strongly connected components, iterative and deterministic."""
-    members = set(nodes)
-    forward: dict[str, list[str]] = {node: [] for node in members}
-    backward: dict[str, list[str]] = {node: [] for node in members}
-    for source, target in pairs:
-        if source in members and target in members:
-            forward[source].append(target)
-            backward[target].append(source)
+def _finish_order(members: set[str], forward: dict[str, list[str]]) -> list[str]:
+    """Depth-first finishing order over ``forward``, iterative and deterministic."""
     finished: list[str] = []
     seen: set[str] = set()
     for start in sorted(members):
@@ -418,8 +466,22 @@ def _components(
             else:
                 stack.pop()
                 finished.append(node)
+    return finished
+
+
+def _components(
+    nodes: Iterable[str], pairs: Iterable[tuple[str, str]]
+) -> dict[str, int]:
+    """Kosaraju's strongly connected components, iterative and deterministic."""
+    members = set(nodes)
+    forward: dict[str, list[str]] = {node: [] for node in members}
+    backward: dict[str, list[str]] = {node: [] for node in members}
+    for source, target in pairs:
+        if source in members and target in members:
+            forward[source].append(target)
+            backward[target].append(source)
     component: dict[str, int] = {}
-    for index, start in enumerate(reversed(finished)):
+    for index, start in enumerate(reversed(_finish_order(members, forward))):
         if start in component:
             continue
         component[start] = index

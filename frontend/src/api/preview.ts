@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { api, ApiError } from "./client";
 import type { Column } from "./blocks";
 import type { SemanticDefinition } from "./validation";
@@ -103,105 +104,194 @@ function invalid(): never {
   );
 }
 
-export function parsePreview(
-  value: unknown,
-  request: PreviewRequest,
-): PreviewResult {
+type Value = Record<string, unknown>;
+type Row = Record<string, unknown>;
+interface Shaped extends Value {
+  data_schema: Value & { columns: unknown[] };
+  rows: unknown[];
+  nulls: unknown[];
+  truncated: boolean;
+}
+const COUNT_FIELDS = [
+  "sample_row_count",
+  "sample_cell_count",
+  "inspected_row_count",
+  "source_read_bytes",
+  "elapsed_ms",
+];
+const SCHEMA_SCOPES = ["header", "declared", "sample", "file_metadata"];
+const FULL_COUNT_SCOPES = ["unknown", "observed", "file_metadata"];
+const DTYPES = ["string", "integer", "number", "boolean"];
+
+function evaluatedPath(ids: unknown, nodeId: string): boolean {
+  return (
+    Array.isArray(ids) &&
+    ids.length <= 20 &&
+    ids.every((id) => text(id)) &&
+    ids.at(-1) === nodeId
+  );
+}
+/** Field types, request echo and fixed protocol values. */
+function shaped(value: unknown, request: PreviewRequest): value is Shaped {
   if (
     !object(value) ||
-    value.node_id !== request.node_id ||
-    value.output_port !== request.output_port ||
     !object(value.data_schema) ||
-    !Array.isArray(value.data_schema.columns) ||
-    value.data_schema.columns.length > 128 ||
-    typeof value.data_schema.allow_extra_columns !== "boolean" ||
-    !Array.isArray(value.rows) ||
-    value.rows.length > request.limits.max_rows ||
-    ![
-      "sample_row_count",
-      "sample_cell_count",
-      "inspected_row_count",
-      "source_read_bytes",
-      "elapsed_ms",
-    ].every((k) => count(value[k])) ||
-    value.sample_row_count !== value.rows.length ||
-    value.sample_cell_count !==
-      value.rows.length * value.data_schema.columns.length ||
-    (value.sample_cell_count as number) > request.limits.max_cells ||
-    (value.inspected_row_count as number) < value.rows.length ||
-    typeof value.truncated !== "boolean" ||
-    (value.full_row_count !== null &&
-      (!count(value.full_row_count) ||
-        value.full_row_count < value.rows.length ||
-        value.truncated !== value.full_row_count > value.rows.length)) ||
-    !["unknown", "observed", "file_metadata"].includes(
-      String(value.full_count_scope),
-    ) ||
-    (value.full_count_scope === "unknown") !==
-      (value.full_row_count === null) ||
-    (value.full_count_scope === "observed" && value.truncated) ||
-    (!value.truncated && value.full_row_count === null) ||
-    value.sampling_method !== "leading_rows" ||
-    !["header", "declared", "sample", "file_metadata"].includes(
-      String(value.schema_scope),
-    ) ||
-    value.null_scope !== "returned_sample" ||
-    !Array.isArray(value.nulls) ||
-    !object(value.effective_limits) ||
-    value.effective_limits.max_rows !== request.limits.max_rows ||
-    value.effective_limits.max_cells !== request.limits.max_cells ||
-    !Array.isArray(value.evaluated_node_ids) ||
-    value.evaluated_node_ids.length > 20 ||
-    !value.evaluated_node_ids.every((id) => text(id)) ||
-    value.evaluated_node_ids.at(-1) !== request.node_id
+    !object(value.effective_limits)
   )
-    return invalid();
-  const columns = value.data_schema.columns;
-  if (
-    !columns.every(
-      (c) =>
-        object(c) &&
-        text(c.name) &&
-        ["string", "integer", "number", "boolean"].includes(String(c.dtype)) &&
-        typeof c.nullable === "boolean",
-    ) ||
-    new Set(columns.map((c) => c.name)).size !== columns.length
-  )
-    return invalid();
-  for (const row of value.rows) {
-    if (!object(row) || Object.keys(row).length !== columns.length)
-      return invalid();
-    for (const c of columns) {
-      const cell = row[c.name];
-      if (
-        cell === null
-          ? !c.nullable
-          : c.dtype === "string"
-            ? typeof cell !== "string" || [...cell].length > 4096
-            : c.dtype === "boolean"
-              ? typeof cell !== "boolean"
-              : typeof cell !== "number" ||
-                !Number.isFinite(cell) ||
-                (c.dtype === "integer" && !Number.isSafeInteger(cell))
-      )
-        return invalid();
-    }
-  }
-  if (
-    value.nulls.length !== columns.length ||
-    !value.nulls.every(
+    return false;
+  const schema = value.data_schema;
+  const limits = value.effective_limits;
+  return [
+    value.node_id === request.node_id,
+    value.output_port === request.output_port,
+    Array.isArray(schema.columns) && schema.columns.length <= 128,
+    typeof schema.allow_extra_columns === "boolean",
+    Array.isArray(value.rows) && value.rows.length <= request.limits.max_rows,
+    COUNT_FIELDS.every((k) => count(value[k])),
+    typeof value.truncated === "boolean",
+    value.sampling_method === "leading_rows",
+    SCHEMA_SCOPES.includes(String(value.schema_scope)),
+    value.null_scope === "returned_sample",
+    Array.isArray(value.nulls),
+    limits.max_rows === request.limits.max_rows,
+    limits.max_cells === request.limits.max_cells,
+    evaluatedPath(value.evaluated_node_ids, request.node_id),
+  ].every(Boolean);
+}
+/** The full count, its scope and truncation must tell one consistent story. */
+function totalConsistent(value: Shaped, rows: number): boolean {
+  const full = value.full_row_count;
+  const scope = value.full_count_scope;
+  const truncated = value.truncated;
+  const fullValid =
+    full === null || (count(full) && full >= rows && truncated === full > rows);
+  return [
+    fullValid,
+    FULL_COUNT_SCOPES.includes(String(scope)),
+    (scope === "unknown") === (full === null),
+    !(scope === "observed" && truncated),
+    truncated || full !== null,
+  ].every(Boolean);
+}
+function countsConsistent(value: Shaped, request: PreviewRequest): boolean {
+  const rows = value.rows.length;
+  const cells = value.sample_cell_count as number;
+  return (
+    [
+      value.sample_row_count === rows,
+      cells === rows * value.data_schema.columns.length,
+      cells <= request.limits.max_cells,
+      (value.inspected_row_count as number) >= rows,
+    ].every(Boolean) && totalConsistent(value, rows)
+  );
+}
+const validColumn = (c: unknown): c is Column =>
+  object(c) &&
+  text(c.name) &&
+  DTYPES.includes(String(c.dtype)) &&
+  typeof c.nullable === "boolean";
+function columnsValid(columns: unknown[]): columns is Column[] {
+  return (
+    columns.every(validColumn) &&
+    new Set(columns.map((c) => (c as Column).name)).size === columns.length
+  );
+}
+function cellValid(cell: unknown, c: Column): boolean {
+  if (cell === null) return c.nullable;
+  if (c.dtype === "string")
+    return typeof cell === "string" && [...cell].length <= 4096;
+  if (c.dtype === "boolean") return typeof cell === "boolean";
+  return (
+    typeof cell === "number" &&
+    Number.isFinite(cell) &&
+    (c.dtype !== "integer" || Number.isSafeInteger(cell))
+  );
+}
+function rowsValid(rows: unknown[], columns: Column[]): rows is Row[] {
+  return rows.every(
+    (row) =>
+      object(row) &&
+      Object.keys(row).length === columns.length &&
+      columns.every((c) => cellValid(row[c.name], c)),
+  );
+}
+function nullsValid(nulls: unknown[], columns: Column[], rows: Row[]): boolean {
+  return (
+    nulls.length === columns.length &&
+    nulls.every(
       (n, i) =>
         object(n) &&
         n.column === columns[i].name &&
         count(n.null_count) &&
-        n.null_count ===
-          (value.rows as Record<string, unknown>[]).filter(
-            (r) => r[columns[i].name] === null,
-          ).length,
+        n.null_count === rows.filter((r) => r[columns[i].name] === null).length,
     )
+  );
+}
+
+export function parsePreview(
+  value: unknown,
+  request: PreviewRequest,
+): PreviewResult {
+  if (!shaped(value, request) || !countsConsistent(value, request))
+    return invalid();
+  const columns = value.data_schema.columns;
+  if (
+    !columnsValid(columns) ||
+    !rowsValid(value.rows, columns) ||
+    !nullsValid(value.nulls, columns, value.rows)
   )
     return invalid();
   return value as unknown as PreviewResult;
+}
+
+type PublicError = Value & {
+  code: string;
+  message: string;
+  correlation_id: string;
+};
+/** The error envelope, only when every field is within its public bounds. */
+function publicError(envelope: unknown): PublicError | null {
+  const e = object(envelope) && object(envelope.error) ? envelope.error : null;
+  if (!e) return null;
+  const valid = [
+    text(e.code, 64),
+    text(e.message, 512),
+    text(e.correlation_id, 100),
+    optional(e.node_context),
+    optional(e.field ?? null),
+    optional(e.port ?? null),
+  ].every(Boolean);
+  return valid ? (e as PublicError) : null;
+}
+const contextName = (value: unknown): string | null =>
+  typeof value === "string" && /^[A-Za-z_][A-Za-z0-9_.[\]-]{0,127}$/.test(value)
+    ? value
+    : null;
+function previewFailure(
+  status: number,
+  envelope: unknown,
+  request: PreviewRequest,
+): never {
+  const e = publicError(envelope);
+  if (!e) return invalid();
+  const nodeId = request.definition.nodes.some(
+    (node) => node.id === e.node_context,
+  )
+    ? (e.node_context as string)
+    : null;
+  throw new PreviewError(
+    Object.hasOwn(recoveryMessages, e.code)
+      ? recoveryMessages[e.code]
+      : "Preview could not complete. Check the input path and configuration, then retry. Your draft is unchanged.",
+    e.code,
+    status,
+    nodeId,
+    nodeId ? contextName(e.field) : null,
+    nodeId ? contextName(e.port) : null,
+    /^[A-Za-z0-9_-]{1,100}$/.test(e.correlation_id)
+      ? e.correlation_id
+      : "unavailable",
+  );
 }
 
 export async function previewNode(
@@ -219,43 +309,7 @@ export async function previewNode(
       validateStatus: () => true,
     },
   );
-  if (response.status >= 400) {
-    const envelope = response.data;
-    const e =
-      object(envelope) && object(envelope.error) ? envelope.error : null;
-    if (
-      !e ||
-      !text(e.code, 64) ||
-      !text(e.message, 512) ||
-      !text(e.correlation_id, 100) ||
-      !optional(e.node_context) ||
-      !optional(e.field ?? null) ||
-      !optional(e.port ?? null)
-    )
-      return invalid();
-    const nodeId = request.definition.nodes.some(
-      (node) => node.id === e.node_context,
-    )
-      ? (e.node_context as string)
-      : null;
-    const context = (value: unknown): string | null =>
-      typeof value === "string" &&
-      /^[A-Za-z_][A-Za-z0-9_.[\]-]{0,127}$/.test(value)
-        ? value
-        : null;
-    throw new PreviewError(
-      Object.hasOwn(recoveryMessages, e.code)
-        ? recoveryMessages[e.code]
-        : "Preview could not complete. Check the input path and configuration, then retry. Your draft is unchanged.",
-      e.code,
-      response.status,
-      nodeId,
-      nodeId ? context(e.field) : null,
-      nodeId ? context(e.port) : null,
-      /^[A-Za-z0-9_-]{1,100}$/.test(e.correlation_id)
-        ? e.correlation_id
-        : "unavailable",
-    );
-  }
+  if (response.status >= 400)
+    previewFailure(response.status, response.data, request);
   return parsePreview(response.data, request);
 }

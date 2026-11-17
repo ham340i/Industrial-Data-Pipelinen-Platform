@@ -174,6 +174,38 @@ def _sqlite_authorizer(
     return sqlite3.SQLITE_DENY
 
 
+def _row_bytes(row: tuple[Any, ...]) -> int:
+    return sum(
+        len(value.encode("utf-8"))
+        if isinstance(value, str)
+        else len(value)
+        if isinstance(value, bytes)
+        else 8
+        for value in row
+    )
+
+
+def _fetch_rows(
+    cursor: sqlite3.Cursor,
+    columns: list[str],
+    max_rows: int | None,
+    max_bytes: int | None,
+) -> list[dict[str, Any]]:
+    """Stream the result while enforcing the accumulated row and byte budgets."""
+    rows: list[dict[str, Any]] = []
+    result_bytes = 0
+    for row in cursor:
+        if max_rows is not None and len(rows) >= max_rows:
+            raise SqlSourceError("SQL result exceeds the row budget")
+        result_bytes += _row_bytes(row)
+        if max_bytes is not None and result_bytes > max_bytes:
+            raise SqlSourceError("SQL result exceeds the byte budget")
+        if len(row) != len(columns):
+            raise SqlSourceError("SQLite returned an unexpected column count")
+        rows.append(dict(zip(columns, row, strict=False)))
+    return rows
+
+
 def execute_read_only_sqlite(
     connection: sqlite3.Connection,
     query: str,
@@ -210,24 +242,7 @@ def execute_read_only_sqlite(
                 "SQL result column names must be unique; use explicit aliases"
             )
 
-        rows: list[dict[str, Any]] = []
-        result_bytes = 0
-        for row in cursor:
-            if max_rows is not None and len(rows) >= max_rows:
-                raise SqlSourceError("SQL result exceeds the row budget")
-            result_bytes += sum(
-                len(value.encode("utf-8"))
-                if isinstance(value, str)
-                else len(value)
-                if isinstance(value, bytes)
-                else 8
-                for value in row
-            )
-            if max_bytes is not None and result_bytes > max_bytes:
-                raise SqlSourceError("SQL result exceeds the byte budget")
-            if len(row) != len(columns):
-                raise SqlSourceError("SQLite returned an unexpected column count")
-            rows.append(dict(zip(columns, row, strict=False)))
+        rows = _fetch_rows(cursor, columns, max_rows, max_bytes)
 
         return SqlQueryResult(
             columns=columns,
@@ -237,6 +252,22 @@ def execute_read_only_sqlite(
         raise SqlSourceError("SQLite rejected the read-only query") from exc
     finally:
         connection.set_authorizer(None)
+
+
+def _contained_database(database: str | Path, workspace_root: Path) -> tuple[Path, int]:
+    """Resolve the database (following links) inside the workspace; return its size."""
+    try:
+        root = workspace_root.resolve(strict=True)
+        database_path = (root / database).resolve(strict=True)
+        database_path.relative_to(root)
+        if not database_path.is_file():
+            raise ValueError("Not a file")
+        size = database_path.stat().st_size
+    except (OSError, ValueError, RuntimeError):
+        raise SqlSourceError(
+            "SQLite database is missing or outside the workspace"
+        ) from None
+    return database_path, size
 
 
 def read_sqlite_source(
@@ -254,17 +285,7 @@ def read_sqlite_source(
     Engine limits mirror the workspace block: value length, VM steps, and
     streamed row/byte budgets.
     """
-    try:
-        root = workspace_root.resolve(strict=True)
-        database_path = (root / config.database_path).resolve(strict=True)
-        database_path.relative_to(root)
-        if not database_path.is_file():
-            raise ValueError("Not a file")
-        size = database_path.stat().st_size
-    except (OSError, ValueError, RuntimeError):
-        raise SqlSourceError(
-            "SQLite database is missing or outside the workspace"
-        ) from None
+    database_path, size = _contained_database(config.database_path, workspace_root)
     if size > max_bytes:
         raise SqlSourceError("SQLite database exceeds the byte budget")
 

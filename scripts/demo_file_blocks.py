@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Reproducible synthetic SDK demonstration for #16, #18 and #20.
 
 Run from the repository root: python -m scripts.demo_file_blocks

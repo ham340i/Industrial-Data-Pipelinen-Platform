@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Safe errors for the preview boundary; raw exceptions never leave it."""
 
 from fastapi.responses import JSONResponse

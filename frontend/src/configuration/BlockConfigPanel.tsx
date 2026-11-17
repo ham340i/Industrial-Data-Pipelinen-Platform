@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   Alert,

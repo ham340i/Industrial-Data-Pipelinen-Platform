@@ -41,6 +41,43 @@ function summary(v: unknown, projectId: string): PipelineSummary {
     revision: Number(v.revision),
   };
 }
+type Node = Record<string, unknown> & { id: string };
+type Edge = Record<string, unknown> & { id: string };
+const finite = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+
+function validNode(n: unknown, ids: Set<string>): n is Node {
+  if (!object(n)) return false;
+  return [
+    typeof n.id === "string" && !ids.has(n.id),
+    typeof n.block_id === "string",
+    typeof n.block_version === "string",
+    object(n.config),
+  ].every(Boolean);
+}
+function validEndpoint(end: unknown, ids: Set<string>): boolean {
+  return (
+    object(end) &&
+    typeof end.node_id === "string" &&
+    ids.has(end.node_id) &&
+    typeof end.port === "string"
+  );
+}
+function validEdge(
+  e: unknown,
+  edgeIds: Set<string>,
+  ids: Set<string>,
+): e is Edge {
+  return (
+    object(e) &&
+    typeof e.id === "string" &&
+    !edgeIds.has(e.id) &&
+    validEndpoint(e.source, ids) &&
+    validEndpoint(e.target, ids)
+  );
+}
+function validPosition(id: string, p: unknown, ids: Set<string>): boolean {
+  return ids.has(id) && object(p) && finite(p.x) && finite(p.y);
+}
 export function parseDefinition(v: unknown): Definition {
   if (
     !object(v) ||
@@ -51,47 +88,19 @@ export function parseDefinition(v: unknown): Definition {
     return invalid();
   const ids = new Set<string>();
   for (const n of v.nodes) {
-    if (
-      !object(n) ||
-      typeof n.id !== "string" ||
-      ids.has(n.id) ||
-      typeof n.block_id !== "string" ||
-      typeof n.block_version !== "string" ||
-      !object(n.config)
-    )
-      return invalid();
+    if (!validNode(n, ids)) return invalid();
     ids.add(n.id);
   }
   const edgeIds = new Set<string>();
   for (const e of v.edges) {
-    if (
-      !object(e) ||
-      typeof e.id !== "string" ||
-      edgeIds.has(e.id) ||
-      !object(e.source) ||
-      !object(e.target) ||
-      typeof e.source.node_id !== "string" ||
-      typeof e.target.node_id !== "string" ||
-      !ids.has(e.source.node_id) ||
-      !ids.has(e.target.node_id) ||
-      typeof e.source.port !== "string" ||
-      typeof e.target.port !== "string"
-    )
-      return invalid();
+    if (!validEdge(e, edgeIds, ids)) return invalid();
     edgeIds.add(e.id);
   }
   const layout = v.layout ?? { positions: {} };
   if (!object(layout) || !object(layout.positions)) return invalid();
-  for (const [id, p] of Object.entries(layout.positions))
-    if (
-      !ids.has(id) ||
-      !object(p) ||
-      typeof p.x !== "number" ||
-      !Number.isFinite(p.x) ||
-      typeof p.y !== "number" ||
-      !Number.isFinite(p.y)
-    )
-      return invalid();
+  const positions = Object.entries(layout.positions);
+  if (!positions.every(([id, p]) => validPosition(id, p, ids)))
+    return invalid();
   return structuredClone({ ...v, layout }) as unknown as Definition;
 }
 function saved(v: unknown, projectId: string, id?: string): SavedPipeline {

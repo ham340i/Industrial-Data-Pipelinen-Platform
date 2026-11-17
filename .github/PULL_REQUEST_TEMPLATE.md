@@ -55,6 +55,9 @@ Closes #<!-- issue number -->
 <!-- Acceptance status, feedback and signoff link where required. -->
 
 ## AI Assistance
+AI contribution: <!-- exactly one of: No substantial AI-generated code | Below 50% AI-generated | 50% or more AI-generated -->
+AI-assisted files:
+<!-- List each source file in this pull request that received substantial AI assistance, or "None". -->
 Tool:
 Purpose:
 What the developer personally designed:

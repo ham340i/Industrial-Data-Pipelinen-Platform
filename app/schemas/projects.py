@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Public project contracts; names are display text, never workspace paths."""
 
 from datetime import UTC, datetime
