@@ -42,7 +42,7 @@ Each directory contains README, demo, retrospective and testing evidence templat
 | Iteration 1 | `v0.1.0-iteration1` |
 | Iteration 2 | `v0.2.0-iteration2` |
 | Iteration 3 | `v0.3.0-iteration3` |
-| Iteration 4 / Release 1 | `v1.0.0-release1` |
+| Iteration 4 / Release 1 | `Release1` |
 
 No tags were created by this reorganization. Create a tag only after genuine completion and an explicit instruction from the repository owner. It must point to the exact `main` commit used for the demonstration/submission, with reviewed evidence linked from the iteration record. Never move a published tag silently.
 
