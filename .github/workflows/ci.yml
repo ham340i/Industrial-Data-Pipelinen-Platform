@@ -262,6 +262,20 @@
           "run": "npm run browser:install --prefix frontend -- --with-deps"
         },
         {
+          "name": "Verify release author preview execute workflow",
+          "run": "npm run test:release --prefix frontend"
+        },
+        {
+          "name": "Upload release acceptance evidence",
+          "if": "always()",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "release-acceptance-${{ matrix.os }}",
+            "path": "frontend/test-results/release/\nfrontend/test-results/release.xml\nfrontend/playwright-report/release/",
+            "if-no-files-found": "error"
+          }
+        },
+        {
           "name": "Verify real standalone API connection",
           "run": "npm run test:standalone --prefix frontend"
         },
