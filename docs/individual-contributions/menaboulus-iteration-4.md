@@ -138,8 +138,10 @@ Iteration: 4 (Release 1)
 
 ## Assigned Stories
 
-[#37](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/37);
-design, implementation, tests and reviews are described in the sections above.
+[#37](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/37) and
+[#36](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/36) (co-assignee with MarcElHaddad1);
+design, implementation, tests and reviews are described in the sections above
+and in the #36 section below.
 
 ## Problems Encountered
 
@@ -152,3 +154,38 @@ Vite's `import.meta.url` asset rewriting and its `server.fs` allow-list
 (found while making the shared fixtures readable from the frontend tests);
 SQLite progress handlers as a deterministic work budget instead of
 wall-clock timeouts.
+
+## Issue #36: packaged Release 1 candidate
+
+Goal: let a stakeholder tester install, demonstrate and recover the Release 1
+candidate without editing source. Record of what was run:
+[verification](../testing/issue-36-release-candidate.md).
+
+- **Design.** One command, `scripts/release_candidate.py`, scoped to one
+  Compose project name. It provides `config`, `build`, `start`, `stop`,
+  `status`, `demo`, `backup`, `restore`, `reset` and `smoke`. The
+  demonstration and the CI rehearsal share one HTTP scenario,
+  `scripts/release_acceptance.py`, so the demo a tester sees is the one CI
+  checks. Backups carry a checksum and schema revision so restore refuses
+  incompatible data before deleting anything.
+- **Tests.** 23 script unit tests with a fake Docker runner, 8 backend
+  integration tests of the scenario against the real API and engine, and a
+  new "Release candidate rehearsal" CI job: clean install, scenario,
+  container recreation, backup, reset and restore.
+- **Docs.** [Candidate guide](../release-1/candidate.md),
+  [release notes](../release-1/release-notes.md) and
+  [tag checklist](../release-1/tag-checklist.md). No tag created.
+- **Other reviews and fixes this iteration.** Reviewed
+  [PR #89](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/89)
+  with two inline comments: an output-rows error hint that blamed a replaced
+  file for every failure, and object-only schema keywords accepted on every
+  field type. Fixed the failing Windows type check and SonarCloud finding on
+  [PR #90](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/90),
+  and the Windows execute-timeout failure on
+  [PR #88](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/88).
+- **AI assistance.** Claude Code, 50% or more AI-generated; per-file
+  declarations are in [AI usage](../../.github/AI_USAGE.md). My own part:
+  scope, the reviewer choice and the data-safety rules (confirmation for
+  destructive commands, no tag until the checklist passes).
+- **Independent review.** Requested from ham340i on the pull request.
+
