@@ -8,15 +8,8 @@ import pytest
 from app.blocks.context import BlockContext
 from app.blocks.contracts import Column, DataSchema, Table
 from app.blocks.errors import BlockError
-from app.blocks.transforms import (
-    Aggregate,
-    Cast,
-    Filter,
-    Join,
-    RenameColumns,
-    SelectColumns,
-    Sort,
-)
+from app.blocks.relational import Aggregate, Join
+from app.blocks.transforms import Cast, Filter, RenameColumns, SelectColumns, Sort
 from tests.test_file_blocks import run
 
 

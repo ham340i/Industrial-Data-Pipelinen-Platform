@@ -121,41 +121,51 @@ class NullHandling(Block[NullHandlingConfig]):
     config_model = NullHandlingConfig
     descriptor = descriptor("transform.null_handling", "Null Handling", "transform")
 
+    @staticmethod
+    def _check_fills(
+        config: NullHandlingConfig, names: list[str], columns: dict[str, Column]
+    ) -> None:
+        if config.policy != "fill":
+            return
+        if set(config.fill_values) != set(names):
+            raise BlockError(
+                "invalid_fill", "Supply one fill for each selected column."
+            )
+        if any(
+            not matches_type(value, columns[name])
+            for name, value in config.fill_values.items()
+        ):
+            raise BlockError("invalid_fill", "Fill values must match declared types.")
+
+    @staticmethod
+    def _resolved_rows(
+        table: Table, names: list[str], config: NullHandlingConfig
+    ) -> tuple[dict[str, Scalar], ...]:
+        if config.policy == "drop":
+            return tuple(
+                dict(row)
+                for row in table.rows
+                if all(row[name] is not None for name in names)
+            )
+        return tuple(
+            {
+                name: config.fill_values[name]
+                if name in config.fill_values and value is None
+                else value
+                for name, value in row.items()
+            }
+            for row in table.rows
+        )
+
     def _execute(
         self, config: NullHandlingConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
         table = input_table(inputs)
         names = selected(table, config)
         columns = {column.name: column for column in table.data_schema.columns}
-        if config.policy == "fill":
-            if set(config.fill_values) != set(names):
-                raise BlockError(
-                    "invalid_fill", "Supply one fill for each selected column."
-                )
-            if any(
-                not matches_type(value, columns[name])
-                for name, value in config.fill_values.items()
-            ):
-                raise BlockError(
-                    "invalid_fill", "Fill values must match declared types."
-                )
+        self._check_fills(config, names, columns)
         affected, row_indices = null_rows(table, names)
-        if config.policy == "drop":
-            rows = tuple(
-                dict(row)
-                for row in table.rows
-                if all(row[name] is not None for name in names)
-            )
-        else:
-            rows = tuple(
-                {
-                    name: config.fill_values[name]
-                    if name in config.fill_values and value is None
-                    else value
-                    for name, value in row.items()
-                }
-                for row in table.rows
-            )
+        rows = self._resolved_rows(table, names, config)
         schema = DataSchema(
             columns=tuple(
                 column.model_copy(update={"nullable": False})
@@ -183,6 +193,24 @@ class NullHandling(Block[NullHandlingConfig]):
         return {"table": (output,)}
 
 
+def _unexpected_nulls(
+    table: Table, name: str, bad: Literal["pass", "fail", "warning"]
+) -> list[QualityDiagnostic]:
+    count, row_indices = null_rows(table, [name])
+    if not count:
+        return []
+    return [
+        QualityDiagnostic(
+            code="unexpected_null",
+            status=bad,
+            column=name,
+            observed=count,
+            maximum=0,
+            row_indices=row_indices,
+        )
+    ]
+
+
 class SchemaValidationConfig(BlockConfig):
     columns: list[Column] = Field(min_length=1, max_length=1000)
     allow_extra_columns: bool = False
@@ -200,6 +228,49 @@ class SchemaValidation(Block[SchemaValidationConfig]):
     config_model = SchemaValidationConfig
     descriptor = descriptor("quality.schema_validation", "Validate Schema")
 
+    @staticmethod
+    def _column_diagnostics(
+        table: Table,
+        column: Column,
+        actual: Column | None,
+        bad: Literal["pass", "fail", "warning"],
+    ) -> list[QualityDiagnostic]:
+        """Compare one expected column with the column the table declares."""
+        name = column.name
+        if actual is None:
+            return [
+                QualityDiagnostic(
+                    code="missing_column",
+                    status=bad,
+                    column=name,
+                    expected_type=column.dtype,
+                )
+            ]
+        found = []
+        if actual.dtype != column.dtype:
+            found.append(
+                QualityDiagnostic(
+                    code="type_mismatch",
+                    status=bad,
+                    column=name,
+                    expected_type=column.dtype,
+                    actual_type=actual.dtype,
+                )
+            )
+        if actual.nullable != column.nullable:
+            found.append(
+                QualityDiagnostic(
+                    code="nullability_mismatch",
+                    status=bad,
+                    column=name,
+                    expected_nullable=column.nullable,
+                    actual_nullable=actual.nullable,
+                )
+            )
+        if not column.nullable:
+            found.extend(_unexpected_nulls(table, name, bad))
+        return found
+
     def _execute(
         self, config: SchemaValidationConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
@@ -209,49 +280,9 @@ class SchemaValidation(Block[SchemaValidationConfig]):
         diagnostics: list[QualityDiagnostic] = []
         bad = status(False, config.required)
         for name, column in expected.items():
-            if name not in actual:
-                diagnostics.append(
-                    QualityDiagnostic(
-                        code="missing_column",
-                        status=bad,
-                        column=name,
-                        expected_type=column.dtype,
-                    )
-                )
-                continue
-            if actual[name].dtype != column.dtype:
-                diagnostics.append(
-                    QualityDiagnostic(
-                        code="type_mismatch",
-                        status=bad,
-                        column=name,
-                        expected_type=column.dtype,
-                        actual_type=actual[name].dtype,
-                    )
-                )
-            if actual[name].nullable != column.nullable:
-                diagnostics.append(
-                    QualityDiagnostic(
-                        code="nullability_mismatch",
-                        status=bad,
-                        column=name,
-                        expected_nullable=column.nullable,
-                        actual_nullable=actual[name].nullable,
-                    )
-                )
-            if not column.nullable:
-                count, row_indices = null_rows(table, [name])
-                if count:
-                    diagnostics.append(
-                        QualityDiagnostic(
-                            code="unexpected_null",
-                            status=bad,
-                            column=name,
-                            observed=count,
-                            maximum=0,
-                            row_indices=row_indices,
-                        )
-                    )
+            diagnostics.extend(
+                self._column_diagnostics(table, column, actual.get(name), bad)
+            )
         if not config.allow_extra_columns:
             for name in sorted(actual.keys() - expected.keys()):
                 diagnostics.append(

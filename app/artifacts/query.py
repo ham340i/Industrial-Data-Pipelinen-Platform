@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.blocks.context import BlockContext
 from app.blocks.contracts import DataSchema, Scalar
 from app.blocks.errors import BlockError
-from app.blocks.files import resource_path
+from app.blocks.resources import resource_path
 from app.metadata.database import Database
 from app.metadata.models import OutputEndpoint
 
@@ -138,6 +138,33 @@ def _scalar(value: object) -> Scalar:
     raise ArtifactUnavailable("Artifact contains an unsupported result value")
 
 
+def _artifact_path(run_id: str, artifact_ref: str, workspace_root: Path) -> Path:
+    """Resolve a registered artifact inside the workspace, or report it missing."""
+    try:
+        path = resource_path(
+            BlockContext(run_id, "artifact-query", workspace_root=workspace_root),
+            artifact_ref,
+            ".parquet",
+        )
+    except BlockError:
+        raise ArtifactUnavailable("Registered artifact is unavailable") from None
+    if not path.is_file():
+        raise ArtifactUnavailable("Registered artifact is unavailable")
+    return path
+
+
+def _bounded_connection() -> Any:
+    """An in-memory DuckDB session with fixed thread and memory ceilings."""
+    # Keep the native query engine out of API startup and non-query processes.
+    import duckdb
+
+    connection = duckdb.connect(database=":memory:")
+    connection.execute("SET threads = 1")
+    connection.execute("SET memory_limit = '64MB'")
+    connection.execute("SET preserve_insertion_order = false")
+    return connection
+
+
 def query_artifact(
     db: Database,
     artifact_id: str,
@@ -145,9 +172,6 @@ def query_artifact(
     query: ArtifactQuery,
 ) -> ArtifactQueryResult:
     """Read a bounded projection without loading the full Parquet artifact."""
-    # Keep the native query engine out of API startup and non-query processes.
-    import duckdb
-
     artifact = get_artifact(db, artifact_id)
     if artifact.format != "parquet":
         raise ArtifactNotQueryable("Only registered Parquet artifacts are queryable")
@@ -156,25 +180,11 @@ def query_artifact(
     columns = _projection(artifact.schema, query.columns)
     if len(columns) * (query.limit + 1) > MAX_CELLS:
         raise ArtifactNotQueryable("Requested result exceeds the cell limit")
-    try:
-        path = resource_path(
-            BlockContext(
-                artifact.run_id, "artifact-query", workspace_root=workspace_root
-            ),
-            artifact.artifact_ref,
-            ".parquet",
-        )
-        if not path.is_file():
-            raise ArtifactUnavailable("Registered artifact is unavailable")
-    except BlockError:
-        raise ArtifactUnavailable("Registered artifact is unavailable") from None
+    path = _artifact_path(artifact.run_id, artifact.artifact_ref, workspace_root)
 
     connection: Any = None
     try:
-        connection = duckdb.connect(database=":memory:")
-        connection.execute("SET threads = 1")
-        connection.execute("SET memory_limit = '64MB'")
-        connection.execute("SET preserve_insertion_order = false")
+        connection = _bounded_connection()
         projection = ", ".join(_quoted(name) for name in columns)
         cursor = connection.execute(
             f"SELECT {projection} FROM read_parquet(?) LIMIT ? OFFSET ?",

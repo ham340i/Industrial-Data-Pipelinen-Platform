@@ -1,6 +1,8 @@
 """Read-only draft preview with bounded request admission and cancellation."""
 
 import asyncio
+import logging
+from collections.abc import Awaitable, Callable
 from threading import BoundedSemaphore, Event
 from typing import Annotated
 from uuid import UUID
@@ -22,6 +24,8 @@ from app.preview.models import (
 from app.preview.service import preview
 from app.projects import database
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1/projects/{project_id}/pipelines", tags=["preview"])
 MAX_BODY_SECONDS = 5.0
 
@@ -37,6 +41,40 @@ class PreviewBoundaryMiddleware:
         self.app = app
         self.slots = BoundedSemaphore(MAX_CONCURRENT)
 
+    @staticmethod
+    async def _read_body(
+        receive: Receive, reject: Callable[[str, str, int], Awaitable[None]]
+    ) -> bytes | None:
+        """Buffer the bounded request body; ``None`` means a response was sent."""
+        body = bytearray()
+        loop = asyncio.get_running_loop()
+        body_deadline = loop.time() + MAX_BODY_SECONDS
+        while True:
+            try:
+                message = await asyncio.wait_for(
+                    receive(), timeout=max(0, body_deadline - loop.time())
+                )
+            except TimeoutError:
+                await reject(
+                    "preview_request_timeout",
+                    "Preview request body took too long to arrive.",
+                    408,
+                )
+                return None
+            if message["type"] == "http.disconnect":
+                return None
+            chunk = message.get("body", b"")
+            if len(body) + len(chunk) > MAX_REQUEST_BYTES:
+                await reject(
+                    "preview_request_limit",
+                    "Preview requests must be at most 256 KiB.",
+                    413,
+                )
+                return None
+            body.extend(chunk)
+            if not message.get("more_body", False):
+                return bytes(body)
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or not scope["path"].endswith("/pipelines/preview"):
             await self.app(scope, receive, send)
@@ -51,53 +89,24 @@ class PreviewBoundaryMiddleware:
                 ] + [(b"cache-control", b"no-store")]
             await send(message)
 
-        if not self.slots.acquire(blocking=False):
+        async def reject(code: str, message: str, status: int) -> None:
             await failure_response(
-                PreviewError(
-                    "preview_busy",
-                    "Two previews are already running. Try again shortly.",
-                    status=429,
-                ),
+                PreviewError(code, message, status=status),
                 scope.get("correlation_id", "preview"),
             )(scope, receive, no_store)
+
+        if not self.slots.acquire(blocking=False):
+            logger.warning("Preview refused: both preview slots are in use")
+            await reject(
+                "preview_busy",
+                "Two previews are already running. Try again shortly.",
+                429,
+            )
             return
         try:
-            body = bytearray()
-            body_deadline = asyncio.get_running_loop().time() + MAX_BODY_SECONDS
-            while True:
-                try:
-                    message = await asyncio.wait_for(
-                        receive(),
-                        timeout=max(
-                            0, body_deadline - asyncio.get_running_loop().time()
-                        ),
-                    )
-                except TimeoutError:
-                    await failure_response(
-                        PreviewError(
-                            "preview_request_timeout",
-                            "Preview request body took too long to arrive.",
-                            status=408,
-                        ),
-                        scope.get("correlation_id", "preview"),
-                    )(scope, receive, no_store)
-                    return
-                if message["type"] == "http.disconnect":
-                    return
-                chunk = message.get("body", b"")
-                if len(body) + len(chunk) > MAX_REQUEST_BYTES:
-                    await failure_response(
-                        PreviewError(
-                            "preview_request_limit",
-                            "Preview requests must be at most 256 KiB.",
-                            status=413,
-                        ),
-                        scope.get("correlation_id", "preview"),
-                    )(scope, receive, no_store)
-                    return
-                body.extend(chunk)
-                if not message.get("more_body", False):
-                    break
+            body = await self._read_body(receive, reject)
+            if body is None:
+                return
             delivered = False
 
             async def replay() -> Message:
@@ -106,7 +115,7 @@ class PreviewBoundaryMiddleware:
                     delivered = True
                     return {
                         "type": "http.request",
-                        "body": bytes(body),
+                        "body": body,
                         "more_body": False,
                     }
                 return await receive()
@@ -114,6 +123,20 @@ class PreviewBoundaryMiddleware:
             await self.app(scope, replay, no_store)
         finally:
             self.slots.release()
+
+
+def _sample_response(result: PreviewResult) -> Response:
+    content = result.model_dump_json().encode("utf-8")
+    if len(content) > MAX_RESPONSE_BYTES:
+        raise PreviewError(
+            "preview_response_limit",
+            "The sample exceeds the 2 MiB response limit. Request fewer rows or cells.",
+        )
+    return Response(
+        content,
+        media_type="application/json",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.post("/preview", response_model=PreviewResult)
@@ -140,22 +163,11 @@ async def preview_pipeline(
             await asyncio.wait({task}, timeout=0.05)
             if await request.is_disconnected():
                 cancelled.set()
-        result = await task
-        content = result.model_dump_json().encode("utf-8")
-        if len(content) > MAX_RESPONSE_BYTES:
-            raise PreviewError(
-                "preview_response_limit",
-                "The sample exceeds the 2 MiB response limit. "
-                "Request fewer rows or cells.",
-            )
-        return Response(
-            content,
-            media_type="application/json",
-            headers={"Cache-Control": "no-store"},
-        )
+        return _sample_response(await task)
     except PreviewError as exc:
         return failure_response(exc, request.scope["correlation_id"])
-    except Exception:
+    except Exception as exc:
+        logger.error("Preview failed unexpectedly: %s", type(exc).__name__)
         return failure_response(
             PreviewError(
                 "preview_failed",
@@ -170,5 +182,6 @@ async def preview_pipeline(
         if not task.done():
             try:
                 await asyncio.shield(task)
-            except (Exception, asyncio.CancelledError):
-                pass
+            except (Exception, asyncio.CancelledError) as exc:
+                # The response is already decided; only the wait is abandoned.
+                logger.debug("Preview worker ended after its response: %r", exc)
