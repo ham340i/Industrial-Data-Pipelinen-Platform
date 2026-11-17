@@ -9,7 +9,15 @@ import platform
 import pytest
 
 from app.pipelines.models import PipelineDefinition
-from experiments.workloads.benchmark import expected, fact, fixtures, graph, worker
+from experiments.workloads.benchmark import (
+    expected,
+    fact,
+    fixtures,
+    graph,
+    peak_rss_mib,
+    worker,
+)
+from experiments.workloads.measure import REPEAT_COUNTS, repeat_argument
 
 
 def test_fixtures_are_repeatable_and_have_nulls_and_duplicate_keys(tmp_path: Path):
@@ -61,3 +69,22 @@ def test_budget_failures_do_not_publish_artifacts(failure: str, code: str):
     result = worker("small", "baseline", failure)
     assert result["state"] == "failed"
     assert code in result["codes"]
+
+
+@pytest.mark.parametrize("requested", [1, 3, 5])
+def test_repeat_argument_returns_the_allowlisted_constant(requested: int):
+    argument = repeat_argument(requested)
+    assert argument == str(requested)
+    assert any(argument is allowed for allowed in REPEAT_COUNTS)
+
+
+@pytest.mark.parametrize("requested", [0, 6, -1])
+def test_repeat_argument_rejects_counts_outside_the_benchmark_bounds(requested: int):
+    with pytest.raises(ValueError, match="Repeats must be one of"):
+        repeat_argument(requested)
+
+
+@pytest.mark.skipif(platform.system() == "Linux", reason="non-Linux hosts only")
+def test_peak_rss_refuses_hosts_with_incomparable_units():
+    with pytest.raises(RuntimeError, match="Linux container"):
+        peak_rss_mib()

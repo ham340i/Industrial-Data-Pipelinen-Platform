@@ -157,9 +157,24 @@ def timed(operation: Any) -> tuple[Any, float]:
     return result, perf_counter() - started
 
 
+def peak_rss_mib() -> float:
+    """Peak resident memory of this process, in MiB.
+
+    Linux reports ru_maxrss in KiB (macOS uses bytes), which is why the
+    benchmark refuses other hosts. The platform check also tells type checkers
+    that the Unix-only resource module is never reached on Windows.
+    """
+    if sys.platform != "linux":
+        raise RuntimeError(
+            "Peak RSS is only comparable in the documented Linux container"
+        )
+    import resource
+
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+
+
 def worker(case: str, variant: str, failure: str | None = None) -> dict[str, Any]:
     # Imports stay in each fresh worker, including DuckDB's first-query startup.
-    import resource
     import pyarrow.parquet as pq
     from sqlalchemy import select
     from app.artifacts import ArtifactQuery, query_artifact
@@ -324,10 +339,7 @@ def worker(case: str, variant: str, failure: str | None = None) -> dict[str, Any
                 "execution_seconds": elapsed,
                 "input_rows_per_second": rows / elapsed,
                 "block_duration_ms": block_timings,
-                "peak_process_rss_mib": resource.getrusage(
-                    resource.RUSAGE_SELF
-                ).ru_maxrss
-                / 1024,
+                "peak_process_rss_mib": peak_rss_mib(),
                 "preview_seconds": preview_seconds,
                 "preview_rows": sample.sample_row_count,
                 "preview_read_bytes": sample.source_read_bytes,

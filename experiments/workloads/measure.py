@@ -9,12 +9,23 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+# The benchmark's own repeat bounds; the container only ever receives one of these.
+REPEAT_COUNTS = ("1", "2", "3", "4", "5")
+
+
+def repeat_argument(requested: int) -> str:
+    """Return the allowlisted constant matching the request, never the input itself."""
+    for allowed in REPEAT_COUNTS:
+        if allowed == str(requested):
+            return allowed
+    raise ValueError(f"Repeats must be one of {', '.join(REPEAT_COUNTS)}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repeats", type=int, choices=range(1, 6), default=3)
     args = parser.parse_args()
+    repeats = repeat_argument(args.repeats)
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
     ).strip()
@@ -38,7 +49,7 @@ def main() -> None:
         "-m",
         "experiments.workloads.benchmark",
         "--repeats",
-        str(args.repeats),
+        repeats,
     ]
     container = subprocess.check_output(command, text=True).strip()
     try:
