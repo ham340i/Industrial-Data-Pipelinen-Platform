@@ -372,6 +372,46 @@ def test_publish_failure_cleanup(tmp_path: Path, operation: str, overwrite: str)
     assert list(tmp_path.iterdir()) == []
 
 
+@pytest.mark.parametrize("published", [False, True])
+def test_cleanup_failure_does_not_change_publication_outcome(
+    tmp_path: Path, published: bool, caplog: pytest.LogCaptureFixture
+):
+    original_unlink = Path.unlink
+
+    def denied(path: Path, missing_ok: bool = False) -> None:
+        if path.name.startswith(".lps-"):
+            raise PermissionError("private cleanup path and password=secret")
+        original_unlink(path, missing_ok=missing_ok)
+
+    try:
+        with patch.object(Path, "unlink", denied):
+            if published:
+                artifact = run(
+                    CsvSink(), tmp_path, {"resource_ref": "out.csv"}, scalar_table()
+                )
+                assert artifact.rows[0]["row_count"] == 2
+                assert (tmp_path / "out.csv").is_file()
+            else:
+                with patch.object(
+                    CsvSink, "_write", side_effect=OSError("original write error")
+                ):
+                    with pytest.raises(BlockError) as error:
+                        run(
+                            CsvSink(),
+                            tmp_path,
+                            {"resource_ref": "out.csv"},
+                            scalar_table(),
+                        )
+                assert error.value.failure.code == "write_failed"
+                assert not (tmp_path / "out.csv").exists()
+        assert "temporary cleanup failed" in caplog.text
+        assert "private cleanup path" not in caplog.text
+        assert "password=secret" not in caplog.text
+    finally:
+        for path in tmp_path.glob(".lps-*.tmp"):
+            original_unlink(path)
+
+
 def test_csv_null_marker_and_no_sink_preview(tmp_path: Path):
     table = Table(
         data_schema=DataSchema(columns=(Column(name="a", dtype="string"),)),

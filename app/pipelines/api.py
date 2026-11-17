@@ -25,6 +25,7 @@ from app.runs.scheduler import (
     TimerAlreadyRunning,
     TimerNotRunning,
     TimerScheduler,
+    TimerSchedulerDraining,
     TimerStopTimedOut,
     scheduler,
 )
@@ -398,6 +399,12 @@ def start_timer(
         ) from None
     try:
         sched.start(str(pipeline_id), revision_id, config.interval_seconds)
+    except TimerSchedulerDraining:
+        raise PipelineError(
+            "timer_scheduler_draining",
+            "Timers are still stopping. Try again after cleanup finishes.",
+            409,
+        ) from None
     except TimerAlreadyRunning:
         raise PipelineError(
             "timer_already_running",

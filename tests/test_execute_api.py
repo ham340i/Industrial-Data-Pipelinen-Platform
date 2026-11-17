@@ -14,7 +14,11 @@ from app.config import settings
 from app.main import app
 from app.metadata.database import Database
 from app.pipelines import api as pipelines_api
-from app.runs.scheduler import TimerStopTimedOut
+from app.runs.scheduler import (
+    TimerSchedulerDraining,
+    TimerShutdownTimedOut,
+    TimerStopTimedOut,
+)
 from app.runs.scheduler import scheduler as scheduler_dependency
 from app.workspace import effective_workspace_root
 
@@ -323,3 +327,53 @@ def test_shutdown_stops_every_running_timer_thread(
         assert start.status_code == 201
         assert any(t.name == f"timer-{pipeline_id}" for t in threading.enumerate())
     assert not any(t.name == f"timer-{pipeline_id}" for t in threading.enumerate())
+
+
+def test_start_during_scheduler_drain_is_structured_409(client: TestClient):
+    path = pipelines_path(client)
+    pipeline_id = create(client, path, timer_graph(30))
+
+    class DrainingScheduler:
+        def start(
+            self, pipeline_id: str, revision_id: str, interval_seconds: int
+        ) -> None:
+            raise TimerSchedulerDraining()
+
+    app.dependency_overrides[scheduler_dependency] = DrainingScheduler
+    try:
+        response = client.post(f"{path}/{pipeline_id}/timer/start")
+    finally:
+        app.dependency_overrides.pop(scheduler_dependency, None)
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "timer_scheduler_draining"
+
+
+def test_shutdown_timeout_preserves_database_ownership(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    monkeypatch.setattr(settings, "metadata_path", tmp_path / "timeout.sqlite3")
+    closed = []
+
+    def timed_out() -> None:
+        raise TimerShutdownTimedOut(("blocked-pipeline",))
+
+    with pytest.raises(TimerShutdownTimedOut):
+        with TestClient(app):
+            database = app.state.database
+            timer_scheduler = app.state.scheduler
+            original_close = database.close
+            monkeypatch.setattr(database, "close", lambda: closed.append(True))
+            monkeypatch.setattr(timer_scheduler, "stop_all", timed_out)
+    try:
+        assert not closed
+        assert app.state.database is database
+        assert app.state.scheduler is timer_scheduler
+        assert "database disposal deferred" in caplog.text
+        # The handle remains usable; a failed shutdown did not dispose it.
+        with database.transaction():
+            pass
+    finally:
+        original_close()
+        app.state.database = app.state.scheduler = None
