@@ -64,6 +64,7 @@ def execute_revision(
             workspace_root=workspace_root,
             on_state=recorder.on_state,
         )
+        state = recorder.finish(context, cancelled=token.is_cancelled())
     except InvalidPipeline:
         logger.info("Refused run for revision %s: validation failed", revision_id)
         raise
@@ -71,9 +72,17 @@ def execute_revision(
         # Includes KeyboardInterrupt: never leave a live-looking row behind.
         # Log the type only; exception text may carry paths or credentials.
         logger.error("Run %s stopped unexpectedly: %s", run_id, type(exc).__name__)
-        recorder.abort("execution_failed", "Execution stopped unexpectedly.")
+        try:
+            recorder.abort("execution_failed", "Execution stopped unexpectedly.")
+        except BaseException as recovery_error:
+            # A second failure must not hide the original cause. Startup
+            # recovery will close any row the unavailable store left active.
+            logger.error(
+                "Run %s: could not persist failure (%s)",
+                run_id,
+                type(recovery_error).__name__,
+            )
         raise
-    state = recorder.finish(context, cancelled=token.is_cancelled())
     log = logger.info if state == "succeeded" else logger.warning
     log("Run %s for revision %s finished: %s", run_id, revision_id, state)
     return RunOutcome(run_id, state, context)

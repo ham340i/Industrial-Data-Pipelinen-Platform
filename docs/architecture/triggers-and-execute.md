@@ -50,8 +50,9 @@ POST .../timer/stop ───▶ TimerScheduler.stop ─▶ cancels + joins the 
   (Python cannot preempt a thread), so a one-node timer's in-flight run still
   finishes successfully and is recorded truthfully as `succeeded`. If Stop arrives
   after a tick is accepted but before its block starts, the run is `cancelled`.
-  Cancellation only skips
-  work that has not started yet, exactly like the rest of the executor.
+  Blocks can also observe cooperative cancellation checkpoints. File sinks now
+  check after writing/flushing and before publication (#34); publication that
+  already succeeded cannot be undone by cancellation.
 - **A timed-out `stop()` is reported honestly, not swallowed.** If the bound
   elapses while a block is still running, `stop()` raises `TimerStopTimedOut`
   (surfaced over HTTP as a retryable `409 timer_stop_timed_out`) rather than
@@ -62,10 +63,12 @@ POST .../timer/stop ───▶ TimerScheduler.stop ─▶ cancels + joins the 
   `stop()`'s decision to cancel/signal share one lock, so a tick can never
   begin after `stop()` has already set the stop signal, even if the tick's
   own interval wait happens to time out at that exact instant.
-  `stop_all()` (used at application shutdown, right before the database is
-  closed) takes the stricter option instead of the bounded one: it falls
-  back to an unbounded wait rather than ever letting shutdown proceed while
-  a timer thread might still touch the database.
+  `stop_all()` (#34) signals every timer before waiting against one shared
+  monotonic deadline, 30 seconds by default. It retains live worker entries and
+  blocks new starts with `409 timer_scheduler_draining`. A timeout raises
+  `TimerShutdownTimedOut`; application shutdown reports failure and retains
+  database ownership. Only successful drain permits database disposal. A retry
+  can finish draining; there is no unbounded join or forced thread termination.
 - **No persistence, no cron, no distributed guarantees.** Timers exist only
   in the process's memory. A restart loses every running timer - callers
   must call `timer/start` again - and if the process dies mid-tick, the
@@ -77,7 +80,12 @@ POST .../timer/stop ───▶ TimerScheduler.stop ─▶ cancels + joins the 
 
 - Timers are per-process and non-durable; there is no multi-instance or
   multi-process coordination, and nothing survives a restart.
-- A single, long-running block cannot be stopped mid-execution; only the
-  *next* tick is prevented.
+- An uncooperative block cannot be forcibly stopped mid-execution. Cooperative
+  checkpoints can cancel it; otherwise its caller observes a timeout and keeps
+  ownership. Process isolation is required for a hard termination guarantee.
 - `execute` always targets the latest revision; there is no way to execute
   an older, specific revision through this API.
+
+The [#34 design](execution-failure-recovery.md) explains shutdown ownership,
+publication boundaries and recovery tradeoffs. Timer exception logs expose only
+the exception type, not raw exception text or traceback contents.

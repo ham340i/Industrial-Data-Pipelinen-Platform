@@ -15,18 +15,17 @@ in flight at once.
 Stopping cancels cooperatively, like the rest of the executor: ``stop()``
 sets the pipeline's ``Cancellation`` token immediately, but a block already
 running is not preemptible (Python cannot interrupt a thread mid-call), so
-``stop()`` waits (bounded by ``join_timeout``) for that block to return before
-the run is recorded as cancelled and the thread joins. A timer with only one,
-long-running block therefore cannot be stopped before that block finishes; a
-multi-block pipeline stops after its current block, as usual.
+``stop()`` waits (bounded by ``join_timeout``) for that block to return. A
+completed one-block run stays succeeded; unstarted work is skipped, and blocks
+with cooperative checkpoints may observe cancellation before committing output.
 
 If the block is still running when ``join_timeout`` elapses, ``stop()`` does
 not pretend the timer is gone: it raises ``TimerStopTimedOut`` and leaves the
 timer registered as stopping, so a replacement ``start()`` for the same
 pipeline is rejected until the old thread actually exits, and never runs
 concurrently with it. ``stop_all()`` (used at application shutdown) instead
-blocks for as long as it takes, since the caller is about to close the
-database and must not do so while a timer thread might still touch it.
+uses one deadline for all workers and reports unfinished workers explicitly.
+The caller must close the database only after a successful drain.
 
 The decision to start the next tick and the decision to stop share one lock,
 so a tick can never begin after ``stop()`` has already set the stop signal
@@ -36,6 +35,7 @@ out at the exact moment ``stop()`` is called.
 
 import logging
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -71,6 +71,16 @@ class TimerStopTimedOut(Exception):
             f"Timer for pipeline {pipeline_id} is still finishing its current "
             "run; it did not stop within the timeout."
         )
+
+
+class TimerSchedulerDraining(Exception):
+    """A scheduler drain is active or still owns unfinished workers."""
+
+
+class TimerShutdownTimedOut(Exception):
+    def __init__(self, pipeline_ids: tuple[str, ...]) -> None:
+        self.pipeline_ids = pipeline_ids
+        super().__init__("Timer shutdown did not complete before its deadline.")
 
 
 @dataclass(frozen=True)
@@ -122,18 +132,20 @@ class _Timer:
         caller must not treat the timer as gone (and must not start a
         replacement for the same pipeline) until this returns True.
         """
+        self.request_stop()
+        return self.wait_until_stopped(join_timeout=join_timeout)
+
+    def request_stop(self) -> None:
+        """Signal cancellation without waiting, so all workers stop promptly."""
         with self._lock:
             self._stop_event.set()
             if self._current_cancellation is not None:
                 self._current_cancellation.cancel()
-        self._thread.join(timeout=join_timeout)
-        return not self._thread.is_alive()
 
-    def wait_until_stopped(self) -> None:
-        """Block with no timeout. Used only at application shutdown, where
-        the caller is about to close the database and a leftover thread
-        touching it is not an option."""
-        self._thread.join()
+    def wait_until_stopped(self, *, join_timeout: float) -> bool:
+        """Wait within the remaining budget; false never means cleaned up."""
+        self._thread.join(timeout=max(0.0, join_timeout))
+        return not self._thread.is_alive()
 
     def _loop(self) -> None:
         while not self._stop_event.wait(self.status.interval_seconds):
@@ -165,13 +177,15 @@ class _Timer:
                 cancellation=token,
                 workspace_root=root / project_id if root is not None else None,
             )
-        except Exception:
-            # The run row itself already records a truthful failed/cancelled
-            # state; this just keeps one bad tick from killing the timer.
-            logger.exception(
-                "Timer tick failed for pipeline %s revision %s",
+        except Exception as exc:
+            # The run service attempts failed-run reconciliation; unavailable
+            # storage can defer it until startup recovery. Keep the next tick
+            # alive without logging private exception text or traceback values.
+            logger.error(
+                "Timer tick failed for pipeline %s revision %s (%s)",
                 self.status.pipeline_id,
                 self.status.revision_id,
+                type(exc).__name__,
             )
         finally:
             with self._lock:
@@ -189,9 +203,20 @@ class TimerScheduler:
         self._workspace_root = workspace_root
         self._lock = threading.Lock()
         self._timers: dict[str, _Timer] = {}
+        self._draining = False
+        self._drain_active = False
 
     def start(self, pipeline_id: str, revision_id: str, interval_seconds: int) -> None:
         with self._lock:
+            if self._draining:
+                if self._drain_active or any(
+                    t.is_alive() for t in self._timers.values()
+                ):
+                    raise TimerSchedulerDraining()
+                # A timed-out drain has since finished. No live worker can
+                # lose its slot, and ordinary reuse is safe again.
+                self._timers.clear()
+                self._draining = False
             existing = self._timers.get(pipeline_id)
             if existing is not None:
                 if existing.is_alive():
@@ -235,23 +260,40 @@ class TimerScheduler:
         return timer.status if timer is not None else None
 
     def stop_all(self, *, join_timeout: float = 30.0) -> None:
-        """Called at app shutdown: blocks until no timer thread remains, so
-        the caller can safely close the database right after this returns.
-        A thread still finishing a block is waited for, never abandoned.
+        """Signal all timers, then drain within one shared monotonic deadline.
+
+        On timeout, keep live workers registered and reject starts until they
+        exit. Only a successful return permits database disposal. Python
+        threads cannot forcibly interrupt a block stuck in native I/O.
         """
         with self._lock:
+            if self._drain_active:
+                raise TimerSchedulerDraining()
+            self._draining = self._drain_active = True
             timers = list(self._timers.values())
-            self._timers.clear()
-        for timer in timers:
-            if not timer.stop(join_timeout=join_timeout):
-                logger.warning(
-                    "Timer for pipeline %s is still finishing its current "
-                    "run after %.1fs; waiting for it to exit before "
-                    "shutdown continues.",
-                    timer.status.pipeline_id,
-                    join_timeout,
+        try:
+            deadline = time.monotonic() + max(0.0, join_timeout)
+            for timer in timers:
+                timer.request_stop()
+            for timer in timers:
+                timer.wait_until_stopped(
+                    join_timeout=max(0.0, deadline - time.monotonic())
                 )
-                timer.wait_until_stopped()
+            with self._lock:
+                unfinished = tuple(
+                    timer.status.pipeline_id for timer in timers if timer.is_alive()
+                )
+            if unfinished:
+                raise TimerShutdownTimedOut(unfinished)
+        finally:
+            with self._lock:
+                self._timers = {
+                    identity: timer
+                    for identity, timer in self._timers.items()
+                    if timer.is_alive()
+                }
+                self._drain_active = False
+                self._draining = bool(self._timers)
 
 
 def scheduler(request: Request) -> TimerScheduler:

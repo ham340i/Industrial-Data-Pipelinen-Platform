@@ -83,6 +83,15 @@ validation_error` for a malformed UUID, state or page bounds.
 
 ## Limits
 
+Issue #34 extends unexpected-failure handling through final reconciliation and
+commit. Recorder creation and event sequence bookkeeping follow committed
+transactions; rollback restores the sequence for retry. A failed finalization
+attempts to close existing evidence as failed in a fresh transaction. Failure of
+that recovery preserves the original exception and leaves startup recovery to
+close unfinished records once storage is available. No success outcome returns
+before the final commit. See [failure boundaries](execution-failure-recovery.md)
+and [verification](../testing/issue-34-execution-failures.md).
+
 One local process per metadata file. Recovery assumes no other live process is
 writing runs. The project has no retention or pruning policy for run history
 yet. UI views of this data come with the Iteration 4 workflow.

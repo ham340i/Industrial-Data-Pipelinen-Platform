@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -56,6 +57,8 @@ ARROW_TYPES = {
     "number": pa.float64(),
     "boolean": pa.bool_(),
 }
+
+logger = logging.getLogger(__name__)
 
 
 class ResourceConfig(BlockConfig):
@@ -574,6 +577,7 @@ class FileSink(Block[SinkConfig]):
         )
         temporary: Path | None = None
         try:
+            context.check_cancelled()
             if target.exists() and config.overwrite == "error":
                 raise BlockError(
                     "output_exists", "Output already exists; choose replace explicitly."
@@ -583,8 +587,10 @@ class FileSink(Block[SinkConfig]):
             ) as stream:
                 temporary = Path(stream.name)
             self._write(temporary, table, config)
+            context.check_cancelled()
             with temporary.open("r+b") as stream:
                 os.fsync(stream.fileno())
+            context.check_cancelled()
             if config.overwrite == "replace":
                 os.replace(temporary, target)
                 temporary = None
@@ -604,7 +610,18 @@ class FileSink(Block[SinkConfig]):
             ) from None
         finally:
             if temporary is not None:
-                temporary.unlink(missing_ok=True)
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError as exc:
+                    # Publication is already final after link/replace. A
+                    # cleanup-only failure cannot revoke it or mask a primary
+                    # failure. Never log exception text or the private path.
+                    logger.warning(
+                        "Run %s node %s: temporary cleanup failed (%s)",
+                        context.run_id,
+                        context.node_id,
+                        type(exc).__name__,
+                    )
 
 
 class CsvSink(FileSink):

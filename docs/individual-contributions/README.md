@@ -27,3 +27,9 @@ unverified.
 Issue #23 local preparation: [aboudka2003, Iteration 3 SQL source](aboudka2003-iteration-3.md).
 This records AI-assisted implementation and local verification; PR, CI and
 independent review remain pending. Related #31 integration is incomplete.
+
+Issue #34 local task evidence: [execution failure hardening](../testing/issue-34-execution-failures.md).
+The user requested and approved the plan; Codex implemented and verified the local
+changes. This task record does not assign personal implementation credit to a
+named teammate. A contributor may link it from their personal record after
+verifying their actual role. Independent review, PR, CI and merge remain pending.

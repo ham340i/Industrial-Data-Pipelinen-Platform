@@ -61,3 +61,45 @@ remain separate issues. Run persistence is provided by
 [`app.runs.execute_revision`](architecture/run-telemetry.md) (#27). See the
 [design](architecture/local-executor.md) and
 [verification record](testing/issue-22-local-executor.md).
+
+## Failure recovery (#34)
+
+In the builder, save the graph and wait for successful validation before choosing
+**Run saved pipeline**. **Run monitoring** identifies each run and saved revision,
+shows completed/failed/skipped blocks, and preserves earlier run evidence. Use
+**Inspect** to open the affected block without clearing your current draft.
+
+For a failed source or transform, correct its resource/configuration, save and
+rerun. Failed dependencies skip downstream blocks; other independent branches
+continue. Failed or skipped sinks have no registered output. A previous successful
+output file may still exist: file existence alone is not evidence that this run
+succeeded. Zero-row tables with declared columns can complete successfully and
+report 0 rows; unknown measurements remain unknown.
+
+An existing output with `overwrite=error` fails safely with `output_exists`.
+Choose a new relative output reference or explicitly select `replace` when
+replacement is intended. Input files and output parent directories must already
+exist within `<workspace root>/<project UUID>/`. Saving a new root does not move
+existing data. Preview never exercises output publication.
+
+A write cancelled before publication preserves the previous target. A successful
+publication cannot be undone by Stop. An unexpected finalization failure attempts
+to mark the run failed; if the metadata store is unavailable, restart recovery
+closes interrupted records. A complete but unregistered output can remain after
+publication followed by failure. Inspect it before choosing an explicit rerun
+policy; the application does not automatically delete it or retry the pipeline.
+
+If logs report temporary cleanup failure, stop affected execution and inspect
+`.lps-*.tmp` siblings in that output directory. Remove only files verified to be
+leftovers, after confirming no worker is using them. Published targets are not
+temporary cleanup candidates. Do not purge the workspace indiscriminately.
+
+Timer Stop can report `409 timer_stop_timed_out` while a block finishes. During a
+scheduler drain, starts return `409 timer_scheduler_draining`. Shutdown has one
+30-second timer-drain deadline; timeout reports incomplete shutdown and retains
+database ownership for active workers. Wait for cooperative completion and retry
+draining. Process termination is the fallback for a permanently stuck block and
+may leave interrupted run evidence and temporary files for recovery on restart.
+
+See the [failure-boundary design](architecture/execution-failure-recovery.md) and
+[repeatable in-app checks](testing/issue-34-execution-failures.md#in-app-checks).

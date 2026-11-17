@@ -108,3 +108,11 @@ Full release UI acceptance remains blocked by preview, artifact inspection and
 monitoring/error-UX dependencies (#26, #28, #30, #33), as well as unsupported
 nested quality/aggregate configuration forms. No issue completion, independent
 review, CI result or stakeholder acceptance is asserted.
+
+## Issue #34 local implementation
+
+The user-approved execution-failure plan is implemented in uncommitted local
+changes. See the [failure/recovery design](../../architecture/execution-failure-recovery.md)
+and [actual checks](../../testing/issue-34-execution-failures.md). Primary work was
+AI-assisted; user approval of the plan is not independent engineering review.
+PR, CI, review, merge and stakeholder acceptance remain pending.

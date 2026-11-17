@@ -70,5 +70,14 @@ is outside this story's trust boundary; deployment permissions must prevent it.
 - Traversal, absolute paths and paths outside the configured root are rejected
   by the shared file-resource policy.
 
+Issue #34 hardens cancellation and cleanup at this boundary. Completed independent
+sinks can retain registered outputs in a failed run; failed/skipped sinks cannot.
+Finalization exceptions roll back registration and attempt failed-run reconciliation.
+A complete file can remain without metadata if failure follows publication:
+filesystem and SQLite commits are separate. No automatic deletion or inference
+of success is safe. Replacing a logical path also replaces the bytes observed by
+older references to it; metadata provenance does not make that path immutable.
+See [execution failure and recovery](execution-failure-recovery.md).
+
 See [usage](../artifacts.md) and
 [acceptance mapping](../testing/issue-28-artifact-query.md).

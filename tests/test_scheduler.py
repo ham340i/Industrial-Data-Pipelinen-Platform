@@ -27,6 +27,8 @@ from app.runs.scheduler import (
     TimerNotRunning,
     TimerScheduler,
     TimerStopTimedOut,
+    TimerSchedulerDraining,
+    TimerShutdownTimedOut,
     _Timer,
 )
 from sqlalchemy import select
@@ -63,6 +65,21 @@ class RecordingTrigger(Block[BlockConfig]):
         end = time.monotonic()
         with self._lock:
             self.calls.append((start, end))
+        return {"signal": (ControlSignal(),)}
+
+
+class GatedTrigger(RecordingTrigger):
+    """Hold one real block until a test deliberately permits it to finish."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.release = threading.Event()
+
+    def _execute(
+        self, config: BlockConfig, inputs: PortValues, context: BlockContext
+    ) -> PortValues:
+        self.started.set()
+        assert self.release.wait(timeout=5)
         return {"signal": (ControlSignal(),)}
 
 
@@ -332,26 +349,28 @@ def test_stop_all_cleans_up_every_running_timer(db: Database):
     scheduler.stop("pipeline-a")
 
 
-def test_stop_all_waits_for_an_active_run_before_the_caller_closes_the_database(
+def test_stop_all_reports_timeout_then_drains_before_database_close(
     db: Database,
 ):
-    """Mirrors ``app.main``'s shutdown sequence exactly (#29 review): it calls
-    ``stop_all()`` and only then closes the database. This asserts that
-    ordering is actually safe - ``stop_all()`` must not return, and the run's
-    own thread must not still exist, while a block is still mid-execution,
-    or the in-flight run's write-back would race a database the caller is
-    about to close right after.
-    """
-    trigger = RecordingTrigger(delay=1.0)
+    """A deadline is not successful cleanup; retain ownership until drained."""
+    trigger = GatedTrigger()
     revision_id = seed_revision(db, chain("test.trigger"))
     scheduler = TimerScheduler(db, executor_for(trigger))
     scheduler.start("pipeline", revision_id, interval_seconds=1)
 
-    assert trigger.started.wait(timeout=5)  # now mid-run, as at a real shutdown
-    scheduler.stop_all(join_timeout=0.05)  # too short to finish on its own
+    try:
+        assert trigger.started.wait(timeout=5)
+        with pytest.raises(TimerShutdownTimedOut) as error:
+            scheduler.stop_all(join_timeout=0)
+        assert error.value.pipeline_ids == ("pipeline",)
+        assert scheduler.status("pipeline") is not None
+        with pytest.raises(TimerSchedulerDraining):
+            scheduler.start("pipeline", revision_id, 30)
+    finally:
+        trigger.release.set()
+        scheduler.stop_all(join_timeout=5)
 
-    # No thread survives stop_all() returning, no matter how short
-    # join_timeout was - exactly what makes closing the database next safe.
+    # Only a successful drain allows the application to dispose its database.
     assert not any(t.name == "timer-pipeline" for t in threading.enumerate())
 
     db.close()  # the same step app.main takes right after stop_all()
@@ -360,6 +379,53 @@ def test_stop_all_waits_for_an_active_run_before_the_caller_closes_the_database(
         runs = list(session.scalars(select(Run)))
     assert len(runs) == 1
     assert runs[0].state == "succeeded"
+
+
+def test_stop_all_rejects_reentry_while_signalling_workers(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+):
+    scheduler = TimerScheduler(db, executor_for(RecordingTrigger()))
+    scheduler.start("pipeline", "revision", 30)
+    original = _Timer.request_stop
+    observed = []
+
+    def signal(timer: _Timer) -> None:
+        assert scheduler.status("pipeline") is not None
+        for identity in ("pipeline", "other"):
+            with pytest.raises(TimerSchedulerDraining):
+                scheduler.start(identity, "revision", 30)
+            observed.append(identity)
+        with pytest.raises(TimerSchedulerDraining):
+            scheduler.stop_all(join_timeout=0)
+        original(timer)
+
+    monkeypatch.setattr(_Timer, "request_stop", signal)
+    scheduler.stop_all()
+    assert observed == ["pipeline", "other"]
+    assert scheduler.status("pipeline") is None
+
+
+def test_stop_all_signals_every_timer_before_waiting_with_one_deadline(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+):
+    scheduler = TimerScheduler(db, executor_for(RecordingTrigger()))
+    for identity in ("a", "b"):
+        scheduler.start(identity, "revision", 30)
+    timers = list(scheduler._timers.values())
+    original_wait = _Timer.wait_until_stopped
+    budgets = []
+    clock = iter([10.0, 10.25, 10.75])
+
+    def wait(timer: _Timer, *, join_timeout: float) -> bool:
+        assert all(item._stop_event.is_set() for item in timers)
+        budgets.append(join_timeout)
+        return original_wait(timer, join_timeout=join_timeout)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr("app.runs.scheduler.time.monotonic", lambda: next(clock))
+        scoped.setattr(_Timer, "wait_until_stopped", wait)
+        scheduler.stop_all(join_timeout=1)
+    assert budgets == [0.75, 0.25]
 
 
 def test_start_publishes_only_started_timer(
@@ -394,3 +460,31 @@ def test_failed_start_does_not_leave_registered_timer(
     with pytest.raises(RuntimeError, match="cannot start"):
         scheduler.start("pipeline", "revision", 30)
     assert scheduler.status("pipeline") is None
+
+
+def test_failed_tick_does_not_poison_next_tick_or_leak_exception_text(
+    db: Database, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    from app.runs.service import execute_revision
+
+    trigger = RecordingTrigger()
+    revision = seed_revision(db, chain("test.trigger"))
+    timer = _Timer(db, executor_for(trigger), "pipeline", revision, 30)
+    calls = 0
+
+    def fail_first_tick(*args: object, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("password=private-tick-detail")
+        return execute_revision(db, executor_for(trigger), revision)
+
+    monkeypatch.setattr("app.runs.scheduler.execute_revision", fail_first_tick)
+    timer._run_once(Cancellation())
+    timer._run_once(Cancellation())
+    assert calls == 2
+    assert timer._current_cancellation is None
+    assert "private-tick-detail" not in caplog.text
+    assert "Timer tick failed" in caplog.text
+    with db.transaction() as session:
+        assert session.scalars(select(Run)).one().state == "succeeded"
