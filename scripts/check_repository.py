@@ -56,7 +56,10 @@ def validate_configuration(path, data):
         assert all(re.fullmatch(r'[a-fA-F0-9]{6}', item['color']) for item in data)
     elif path.name == 'dependabot.yml':
         assert data['version'] == 2
-        assert all(item['package-ecosystem'] == 'github-actions' for item in data['updates'])
+        ecosystems = [item['package-ecosystem'] for item in data['updates']]
+        # Actions, the Python lock and the frontend npm lock are all maintained.
+        assert set(ecosystems) == {'github-actions', 'pip', 'npm'}
+        assert len(ecosystems) == len(set(ecosystems))
 
 
 def main():
