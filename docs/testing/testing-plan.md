@@ -53,3 +53,7 @@ Response fixtures captured from those runs are shape-checked by
 `tests/test_integration_contracts.py` and parsed by
 `frontend/src/api/contracts.test.ts`. Both CI jobs upload JUnit results.
 Record: [issue #37 verification](issue-37-integration-matrix.md).
+
+Security boundaries (#32): adversarial file, SQL, artifact and definition
+fixtures through the real API, plus unit regressions for every gap fixed.
+Record: [issue #32 verification](issue-32-security-boundaries.md).

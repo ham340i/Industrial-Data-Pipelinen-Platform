@@ -1,19 +1,17 @@
 # AI contribution: 50% or more AI-generated
-"""Workspace-bound file readers and atomic file writers (#16, #20)."""
+"""Workspace-bound file readers (#16, #20); writers live in file_sinks."""
 
 from __future__ import annotations
 
 import csv
 import io
 import json
-import os
 import re
+from abc import abstractmethod
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Any, Literal
 
 import polars as pl
-import pyarrow as pa
 import pyarrow.parquet as pq
 from pydantic import Field, field_validator, model_validator
 
@@ -25,19 +23,18 @@ from app.blocks.contracts import (
     Column,
     DataSchema,
     NonBlank,
-    Port,
     PortValues,
     PreviewLimits,
-    PreviewObservation,
     Table,
 )
 from app.blocks.errors import BlockError
-from app.blocks.preview_policy import (
-    CsvLines,
-    MAX_READ_BYTES,
-    MAX_FIELD_CHARS,
-    MAX_COLUMNS,
-    MAX_COLUMN_CHARS,
+from app.blocks.parquet_decode import (
+    decoded_bytes,
+    expand_dictionaries,
+    parquet_decode_budget,
+    parquet_schema,
+    string_columns,
+    uncompressed_bytes,
 )
 from app.blocks.tabular import (
     DType,
@@ -49,13 +46,6 @@ from app.blocks.tabular import (
     from_frame,
     to_frame,
 )
-
-ARROW_TYPES = {
-    "string": pa.string(),
-    "integer": pa.int64(),
-    "number": pa.float64(),
-    "boolean": pa.bool_(),
-}
 
 
 class ResourceConfig(BlockConfig):
@@ -186,10 +176,11 @@ def check_source_file(path: Path, max_bytes: int) -> None:
 class FileSource[SourceT: SourceConfig](Block[SourceT]):
     suffix = ""
 
+    @abstractmethod
     def _read(
         self, path: Path, config: SourceT
     ) -> tuple[pl.DataFrame, DataSchema | None]:
-        raise NotImplementedError
+        """Parse ``path`` within ``config`` limits; each source format implements it."""
 
     def _execute(
         self, config: SourceT, inputs: PortValues, context: BlockContext
@@ -248,118 +239,9 @@ class CsvSource(FileSource[CsvConfig]):
         context: BlockContext,
         limits: PreviewLimits,
     ) -> PortValues:
-        context.check_cancelled()
-        path = resource_path(context, config.resource_ref, self.suffix)
-        try:
-            if not path.is_file():
-                raise OSError
-            with path.open("rb", buffering=0) as stream:
-                lines = CsvLines(
-                    stream,
-                    config.encoding,
-                    min(config.max_bytes, MAX_READ_BYTES),
-                    context,
-                )
-                reader = csv.reader(lines, strict=True)
-                header = next(reader, [])
-                if not header or len(header) > min(config.max_columns, MAX_COLUMNS):
-                    raise BlockError(
-                        "preview_columns",
-                        "CSV preview requires 1 to 128 columns "
-                        "within the source limit.",
-                    )
-                checked_names(header)
-                if any(len(name) > MAX_COLUMN_CHARS for name in header):
-                    raise BlockError(
-                        "preview_columns",
-                        "CSV preview column names exceed the supported length.",
-                    )
-                if config.columns and header != config.columns:
-                    raise BlockError(
-                        "schema_mismatch",
-                        "Declared columns must match source order and names.",
-                        field="columns",
-                    )
-                count = min(
-                    limits.max_rows,
-                    limits.max_cells // len(header),
-                    config.max_rows,
-                    config.max_cells // len(header),
-                )
-                if count < 1:
-                    raise BlockError(
-                        "preview_limit",
-                        "The cell limit cannot hold one row of this schema.",
-                    )
-                rows: list[dict[str, str | None]] = []
-                inspected = 0
-                truncated = False
-                while True:
-                    lines.next_record()
-                    values = next(reader, None)
-                    if values is None:
-                        break
-                    inspected += 1
-                    if len(values) != len(header):
-                        raise BlockError(
-                            "invalid_csv", "CSV row width differs from its header."
-                        )
-                    if any(len(value) > MAX_FIELD_CHARS for value in values):
-                        raise BlockError(
-                            "preview_field_limit",
-                            "A CSV preview field exceeds 4096 characters.",
-                        )
-                    if len(rows) == count:
-                        truncated = True
-                        break
-                    rows.append(
-                        {
-                            name: None if value == config.null_value else value
-                            for name, value in zip(header, values, strict=True)
-                        }
-                    )
-                context.check_cancelled()
-                frame = pl.DataFrame(rows, schema={name: pl.String for name in header})
-                if config.columns:
-                    for name, kind in zip(config.columns, config.types, strict=True):
-                        context.check_cancelled()
-                        frame = cast_column(frame, name, kind)
-                    schema = config.declared_schema()
-                else:
-                    # A prefix cannot establish whole-file non-nullability.
-                    schema = DataSchema(
-                        columns=tuple(
-                            Column(name=name, dtype="string", nullable=True)
-                            for name in header
-                        )
-                    )
-                table = from_frame(frame, schema)
-                context.check_cancelled()
-                if context.observe_preview is not None:
-                    context.observe_preview(
-                        PreviewObservation(
-                            inspected_rows=inspected,
-                            full_row_count=None if truncated else len(rows),
-                            truncated=truncated,
-                            schema_scope="declared" if config.columns else "header",
-                            full_count_scope="unknown" if truncated else "observed",
-                            read_bytes=lines.read_bytes,
-                        )
-                    )
-                return {"table": (table,)}
-        except BlockError:
-            raise
-        except OSError:
-            raise BlockError(
-                "file_unavailable",
-                "Input file is missing or unreadable.",
-                field="resource_ref",
-            ) from None
-        except Exception:
-            raise BlockError(
-                "invalid_csv",
-                "CSV format, encoding, headers or scalar values are invalid.",
-            ) from None
+        from app.blocks.csv_preview import preview_csv
+
+        return preview_csv(config, context, limits)
 
     def _read(
         self, path: Path, config: CsvConfig
@@ -421,7 +303,7 @@ class JsonSource(FileSource[JsonConfig]):
         context: BlockContext,
         limits: PreviewLimits,
     ) -> PortValues:
-        from app.blocks.file_preview import preview_json
+        from app.blocks.json_preview import preview_json
 
         return preview_json(config, context, limits)
 
@@ -502,155 +384,31 @@ class ParquetSource(FileSource[SourceConfig]):
     def _read(
         self, path: Path, config: SourceConfig
     ) -> tuple[pl.DataFrame, DataSchema | None]:
-        arrow = pq.read_schema(path)
-        columns = []
-        for item in arrow:
-            kind: DType
-            if pa.types.is_string(item.type) or pa.types.is_large_string(item.type):
-                kind = "string"
-            elif pa.types.is_integer(item.type):
-                kind = "integer"
-            elif pa.types.is_floating(item.type):
-                kind = "number"
-            elif pa.types.is_boolean(item.type):
-                kind = "boolean"
-            else:
-                raise BlockError(
-                    "unsupported_type",
-                    "Parquet contains an unsupported SDK column type.",
-                )
-            columns.append(Column(name=item.name, dtype=kind, nullable=item.nullable))
+        file = pq.ParquetFile(path)
+        schema = parquet_schema(file.schema_arrow)
+        columns = schema.columns
         if len(columns) > config.max_columns:
             raise BlockError(
                 "table_limit", "Input exceeds the configured column limit."
             )
-        return pl.read_parquet(
-            path,
-            n_rows=min(config.max_rows, config.max_cells // max(1, len(columns))) + 1,
-        ), DataSchema(columns=tuple(columns))
-
-
-class SinkConfig(ResourceConfig):
-    overwrite: Literal["error", "replace"] = "error"
-    null_value: str = Field(default="NULL", min_length=1, max_length=64)
-
-
-ARTIFACT_SCHEMA = DataSchema(
-    columns=(
-        Column(name="location", dtype="string"),
-        Column(name="format", dtype="string"),
-        Column(name="row_count", dtype="integer"),
-        Column(name="schema_json", dtype="string"),
-    )
-)
-ARTIFACT_PORT = Port(name="artifact", data_schema=ARTIFACT_SCHEMA)
-
-
-class FileSink(Block[SinkConfig]):
-    config_model = SinkConfig
-    suffix = ""
-
-    def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        raise NotImplementedError
-
-    def _execute(
-        self, config: SinkConfig, inputs: PortValues, context: BlockContext
-    ) -> PortValues:
-        target = resource_path(context, config.resource_ref, self.suffix)
-        table = inputs["table"][0]
-        assert isinstance(table, Table)
-        # Validate serializability and construct metadata before publication.
-        to_frame(table)
-        artifact = Table(
-            data_schema=ARTIFACT_SCHEMA,
-            rows=(
-                {
-                    "location": config.resource_ref,
-                    "format": self.suffix[1:],
-                    "row_count": len(table.rows),
-                    "schema_json": table.data_schema.model_dump_json(),
-                },
-            ),
-        )
-        temporary: Path | None = None
-        try:
-            if target.exists() and config.overwrite == "error":
-                raise BlockError(
-                    "output_exists", "Output already exists; choose replace explicitly."
-                )
-            # resource_path already proved target lies inside the project
-            # workspace; only inputs/ is pre-created, so make output folders
-            # such as outputs/ on demand instead of failing the publication.
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with NamedTemporaryFile(
-                dir=target.parent, prefix=".lps-", suffix=".tmp", delete=False
-            ) as stream:
-                temporary = Path(stream.name)
-            self._write(temporary, table, config)
-            with temporary.open("r+b") as stream:
-                os.fsync(stream.fileno())
-            if config.overwrite == "replace":
-                os.replace(temporary, target)
-                temporary = None
-            else:
-                # Atomic no-clobber publication, including a destination race.
-                os.link(temporary, target)
-            return {"artifact": (artifact,)}
-        except FileExistsError:
-            raise BlockError(
-                "output_exists", "Output already exists; choose replace explicitly."
-            ) from None
-        except BlockError:
-            raise
-        except Exception:
-            raise BlockError(
-                "write_failed", "Output could not be published atomically."
-            ) from None
-        finally:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
-
-
-class CsvSink(FileSink):
-    suffix = ".csv"
-    descriptor = BlockDescriptor(
-        **descriptor_values("sink.csv", "CSV Sink", "sink"),
-        inputs=(TABLE_PORT,),
-        outputs=(ARTIFACT_PORT,),
-    )
-
-    def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        if not table.data_schema.columns:
-            raise BlockError(
-                "schema_required", "CSV requires at least one declared column."
-            )
-        if any(
-            value == config.null_value
-            for row in table.rows
-            for value in row.values()
-            if isinstance(value, str)
+        metadata = file.metadata
+        if (
+            metadata.num_rows > config.max_rows
+            or metadata.num_rows * len(columns) > config.max_cells
         ):
             raise BlockError(
-                "ambiguous_null",
-                "A string equals the CSV null marker; choose a different marker.",
-                field="null_value",
+                "table_limit", "Input exceeds the configured table limits."
             )
-        to_frame(table).write_csv(path, null_value=config.null_value)
-
-
-class ParquetSink(FileSink):
-    suffix = ".parquet"
-    descriptor = BlockDescriptor(
-        **descriptor_values("sink.parquet", "Parquet Sink", "sink"),
-        inputs=(TABLE_PORT,),
-        outputs=(ARTIFACT_PORT,),
-    )
-
-    def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        schema = pa.schema(
-            [
-                pa.field(c.name, ARROW_TYPES[c.dtype], nullable=c.nullable)
-                for c in table.data_schema.columns
-            ]
-        )
-        pq.write_table(pa.Table.from_pylist(list(table.rows), schema=schema), path)
+        # Bound decoding before and after the read: declared page bytes catch
+        # large plain values; dictionary-aware decoded bytes catch repetition.
+        budget = parquet_decode_budget(config.max_bytes)
+        if uncompressed_bytes(metadata) > budget:
+            raise BlockError("file_limit", "Parquet decodes beyond the byte limit.")
+        table = pq.ParquetFile(
+            path, metadata=metadata, read_dictionary=string_columns(schema)
+        ).read(use_threads=False)
+        if decoded_bytes(table) > budget:
+            raise BlockError("file_limit", "Parquet decodes beyond the byte limit.")
+        frame = pl.from_arrow(expand_dictionaries(table))
+        assert isinstance(frame, pl.DataFrame)
+        return frame, schema

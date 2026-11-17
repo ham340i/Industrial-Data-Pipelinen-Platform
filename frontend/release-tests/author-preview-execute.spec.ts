@@ -195,12 +195,18 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
   const saved = await (await saving).json();
   await expect(runButton).toBeEnabled();
 
-  async function executeAndInspect() {
+  // Execute is synchronous: assert on the result only after the API answers,
+  // so slower runners are not judged by the UI assertion timeout.
+  async function runSaved() {
     const executing = page.waitForResponse(
       (r) => r.request().method() === "POST" && r.url().endsWith("/execute"),
     );
     await runButton.click();
-    const execution = await (await executing).json();
+    return executing;
+  }
+
+  async function executeAndInspect() {
+    const execution = await (await runSaved()).json();
     const controls = page.getByLabel("Pipeline execution", { exact: true });
     await expect(
       controls.getByText("Run succeeded · revision 1", { exact: true }),
@@ -294,7 +300,7 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     .getByRole("button", { name: "Save pipeline", exact: true })
     .click();
   await expect(runButton).toBeEnabled();
-  await runButton.click();
+  await runSaved();
   const controls = page.getByLabel("Pipeline execution", { exact: true });
   await expect(
     controls.getByText("Run failed · revision 2", { exact: true }),
@@ -318,7 +324,7 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     .getByRole("button", { name: "Save pipeline", exact: true })
     .click();
   await expect(runButton).toBeEnabled();
-  await runButton.click();
+  await runSaved();
   await expect(
     controls.getByText("Run succeeded · revision 3", { exact: true }),
   ).toBeVisible();

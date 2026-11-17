@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """JSON storage validation without taking ownership of the future DAG contract."""
 
 import json
@@ -8,6 +9,9 @@ from sqlalchemy import JSON
 from sqlalchemy.engine import Dialect
 from sqlalchemy.types import TypeDecorator
 
+from app.secret_policy import HOME_PATH, URL_USERINFO, is_credential_key
+
+# Machine-local bindings. Credential keys come from the shared policy (#32).
 _RUNTIME_KEYS = {
     "path",
     "localpath",
@@ -15,26 +19,18 @@ _RUNTIME_KEYS = {
     "workspacepath",
     "filepath",
     "outputpath",
-    "secret",
-    "secrets",
     "secretref",
     "secretreference",
-    "password",
-    "credentials",
-    "credential",
-    "apikey",
-    "token",
-    "accesstoken",
-    "connectionstring",
-    "dsn",
 }
 _ABSOLUTE_PATH = re.compile(r"^(?:[/\\]|[A-Za-z]:|file:)", re.IGNORECASE)
 
 
 def portable_definition(value: dict[str, Any]) -> dict[str, Any]:
-    """Return detached JSON; reject known runtime fields and absolute paths.
+    """Return detached JSON; reject runtime fields, credentials and machine paths.
 
-    This does not validate graph topology or detect arbitrary secret strings.
+    Rejects credential keys (shared policy), absolute and home-relative paths,
+    and URLs that embed userinfo (``scheme://user:password@host``). This does
+    not validate graph topology or detect arbitrary secret strings.
     Logical resource IDs belong in definitions; local bindings are separate.
     """
     if not isinstance(value, dict):
@@ -46,15 +42,17 @@ def portable_definition(value: dict[str, Any]) -> dict[str, Any]:
                 if not isinstance(key, str):
                     raise ValueError("JSON object keys must be strings")
                 normalized = re.sub(r"[^a-z0-9]", "", key.lower())
-                if normalized in _RUNTIME_KEYS:
+                if normalized in _RUNTIME_KEYS or is_credential_key(key):
                     raise ValueError("Runtime bindings do not belong in definitions")
                 visit(child)
         elif isinstance(item, list):
             for child in item:
                 visit(child)
         elif isinstance(item, str):
-            if _ABSOLUTE_PATH.match(item):
+            if _ABSOLUTE_PATH.match(item) or HOME_PATH.match(item):
                 raise ValueError("Absolute paths do not belong in definitions")
+            if URL_USERINFO.search(item):
+                raise ValueError("Credentials do not belong in definitions")
         elif item is not None and not isinstance(item, (bool, int, float)):
             raise ValueError("Definitions accept only JSON values")
 
