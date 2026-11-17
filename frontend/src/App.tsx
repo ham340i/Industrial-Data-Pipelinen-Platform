@@ -110,7 +110,7 @@ function Overview() {
         sx={{ p: { xs: 3, md: 4 }, background: "#e9f2ee" }}
       >
         <Chip
-          label="Iteration 2 · Pipeline authoring"
+          label="Pipeline authoring"
           size="small"
           sx={{ mb: 3 }}
         />

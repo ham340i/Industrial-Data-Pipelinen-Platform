@@ -54,32 +54,6 @@ export function WorkspaceSettings() {
           {query.error.message}
         </Alert>
       )}
-      {query.data && (
-        <Paper variant="outlined" sx={{ p: 3, overflowWrap: "anywhere" }}>
-          <Typography component="h2" variant="h2">
-            Current configuration
-          </Typography>
-          <Typography>
-            {query.data.ready
-              ? "Root folder available"
-              : "Workspace needs configuration"}
-          </Typography>
-          <Typography>{root ?? "No workspace root configured"}</Typography>
-          <Typography variant="body2">
-            {source === "application"
-              ? "Using the saved app setting, overriding LPS_WORKSPACE_ROOT."
-              : source === "environment"
-                ? "Using LPS_WORKSPACE_ROOT from the API environment."
-                : "No app setting or environment root is configured."}
-          </Typography>
-          {root && projectId && (
-            <Typography variant="body2" sx={{ mt: 2 }}>
-              Current project inputs: {root.replace(/[\\/]$/, "")}/{projectId}
-              /inputs
-            </Typography>
-          )}
-        </Paper>
-      )}
       <Paper variant="outlined" sx={{ p: 3 }}>
         <Stack
           component="form"
@@ -88,7 +62,10 @@ export function WorkspaceSettings() {
             event.preventDefault();
             if (path.trim() && !mutation.isPending) mutation.mutate(path);
           }}
-        >
+        >          
+        <Typography component="h2" variant="h2">
+            Current configuration
+          </Typography>
           <TextField
             label="Workspace root folder"
             fullWidth
