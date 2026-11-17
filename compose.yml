@@ -13,7 +13,8 @@
       ],
       "environment": {
         "LPS_METADATA_PATH": "/var/lib/lps/metadata.sqlite3",
-        "LPS_WORKSPACE_ROOT": "/var/lib/lps/workspace"
+        "LPS_WORKSPACE_ROOT": "/var/lib/lps/workspace",
+        "LPS_LOG_LEVEL": "${LPS_LOG_LEVEL:-INFO}"
       },
       "healthcheck": {
         "test": [

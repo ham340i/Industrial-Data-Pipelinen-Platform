@@ -1,7 +1,9 @@
 # AI contribution: 50% or more AI-generated
 from __future__ import annotations
 
+import logging
 import re
+from time import monotonic
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -17,6 +19,7 @@ from app.artifacts.api import router as artifacts_router
 from app.blocks.catalog import executor, router as blocks_router
 from app.config import settings
 from app.execution import InvalidPipeline
+from app.logging_config import configure_logging
 from app.metadata.database import Database
 from app.metadata.migrate import upgrade
 from app.pipelines.api import (
@@ -34,6 +37,9 @@ from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
 from app.workspace import WorkspaceError, router as workspace_router
 
+
+configure_logging(settings.log_level)
+logger = logging.getLogger(__name__)
 
 _CORRELATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,100}$")
 
@@ -78,9 +84,19 @@ class CorrelationIdMiddleware:
                     )
                 )
                 message["headers"] = headers
+                # Method, route, status and timing only: never bodies or queries.
+                logger.info(
+                    "%s %s -> %s in %d ms [%s]",
+                    scope["method"],
+                    scope["path"],
+                    message["status"],
+                    int((monotonic() - started) * 1000),
+                    correlation_id,
+                )
 
             await send(message)
 
+        started = monotonic()
         scope["correlation_id"] = correlation_id
         await self.app(scope, receive, send_with_correlation_id)
 
@@ -98,6 +114,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         recover_interrupted(database)
         application.state.database = database
         application.state.scheduler = TimerScheduler(database, executor)
+        logger.info("API %s started; metadata migrated", settings.api_version)
         yield
     finally:
         # Stop every timer thread (#29) before closing the database it uses.
@@ -107,6 +124,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         application.state.scheduler = None
         database.close()
         application.state.database = None
+        logger.info("API stopped; timers cancelled and metadata closed")
 
 
 app = FastAPI(
@@ -147,6 +165,8 @@ def error_response(
 ) -> JSONResponse:
     correlation_id = request.scope.get("correlation_id", str(uuid4()))
 
+    log = logger.error if status_code >= 500 else logger.info
+    log("Request refused with %s (%d) [%s]", code, status_code, correlation_id)
     payload = ErrorEnvelope(
         error=ApiError(
             code=code,
@@ -293,6 +313,14 @@ async def unhandled_exception_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
+    # The stack trace stays in the server log; the client gets a fixed message.
+    logger.error(
+        "Unhandled error on %s %s [%s]",
+        request.method,
+        request.url.path,
+        request.scope.get("correlation_id", "unknown"),
+        exc_info=exc,
+    )
     return error_response(
         request=request,
         code="internal_error",
