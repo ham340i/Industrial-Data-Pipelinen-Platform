@@ -14,7 +14,13 @@ from app.blocks.contracts import Table
 from app.blocks.errors import BlockError
 from app.blocks.file_sinks import CsvSink, FileSink
 from app.blocks.files import CsvSource, FileSource, JsonSource, ParquetSource
-from app.blocks.parquet_decode import decoded_bytes
+from app.blocks.parquet_decode import (
+    MAX_PARQUET_DECODE_BYTES,
+    PARQUET_DECODE_FACTOR,
+    decoded_bytes,
+    parquet_decode_budget,
+    uncompressed_bytes,
+)
 from app.blocks.registry import RegisteredBlock
 from tests.test_file_blocks import run, scalar_table
 
@@ -157,6 +163,71 @@ def test_parquet_large_declared_pages_are_refused_before_reading(tmp_path: Path)
                 tmp_path,
                 {"resource_ref": "data.parquet", "max_bytes": 4096},
             )
+    assert error.value.failure.code == "file_limit"
+
+
+MIB = 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    ("max_bytes", "budget"),
+    [
+        (1, PARQUET_DECODE_FACTOR),
+        # The 16x factor and the 1 GiB cap meet at max_bytes = 64 MiB.
+        (64 * MIB - 1, PARQUET_DECODE_FACTOR * (64 * MIB - 1)),
+        (64 * MIB, MAX_PARQUET_DECODE_BYTES),
+        (64 * MIB + 1, MAX_PARQUET_DECODE_BYTES),
+        (128 * MIB, MAX_PARQUET_DECODE_BYTES),  # largest allowed max_bytes
+    ],
+)
+def test_parquet_decode_budget_is_sixteen_times_capped_at_one_gib(
+    max_bytes: int, budget: int
+):
+    assert parquet_decode_budget(max_bytes) == budget
+
+
+def test_parquet_declared_pages_just_within_and_just_over_the_budget(
+    tmp_path: Path,
+):
+    path = tmp_path / "data.parquet"
+    pq.write_table(
+        pa.table({"payload": ["A" * 200_000]}),
+        path,
+        compression="zstd",
+        use_dictionary=False,
+    )
+    declared = uncompressed_bytes(pq.ParquetFile(path).metadata)
+    # Smallest max_bytes whose budget holds the declared pages; one less
+    # leaves the budget 1 to 16 bytes short. The on-disk size fits both.
+    fits = -(-declared // PARQUET_DECODE_FACTOR)
+    assert parquet_decode_budget(fits) >= declared
+    assert parquet_decode_budget(fits - 1) < declared
+    assert path.stat().st_size <= fits - 1
+    config = {"resource_ref": "data.parquet"}
+    table = run(ParquetSource(), tmp_path, {**config, "max_bytes": fits})
+    assert [len(str(row["payload"])) for row in table.rows] == [200_000]
+    with patch.object(pq.ParquetFile, "read", side_effect=AssertionError("read")):
+        with pytest.raises(BlockError) as error:
+            run(ParquetSource(), tmp_path, {**config, "max_bytes": fits - 1})
+    assert error.value.failure.code == "file_limit"
+
+
+@pytest.mark.parametrize(("over_cap", "allowed"), [(0, True), (1, False)])
+def test_parquet_declared_pages_at_the_one_gib_cap(
+    tmp_path: Path, over_cap: int, allowed: bool
+):
+    # A real 1 GiB declared file is too heavy for CI, so the declared size is
+    # substituted; the comparison and the capped budget are the real ones.
+    pq.write_table(pa.table({"a": [1, 2]}), tmp_path / "data.parquet")
+    config = {"resource_ref": "data.parquet", "max_bytes": 128 * MIB}
+    declared = MAX_PARQUET_DECODE_BYTES + over_cap
+    with patch("app.blocks.files.uncompressed_bytes", return_value=declared):
+        if allowed:
+            assert len(run(ParquetSource(), tmp_path, config).rows) == 2
+            return
+        with patch.object(pq.ParquetFile, "read", side_effect=AssertionError):
+            with pytest.raises(BlockError) as error:
+                run(ParquetSource(), tmp_path, config)
     assert error.value.failure.code == "file_limit"
 
 
