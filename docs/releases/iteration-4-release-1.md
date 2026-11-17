@@ -82,4 +82,4 @@ Planning tables, demo scripts and testing evidence for each iteration: [Iteratio
 
 | Release | Tag | GitHub Release | Demo video |
 |---|---|---|---|
-| Release 1 | Not created yet (`v1.0.0-release1` planned) | Not created yet | Not recorded yet |
+| Release 1 | Not created yet (`Release1`, after the [tag checklist](../release-1/tag-checklist.md) is complete) | Not created yet | Not recorded yet |
