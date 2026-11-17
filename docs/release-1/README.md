@@ -29,6 +29,10 @@ CSV → Validate Schema → Filter ─┐
 SQL Source ────────────────────┘
 ```
 
+## Install the candidate
+
+The [candidate guide](candidate.md) installs, demonstrates, backs up, restores and resets the Release 1 candidate with one command and no source edits. The [release notes](release-notes.md) list delivered capabilities and known limitations. The [tag checklist](tag-checklist.md) is the gate for creating the `Release1` tag; no tag exists yet.
+
 ## Acceptance and evidence
 
 Use the [acceptance checklist](acceptance.md), [traceability record](traceability.md), [Iteration 4 evidence](../iterations/iteration-4-release-1/README.md) and [existing release process](../releases/README.md). The [detailed plan](../release-1-plan.md) and existing issue assignments remain in place. No release completion, successful demonstration or stakeholder approval is asserted here.

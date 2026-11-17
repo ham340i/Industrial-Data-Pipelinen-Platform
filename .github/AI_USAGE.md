@@ -375,3 +375,35 @@ Authors who find a declaration wrong for their file should correct it; the pull 
 ## Frontend response parsers (#36)
 
 Author: ham340i. Tool used: Claude Code. AI contribution: 50% or more AI-generated. AI-assisted files: `frontend/src/api/pipelines.ts`, `runs.ts`, `preview.ts`, `blocks.ts`, `artifacts.ts`. The validation chains in `parseDefinition`, `parseRun`, `executePipeline`, `parsePreview`, `previewNode`, `queryArtifact` and the block catalog parser were split into named predicates so each function is within 50 lines and complexity 15. Verification: the rules are unchanged; all 226 frontend tests, ESLint, Prettier, the TypeScript compiler and the production build pass.
+
+## Issue #36 packaged Release 1 candidate
+
+Tool: Claude Code. AI contribution: 50% or more AI-generated overall,
+declared per file: `50% or more` for `scripts/release_candidate.py`,
+`scripts/release_acceptance.py`, `scripts/tests/test_release_candidate.py`,
+`tests/test_release_acceptance.py`, `docs/release-1/candidate.md`,
+`docs/release-1/release-notes.md`, `docs/release-1/tag-checklist.md` and
+`docs/testing/issue-36-release-candidate.md`; `below 50%` for the small edits
+to `.github/workflows/ci.yml`, `.gitignore` and the documentation indexes.
+Claude Code drafted the candidate command, the HTTP acceptance scenario, both
+test files, the CI job and the documentation, and ran them against the real
+API locally. Verified by 29 script unit tests, 8 backend integration tests
+(1110 backend tests passing overall), Ruff, strict mypy, the repository and
+documentation checks, and a local HTTP run of the scenario
+([record](../docs/testing/issue-36-release-candidate.md)). The Compose
+rehearsal runs in CI because Docker is not installed on the development
+machine.
+
+Problems found and corrected while building it: the first CSV source
+configuration omitted the nullability list and was rejected by validation;
+the graph builder exceeded the 50-line function limit and was split; the
+rehearsal first went into the existing Compose job, which would have broken
+the repository's 15-minute job limit, so it became its own job.
+
+Corrected after ham340i's review of PR #106: restore validated schemas
+against, and restarted on, a cached image, so a rollback could be reopened by
+the newer API and migrated forward again. Restore now builds the checked-out
+revision first and recreates the containers, with unit tests and a rollback
+step in the CI rehearsal. `LPS_LOG_LEVEL` was validated but not forwarded;
+main's #105 now forwards it, and a test checks every accepted setting reaches
+`compose.yml`.
