@@ -387,7 +387,7 @@ declared per file: `50% or more` for `scripts/release_candidate.py`,
 to `.github/workflows/ci.yml`, `.gitignore` and the documentation indexes.
 Claude Code drafted the candidate command, the HTTP acceptance scenario, both
 test files, the CI job and the documentation, and ran them against the real
-API locally. Verified by 24 script unit tests, 8 backend integration tests
+API locally. Verified by 29 script unit tests, 8 backend integration tests
 (1110 backend tests passing overall), Ruff, strict mypy, the repository and
 documentation checks, and a local HTTP run of the scenario
 ([record](../docs/testing/issue-36-release-candidate.md)). The Compose
@@ -399,3 +399,11 @@ configuration omitted the nullability list and was rejected by validation;
 the graph builder exceeded the 50-line function limit and was split; the
 rehearsal first went into the existing Compose job, which would have broken
 the repository's 15-minute job limit, so it became its own job.
+
+Corrected after ham340i's review of PR #106: restore validated schemas
+against, and restarted on, a cached image, so a rollback could be reopened by
+the newer API and migrated forward again. Restore now builds the checked-out
+revision first and recreates the containers, with unit tests and a rollback
+step in the CI rehearsal. `LPS_LOG_LEVEL` was validated but not forwarded;
+main's #105 now forwards it, and a test checks every accepted setting reaches
+`compose.yml`.

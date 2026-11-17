@@ -44,7 +44,7 @@ python3 scripts/release_candidate.py demo
 
 ## Upgrade and rollback
 
-Back up, check out the new revision, then `start`. The API upgrades the database on start. To roll back, check out the older revision and `restore` a backup that it created.
+Back up, check out the new revision, then `start`. The API upgrades the database on start. To roll back, check out the older revision and `restore` a backup that it created. Restore rebuilds that revision's images and restarts on them, so the newer API never reopens the restored data.
 
 ## Verification
 

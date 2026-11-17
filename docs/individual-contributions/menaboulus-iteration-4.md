@@ -168,7 +168,7 @@ candidate without editing source. Record of what was run:
   `scripts/release_acceptance.py`, so the demo a tester sees is the one CI
   checks. Backups carry a checksum and schema revision so restore refuses
   incompatible data before deleting anything.
-- **Tests.** 24 script unit tests with a fake Docker runner, 8 backend
+- **Tests.** 29 script unit tests with a fake Docker runner, 8 backend
   integration tests of the scenario against the real API and engine, and a
   new "Release candidate rehearsal" CI job: clean install, scenario,
   container recreation, backup, reset and restore.
@@ -187,5 +187,8 @@ candidate without editing source. Record of what was run:
   declarations are in [AI usage](../../.github/AI_USAGE.md). My own part:
   scope, the reviewer choice and the data-safety rules (confirmation for
   destructive commands, no tag until the checklist passes).
-- **Independent review.** Requested from ham340i on the pull request.
+- **Independent review.** ham340i requested changes on PR #106: restore
+  could reuse a cached newer image during rollback, and the log-level
+  setting was not forwarded. Both fixed; see the
+  [review section](../testing/issue-36-release-candidate.md#ham340is-review-of-pr-106-at-952e7f8).
 

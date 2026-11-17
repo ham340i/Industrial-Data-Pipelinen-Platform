@@ -76,7 +76,7 @@ python3 scripts/release_candidate.py reset --yes            # delete all candida
 ```
 
 - **Backup** stops the containers for a moment so the database is copied in a consistent state. It restarts them if they were running. The `.json` manifest records the archive's SHA-256 checksum, the database schema revision and the Git revision that wrote it. `backups/` is ignored by Git; keep backups out of the repository.
-- **Restore** checks the checksum and the schema revision before it stops anything. It then replaces all candidate data with the archive. It refuses a damaged archive, and it refuses a backup whose schema this candidate does not know.
+- **Restore** first builds the images of the revision you have checked out. It then checks the backup's checksum and schema revision against that build, before it stops anything. It refuses a damaged archive, and it refuses a backup whose schema this revision does not know. Only then does it replace all candidate data with the archive. If the candidate was running, restore restarts it on freshly created containers from that build.
 - **Reset** removes this candidate's containers and its data volume only. Images and other Compose projects are untouched.
 
 `restore` and `reset` delete data, so both require `--yes`.
@@ -84,7 +84,7 @@ python3 scripts/release_candidate.py reset --yes            # delete all candida
 ## Rollback and data compatibility
 
 - **Upgrading is automatic.** The API upgrades the database to the newest schema when it starts. A backup from an older candidate can therefore be restored into a newer one.
-- **Downgrading is not automatic.** Once a newer candidate has started on your data, an older candidate cannot open it. To roll back, check out the older revision, then restore a backup made by that older revision (or any earlier one). `restore` names the revision you need when the schema is too new.
+- **Downgrading is not automatic.** Once a newer candidate has started on your data, an older candidate cannot open it. To roll back, check out the older revision, then restore a backup made by that older revision (or any earlier one). `restore` names the revision you need when the schema is too new. Because restore rebuilds and recreates the containers, a newer candidate that was still running cannot reopen the restored data and migrate it forward again.
 - **Back up before every upgrade.** That backup is your rollback point.
 - Saved pipelines are versioned JSON with `schema_version: 1`. Release 1 reads only that version.
 - Output files written by a run are plain files under the project folder. They are kept by backups and removed by reset.
@@ -103,6 +103,7 @@ python3 scripts/release_candidate.py smoke --report
 2. The demonstration scenario: two runs, every block count and the output rows.
 3. Recreate the containers; the project, pipeline, runs and output must survive.
 4. Back up while running, reset, confirm the candidate starts empty, restore, and confirm everything is back.
+5. Rollback: mark the database with a schema this candidate does not know, as a newer release's data would be, and back it up. Restore must refuse that backup and leave the data untouched. Then restore the older backup and confirm everything reopens.
 
 It always removes its containers and volume, even when a step fails, and fails if anything is left behind. The "Release candidate rehearsal" CI job runs it on every pull request and uploads the JSON report.
 
