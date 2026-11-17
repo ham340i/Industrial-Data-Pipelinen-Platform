@@ -301,7 +301,7 @@ class JsonSource(FileSource[JsonConfig]):
         context: BlockContext,
         limits: PreviewLimits,
     ) -> PortValues:
-        from app.blocks.file_preview import preview_json
+        from app.blocks.json_preview import preview_json
 
         return preview_json(config, context, limits)
 

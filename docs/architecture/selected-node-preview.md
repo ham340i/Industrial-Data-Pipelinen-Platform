@@ -105,6 +105,6 @@ SDK failures use an allowlist of public reasons. API failures carry stable code,
 ## Implementation and verification
 
 - Service, contracts and admission: `app/preview/`; API wiring: `app/main.py`; workspace configuration: `app/config.py`.
-- SDK observation callback: `PreviewObservation` and `BlockContext.observe_preview`, scoped to one request; CSV reader: `app/blocks/preview_policy.py` and `files.py`; JSON/Parquet readers: `app/blocks/file_preview.py`; projection: `transforms.py`.
+- SDK observation callback: `PreviewObservation` and `BlockContext.observe_preview`, scoped to one request; CSV reader: `app/blocks/preview_policy.py` and `csv_preview.py`; JSON reader: `json_preview.py`; Parquet reader and shared preview checks: `file_preview.py`, with decode-size checks in `parquet_decode.py`; projection: `transforms.py`.
 - Client/panel: `frontend/src/api/preview.ts`, `frontend/src/state/preview.ts`, `frontend/src/PreviewPanel.tsx`, `Builder.tsx` and capability metadata parsing.
 - Regression evidence: [issue #26 verification](../testing/issue-26-preview.md). Broader workflow integration, error UX and performance work (#31/#33/#35) can extend this contract without interpreting sampled counts as full counts.

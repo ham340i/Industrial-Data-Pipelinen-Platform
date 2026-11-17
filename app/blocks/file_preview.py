@@ -1,4 +1,7 @@
-"""Bounded JSON records and Parquet batches, independent of execution readers.
+"""Bounded Parquet batches and the preview checks shared with JSON previews.
+
+JSON record framing lives in app/blocks/json_preview.py and CSV in
+app/blocks/csv_preview.py; both are independent of the execution readers.
 
 Parquet limits bound reads and declared decoding work, not native allocator RSS.
 Corrupt metadata/codec behavior is not a hard process-isolation boundary.
@@ -6,9 +9,7 @@ Corrupt metadata/codec behavior is not a hard process-isolation boundary.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 import io
-import json
 import math
 from typing import Any, BinaryIO
 
@@ -16,7 +17,6 @@ import pyarrow.parquet as pq
 
 from app.blocks.context import BlockContext
 from app.blocks.contracts import (
-    Column,
     DataSchema,
     PortValues,
     PreviewLimits,
@@ -25,7 +25,7 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
-from app.blocks.files import JsonConfig, SourceConfig, resource_path, unique_object
+from app.blocks.files import SourceConfig, resource_path
 from app.blocks.parquet_decode import (
     decoded_bytes,
     group_uncompressed_bytes,
@@ -39,7 +39,7 @@ from app.blocks.preview_policy import (
     MAX_READ_BYTES,
     MAX_RECORD_BYTES,
 )
-from app.blocks.tabular import DType, cast_column, checked_names, from_frame, to_frame
+from app.blocks.tabular import cast_column, checked_names, from_frame, to_frame
 
 MAX_FOOTER_BYTES = 256 * 1024
 MAX_DECODE_BYTES = 8 * 1024 * 1024
@@ -104,193 +104,6 @@ def configured_table(
     return table
 
 
-class JsonRecords(Iterator[dict[str, Any]]):
-    """Frame flat objects; the standard JSON decoder validates each whole record.
-
-    A 1 KiB read-ahead buffer and 64 KiB record cap bound allocations before
-    json.loads. Nested arrays/objects are rejected before decoding, including
-    the lookahead record. Whitespace is subject to the same total byte budget.
-    """
-
-    def __init__(
-        self, stream: BinaryIO, encoding: str, budget: int, context: BlockContext
-    ) -> None:
-        self.stream, self.encoding, self.budget, self.context = (
-            stream,
-            encoding,
-            budget,
-            context,
-        )
-        self.buffer = b""
-        self.position = 0
-        self.read_bytes = 0
-        self.started = False
-        self.after_record = False
-        self.finished = False
-
-    def byte(self) -> int:
-        if self.position == len(self.buffer):
-            self.context.check_cancelled()
-            self.buffer = self.stream.read(min(1024, self.budget - self.read_bytes + 1))
-            self.read_bytes += len(self.buffer)
-            if self.read_bytes > self.budget:
-                raise BlockError("preview_read_limit", "JSON read budget exceeded.")
-            self.position = 0
-            if not self.buffer:
-                return -1
-        result = self.buffer[self.position]
-        self.position += 1
-        return result
-
-    def nonspace(self) -> int:
-        char = self.byte()
-        while char in (9, 10, 13, 32):
-            char = self.byte()
-        return char
-
-    def __iter__(self) -> JsonRecords:
-        return self
-
-    def __next__(self) -> dict[str, Any]:
-        self.context.check_cancelled()
-        if self.finished:
-            raise StopIteration
-        if not self.started:
-            char = self.byte()
-            if char == 239 and self.encoding == "utf-8-sig":
-                if (self.byte(), self.byte()) != (187, 191):
-                    raise ValueError("Invalid BOM")
-                char = self.byte()
-            while char in (9, 10, 13, 32):
-                char = self.byte()
-            if char != 91:
-                raise ValueError("Expected array")
-            self.started = True
-        char = self.nonspace()
-        if char == 93:
-            if self.nonspace() != -1:
-                raise ValueError("Trailing content")
-            self.finished = True
-            raise StopIteration
-        if self.after_record:
-            if char != 44:
-                raise ValueError("Expected separator")
-            char = self.nonspace()
-        if char != 123:
-            raise ValueError("Expected record")
-        record = bytearray(b"{")
-        quoted = escaped = False
-        while True:
-            char = self.byte()
-            if char == -1:
-                raise ValueError("Incomplete record")
-            record.append(char)
-            if len(record) > MAX_RECORD_BYTES:
-                raise BlockError("preview_read_limit", "JSON record budget exceeded.")
-            if quoted:
-                if escaped:
-                    escaped = False
-                elif char == 92:
-                    escaped = True
-                elif char == 34:
-                    quoted = False
-            elif char == 34:
-                quoted = True
-            elif char in (91, 123):
-                raise BlockError("unsupported_type", "Nested JSON is unsupported.")
-            elif char == 125:
-                break
-        self.after_record = True
-        # Decode BOM only at the start of the file, not at each record.
-        encoding = "utf-8" if self.encoding == "utf-8-sig" else self.encoding
-        row: dict[str, Any] = json.loads(
-            record.decode(encoding), object_pairs_hook=unique_object
-        )
-        check_values(row)
-        return row
-
-
-def preview_json(
-    config: JsonConfig, context: BlockContext, limits: PreviewLimits
-) -> PortValues:
-    context.check_cancelled()
-    path = resource_path(context, config.resource_ref, ".json")
-    try:
-        with path.open("rb", buffering=0) as stream:
-            records = JsonRecords(
-                stream, config.encoding, min(config.max_bytes, MAX_READ_BYTES), context
-            )
-            rows: list[dict[str, Scalar]] = []
-            names: list[str] = config.columns
-            count = inspected = 0
-            truncated = False
-            for row in records:
-                if not inspected:
-                    names = list(row)
-                    count = names_and_limit(names, config, limits)
-                elif set(row) != set(names):
-                    raise BlockError("schema_mismatch", "JSON record keys differ.")
-                inspected += 1
-                if len(rows) == count:
-                    truncated = True
-                    break
-                rows.append(row)
-            if not names:
-                raise BlockError("schema_required", "Empty JSON requires a schema.")
-            names_and_limit(names, config, limits)
-            columns = []
-            for index, name in enumerate(names):
-                kinds = {type(row[name]) for row in rows if row[name] is not None}
-                kind: DType
-                if not kinds:
-                    if not config.columns:
-                        raise BlockError(
-                            "schema_required",
-                            "All-null columns need a schema.",
-                            field=name,
-                        )
-                    kind = config.types[index]
-                elif kinds <= {int, float}:
-                    kind = "number" if float in kinds else "integer"
-                elif kinds == {str}:
-                    kind = "string"
-                elif kinds == {bool}:
-                    kind = "boolean"
-                else:
-                    raise BlockError(
-                        "unsupported_type", "JSON column types differ.", field=name
-                    )
-                columns.append(Column(name=name, dtype=kind, nullable=True))
-            table = configured_table(
-                Table(data_schema=DataSchema(columns=tuple(columns)), rows=tuple(rows)),
-                config,
-                context,
-            )
-            context.check_cancelled()
-            if context.observe_preview:
-                context.observe_preview(
-                    PreviewObservation(
-                        inspected_rows=inspected,
-                        full_row_count=None if truncated else len(rows),
-                        truncated=truncated,
-                        schema_scope="declared" if config.columns else "sample",
-                        full_count_scope="unknown" if truncated else "observed",
-                        read_bytes=records.read_bytes,
-                    )
-                )
-            return {"table": (table,)}
-    except BlockError:
-        raise
-    except OSError:
-        raise BlockError(
-            "file_unavailable", "Input is missing or unreadable.", field="resource_ref"
-        ) from None
-    except Exception:
-        raise BlockError(
-            "invalid_json", "JSON records or encoding are invalid."
-        ) from None
-
-
 class BudgetFile(io.RawIOBase):
     """Seekable Arrow input counting every read, including repeated footer reads."""
 
@@ -331,6 +144,97 @@ class BudgetFile(io.RawIOBase):
         return len(data)
 
 
+def check_parquet_envelope(source: BudgetFile) -> None:
+    """Magic bytes and footer length, read before Arrow parses any metadata."""
+    size = source.seek(0, 2)
+    if size < 12:
+        raise ValueError("Incomplete Parquet")
+    source.seek(0)
+    if source.read(4) != b"PAR1":
+        raise ValueError("Invalid magic")
+    source.seek(-8, 2)
+    trailer = source.read(8)
+    footer_size = int.from_bytes(trailer[:4], "little")
+    if trailer[4:] != b"PAR1" or footer_size > size - 12:
+        raise ValueError("Invalid footer")
+    if footer_size > MAX_FOOTER_BYTES:
+        raise BlockError("preview_decode_limit", "Parquet footer is too large.")
+    source.seek(0)
+
+
+def check_parquet_metadata(metadata: pq.FileMetaData) -> None:
+    if metadata.num_row_groups > MAX_ROW_GROUPS or metadata.num_columns > MAX_COLUMNS:
+        raise BlockError("preview_decode_limit", "Parquet metadata is too large.")
+
+
+def declared_rows(metadata: pq.FileMetaData) -> int:
+    if metadata.num_rows < 0:
+        raise ValueError("Invalid count")
+    return int(metadata.num_rows)
+
+
+def preview_row_groups(
+    metadata: pq.FileMetaData, wanted: int, context: BlockContext
+) -> list[int]:
+    """Leading row groups covering ``wanted`` rows within the declared budget."""
+    groups = []
+    available = decode_bytes = 0
+    for index in range(metadata.num_row_groups):
+        context.check_cancelled()
+        if available >= wanted:
+            break
+        group = metadata.row_group(index)
+        if group.num_rows < 0:
+            raise ValueError("Invalid group")
+        decode_bytes += group_uncompressed_bytes(group)
+        if decode_bytes > MAX_DECODE_BYTES:
+            raise BlockError(
+                "preview_decode_limit", "Parquet row groups are too large."
+            )
+        available += group.num_rows
+        groups.append(index)
+    return groups
+
+
+def parquet_sample(
+    source: BudgetFile,
+    metadata: pq.FileMetaData,
+    schema: DataSchema,
+    groups: list[int],
+    count: int,
+    wanted: int,
+    context: BlockContext,
+) -> tuple[list[dict[str, Scalar]], int]:
+    """Rows from ``groups`` until ``wanted`` are held, and rows decoded.
+
+    Each batch is sliced to the preview ``count``, not ``wanted``, so a footer
+    that under-declares its rows still fails the caller's row-count check.
+    """
+    rows: list[dict[str, Scalar]] = []
+    inspected = 0
+    # Keep strings dictionary-encoded until their expanded size is known to
+    # fit the decode budget (#32).
+    dictionary_file = pq.ParquetFile(
+        source,
+        metadata=metadata,
+        memory_map=False,
+        buffer_size=0,
+        pre_buffer=False,
+        read_dictionary=string_columns(schema),
+    )
+    for batch in dictionary_file.iter_batches(
+        batch_size=wanted, row_groups=groups, use_threads=False
+    ):
+        context.check_cancelled()
+        if decoded_bytes(batch) > MAX_DECODE_BYTES:
+            raise BlockError("preview_decode_limit", "Decoded batch is too large.")
+        inspected += batch.num_rows
+        rows.extend(batch.slice(0, count - len(rows)).to_pylist())
+        if len(rows) >= wanted:
+            break
+    return rows, inspected
+
+
 def preview_parquet(
     config: SourceConfig, context: BlockContext, limits: PreviewLimits
 ) -> PortValues:
@@ -345,20 +249,7 @@ def preview_parquet(
     try:
         with stream:
             source = BudgetFile(stream, min(config.max_bytes, MAX_READ_BYTES), context)
-            size = source.seek(0, 2)
-            if size < 12:
-                raise ValueError("Incomplete Parquet")
-            source.seek(0)
-            if source.read(4) != b"PAR1":
-                raise ValueError("Invalid magic")
-            source.seek(-8, 2)
-            trailer = source.read(8)
-            footer_size = int.from_bytes(trailer[:4], "little")
-            if trailer[4:] != b"PAR1" or footer_size > size - 12:
-                raise ValueError("Invalid footer")
-            if footer_size > MAX_FOOTER_BYTES:
-                raise BlockError("preview_decode_limit", "Parquet footer is too large.")
-            source.seek(0)
+            check_parquet_envelope(source)
             with pq.ParquetFile(
                 source,
                 memory_map=False,
@@ -368,64 +259,22 @@ def preview_parquet(
                 thrift_container_size_limit=10000,
             ) as file:
                 metadata = file.metadata
-                if (
-                    metadata.num_row_groups > MAX_ROW_GROUPS
-                    or metadata.num_columns > MAX_COLUMNS
-                ):
-                    raise BlockError(
-                        "preview_decode_limit", "Parquet metadata is too large."
-                    )
+                check_parquet_metadata(metadata)
                 schema = parquet_schema(file.schema_arrow)
                 count = names_and_limit(
                     [c.name for c in schema.columns], config, limits
                 )
-                total = metadata.num_rows
-                if total < 0:
-                    raise ValueError("Invalid count")
-                groups = []
-                available = decode_bytes = 0
-                for index in range(metadata.num_row_groups):
-                    context.check_cancelled()
-                    if available >= min(count, total):
-                        break
-                    group = metadata.row_group(index)
-                    if group.num_rows < 0:
-                        raise ValueError("Invalid group")
-                    decode_bytes += group_uncompressed_bytes(group)
-                    if decode_bytes > MAX_DECODE_BYTES:
-                        raise BlockError(
-                            "preview_decode_limit", "Parquet row groups are too large."
-                        )
-                    available += group.num_rows
-                    groups.append(index)
-                rows: list[dict[str, Scalar]] = []
-                inspected = 0
-                if total:
-                    # Keep strings dictionary-encoded until their expanded
-                    # size is known to fit the decode budget (#32).
-                    dictionary_file = pq.ParquetFile(
-                        source,
-                        metadata=metadata,
-                        memory_map=False,
-                        buffer_size=0,
-                        pre_buffer=False,
-                        read_dictionary=string_columns(schema),
+                total = declared_rows(metadata)
+                wanted = min(count, total)
+                groups = preview_row_groups(metadata, wanted, context)
+                rows, inspected = (
+                    parquet_sample(
+                        source, metadata, schema, groups, count, wanted, context
                     )
-                    for batch in dictionary_file.iter_batches(
-                        batch_size=min(count, total),
-                        row_groups=groups,
-                        use_threads=False,
-                    ):
-                        context.check_cancelled()
-                        if decoded_bytes(batch) > MAX_DECODE_BYTES:
-                            raise BlockError(
-                                "preview_decode_limit", "Decoded batch is too large."
-                            )
-                        inspected += batch.num_rows
-                        rows.extend(batch.slice(0, count - len(rows)).to_pylist())
-                        if len(rows) >= min(count, total):
-                            break
-                if len(rows) != min(count, total):
+                    if total
+                    else ([], 0)
+                )
+                if len(rows) != wanted:
                     raise ValueError("Metadata and sample disagree")
                 for row in rows:
                     check_values(row)

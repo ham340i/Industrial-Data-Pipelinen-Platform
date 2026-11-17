@@ -2,8 +2,8 @@
 """Bounded CSV preview: header checks, a row-prefix sample and provenance.
 
 Moved out of ``CsvSource._preview`` in app/blocks/files.py (#32 review) and
-split into one helper per step; JSON and Parquet previews already live
-outside the reader module in app/blocks/file_preview.py.
+split into one helper per step, like the JSON and Parquet previews in
+app/blocks/json_preview.py and app/blocks/file_preview.py.
 """
 
 from __future__ import annotations

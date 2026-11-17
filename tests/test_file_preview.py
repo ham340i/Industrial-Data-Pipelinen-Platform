@@ -386,7 +386,7 @@ def test_new_source_cancellation_during_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suffix: str
 ):
     from threading import Event
-    from app.blocks.file_preview import JsonRecords
+    from app.blocks.json_preview import JsonRecords
 
     cancelled = Event()
     block: JsonSource | ParquetSource
