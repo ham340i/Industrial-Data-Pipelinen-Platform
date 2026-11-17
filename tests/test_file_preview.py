@@ -15,7 +15,8 @@ from app.blocks.context import BlockContext
 from app.blocks.contracts import PreviewLimits, PreviewObservation, Table
 from app.blocks.errors import BlockError
 from app.blocks.file_preview import BudgetFile, MAX_DECODE_BYTES, MAX_FOOTER_BYTES
-from app.blocks.files import FileSource, JsonSource, ParquetSource, decoded_bytes
+from app.blocks.files import FileSource, JsonSource, ParquetSource
+from app.blocks.parquet_decode import decoded_bytes
 from app.blocks.transforms import SelectColumns
 from app.config import settings
 from app.main import app

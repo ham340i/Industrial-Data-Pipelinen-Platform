@@ -12,13 +12,8 @@ import pytest
 from app.blocks.context import BlockEvent
 from app.blocks.contracts import Table
 from app.blocks.errors import BlockError
-from app.blocks.files import (
-    CsvSink,
-    CsvSource,
-    JsonSource,
-    ParquetSource,
-    decoded_bytes,
-)
+from app.blocks.files import CsvSink, CsvSource, JsonSource, ParquetSource
+from app.blocks.parquet_decode import decoded_bytes
 from app.blocks.registry import RegisteredBlock
 from tests.test_file_blocks import run, scalar_table
 

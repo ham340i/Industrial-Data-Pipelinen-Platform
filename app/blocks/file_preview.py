@@ -12,7 +12,6 @@ import json
 import math
 from typing import Any, BinaryIO
 
-import pyarrow as pa
 import pyarrow.parquet as pq
 
 from app.blocks.context import BlockContext
@@ -26,12 +25,12 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
-from app.blocks.files import (
-    JsonConfig,
-    SourceConfig,
+from app.blocks.files import JsonConfig, SourceConfig, resource_path, unique_object
+from app.blocks.parquet_decode import (
     decoded_bytes,
-    resource_path,
-    unique_object,
+    group_uncompressed_bytes,
+    parquet_schema,
+    string_columns,
 )
 from app.blocks.preview_policy import (
     MAX_COLUMN_CHARS,
@@ -332,24 +331,6 @@ class BudgetFile(io.RawIOBase):
         return len(data)
 
 
-def parquet_schema(arrow: pa.Schema) -> DataSchema:
-    columns = []
-    for item in arrow:
-        kind: DType
-        if pa.types.is_string(item.type) or pa.types.is_large_string(item.type):
-            kind = "string"
-        elif pa.types.is_integer(item.type):
-            kind = "integer"
-        elif pa.types.is_floating(item.type):
-            kind = "number"
-        elif pa.types.is_boolean(item.type):
-            kind = "boolean"
-        else:
-            raise BlockError("unsupported_type", "Unsupported Parquet scalar type.")
-        columns.append(Column(name=item.name, dtype=kind, nullable=item.nullable))
-    return DataSchema(columns=tuple(columns))
-
-
 def preview_parquet(
     config: SourceConfig, context: BlockContext, limits: PreviewLimits
 ) -> PortValues:
@@ -410,11 +391,7 @@ def preview_parquet(
                     group = metadata.row_group(index)
                     if group.num_rows < 0:
                         raise ValueError("Invalid group")
-                    for col in range(group.num_columns):
-                        chunk = group.column(col)
-                        if chunk.total_uncompressed_size < 0:
-                            raise ValueError("Invalid chunk")
-                        decode_bytes += chunk.total_uncompressed_size
+                    decode_bytes += group_uncompressed_bytes(group)
                     if decode_bytes > MAX_DECODE_BYTES:
                         raise BlockError(
                             "preview_decode_limit", "Parquet row groups are too large."
@@ -432,9 +409,7 @@ def preview_parquet(
                         memory_map=False,
                         buffer_size=0,
                         pre_buffer=False,
-                        read_dictionary=[
-                            c.name for c in schema.columns if c.dtype == "string"
-                        ],
+                        read_dictionary=string_columns(schema),
                     )
                     for batch in dictionary_file.iter_batches(
                         batch_size=min(count, total),
