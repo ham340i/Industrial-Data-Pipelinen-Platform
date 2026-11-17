@@ -1,0 +1,852 @@
+{
+  "environment": {
+    "python": "3.12.15",
+    "platform": "Linux",
+    "machine": "x86_64",
+    "kernel": "5.15.167.4-microsoft-standard-WSL2",
+    "cpu_model": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz",
+    "logical_cpus": 12,
+    "polars_threads": "2",
+    "versions": {
+      "polars": "1.44.2",
+      "pyarrow": "25.0.1",
+      "duckdb": "1.5.6",
+      "sqlalchemy": "2.0.54"
+    },
+    "source_revision": "db5df18f1db583b508ff066e45f9008b82cf12d8",
+    "cgroup_cpu_max": null,
+    "cgroup_memory_max": null
+  },
+  "source_sha256": "eff50424a938c59b511b3e37f57e836710e2bb24559a0d9f78d3796cb86c08e0",
+  "lock_sha256": "2fc2d1478be380d43663845fe649d4fc98d270c08fbd798bcad67101d15225a7",
+  "repeats": 3,
+  "runs": [
+    {
+      "case": "small",
+      "variant": "baseline",
+      "input_rows": 100,
+      "input_columns": 6,
+      "input_sha256": {
+        "facts.csv": "9766da014bc88d26fd405547288046901cc2635772879eac0213af138a48058c",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "3b313370c5be69c61eed757bf57c6b584dcc8b9c510a53b50faadd9f17408c42",
+      "execution_seconds": 0.17142245000002276,
+      "input_rows_per_second": 583.3541639381932,
+      "block_duration_ms": {
+        "dimension": 18,
+        "facts": 10,
+        "join": 14,
+        "aggregate": 10,
+        "sort": 6,
+        "sink": 13
+      },
+      "peak_process_rss_mib": 247.92578125,
+      "preview_seconds": 0.006617680999966069,
+      "preview_rows": 25,
+      "preview_read_bytes": 486,
+      "query_first_seconds": 0.0669778489999544,
+      "query_repeat_seconds": [
+        0.019046795000008387,
+        0.019195602999957373
+      ],
+      "query_repeat_median_seconds": 0.01912119899998288,
+      "output_sha256": "5fc1674fac73ad15f5aa6c6edce678628676d77bbb6747c0c02b9e4ab5360de0",
+      "correctness": "passed"
+    },
+    {
+      "case": "small",
+      "variant": "projected",
+      "input_rows": 100,
+      "input_columns": 6,
+      "input_sha256": {
+        "facts.csv": "9766da014bc88d26fd405547288046901cc2635772879eac0213af138a48058c",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "2992a3473ecfd57499338692dc18d35e9d20fc9f4ba2ccb5e8751b3228cf7641",
+      "execution_seconds": 0.18306542200002696,
+      "input_rows_per_second": 546.2528035468396,
+      "block_duration_ms": {
+        "dimension": 13,
+        "facts": 10,
+        "project": 10,
+        "join": 11,
+        "aggregate": 8,
+        "sort": 5,
+        "sink": 12
+      },
+      "peak_process_rss_mib": 244.38671875,
+      "preview_seconds": 0.013029654999968443,
+      "preview_rows": 25,
+      "preview_read_bytes": 486,
+      "query_first_seconds": 0.08330947100000685,
+      "query_repeat_seconds": [
+        0.041435821000050055,
+        0.0484687829999757
+      ],
+      "query_repeat_median_seconds": 0.04495230200001288,
+      "output_sha256": "5fc1674fac73ad15f5aa6c6edce678628676d77bbb6747c0c02b9e4ab5360de0",
+      "correctness": "passed"
+    },
+    {
+      "case": "medium",
+      "variant": "baseline",
+      "input_rows": 1000,
+      "input_columns": 10,
+      "input_sha256": {
+        "facts.csv": "259c9312cd3986437e18ad1885b56225a8cace65a68bc890db089aa7f5fb0ad4",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "ad483ebc17a4b985b264ac7b81694fcdc4ea8ee1fa5d752a646c80df67a343e7",
+      "execution_seconds": 0.3698461879999968,
+      "input_rows_per_second": 2703.8267053870745,
+      "block_duration_ms": {
+        "dimension": 18,
+        "facts": 83,
+        "join": 94,
+        "aggregate": 56,
+        "sort": 6,
+        "sink": 11
+      },
+      "peak_process_rss_mib": 248.65625,
+      "preview_seconds": 0.009027492999962305,
+      "preview_rows": 25,
+      "preview_read_bytes": 816,
+      "query_first_seconds": 0.062175183000022116,
+      "query_repeat_seconds": [
+        0.02305041300007815,
+        0.022511477999955787
+      ],
+      "query_repeat_median_seconds": 0.02278094550001697,
+      "output_sha256": "a7ecde10fafafc5850af5a2f58a130e62693f7269fe895870146f0531f77cac8",
+      "correctness": "passed"
+    },
+    {
+      "case": "medium",
+      "variant": "projected",
+      "input_rows": 1000,
+      "input_columns": 10,
+      "input_sha256": {
+        "facts.csv": "259c9312cd3986437e18ad1885b56225a8cace65a68bc890db089aa7f5fb0ad4",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "850caa449796cc52358da005a480c8493fb5337940a3213d7881d03a8a1b71c6",
+      "execution_seconds": 0.41455332300006376,
+      "input_rows_per_second": 2412.234915313527,
+      "block_duration_ms": {
+        "dimension": 27,
+        "facts": 58,
+        "project": 69,
+        "join": 34,
+        "aggregate": 24,
+        "sort": 7,
+        "sink": 12
+      },
+      "peak_process_rss_mib": 249.69921875,
+      "preview_seconds": 0.008610665999981393,
+      "preview_rows": 25,
+      "preview_read_bytes": 816,
+      "query_first_seconds": 0.07454909600005521,
+      "query_repeat_seconds": [
+        0.022459675000050083,
+        0.02174392799997804
+      ],
+      "query_repeat_median_seconds": 0.022101801500014062,
+      "output_sha256": "a7ecde10fafafc5850af5a2f58a130e62693f7269fe895870146f0531f77cac8",
+      "correctness": "passed"
+    },
+    {
+      "case": "wide",
+      "variant": "baseline",
+      "input_rows": 3000,
+      "input_columns": 26,
+      "input_sha256": {
+        "facts.csv": "ba4a8b075ab9a8fb2ff9df4d440dd471a896e9ed08b3013d24363562aed5d98a",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "1fad3e2636ff6cfaacf3ee207b0f1f4ba6594a57213ba3c53696c1ecd5d2662f",
+      "execution_seconds": 1.5251968979999901,
+      "input_rows_per_second": 1966.9591538862542,
+      "block_duration_ms": {
+        "dimension": 12,
+        "facts": 320,
+        "join": 644,
+        "aggregate": 372,
+        "sort": 10,
+        "sink": 26
+      },
+      "peak_process_rss_mib": 260.10546875,
+      "preview_seconds": 0.011505363999958718,
+      "preview_rows": 25,
+      "preview_read_bytes": 2219,
+      "query_first_seconds": 0.06053962100008903,
+      "query_repeat_seconds": [
+        0.019120369999996,
+        0.019844518000013522
+      ],
+      "query_repeat_median_seconds": 0.01948244400000476,
+      "output_sha256": "8a8804b7c01db5f4345d281f71ce490df8fdf16b128d5e37f6abeaa2594f81f8",
+      "correctness": "passed"
+    },
+    {
+      "case": "wide",
+      "variant": "projected",
+      "input_rows": 3000,
+      "input_columns": 26,
+      "input_sha256": {
+        "facts.csv": "ba4a8b075ab9a8fb2ff9df4d440dd471a896e9ed08b3013d24363562aed5d98a",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "3a8128a76e215985c28875400779b2132336d6a2007a35c3f578088ff85a8e28",
+      "execution_seconds": 1.0538948959999743,
+      "input_rows_per_second": 2846.5836691935865,
+      "block_duration_ms": {
+        "dimension": 15,
+        "facts": 325,
+        "project": 380,
+        "join": 86,
+        "aggregate": 59,
+        "sort": 20,
+        "sink": 18
+      },
+      "peak_process_rss_mib": 257.80859375,
+      "preview_seconds": 0.012190308999947774,
+      "preview_rows": 25,
+      "preview_read_bytes": 2219,
+      "query_first_seconds": 0.0626530609999918,
+      "query_repeat_seconds": [
+        0.02125531100000444,
+        0.019408388999977433
+      ],
+      "query_repeat_median_seconds": 0.020331849999990936,
+      "output_sha256": "8a8804b7c01db5f4345d281f71ce490df8fdf16b128d5e37f6abeaa2594f81f8",
+      "correctness": "passed"
+    },
+    {
+      "case": "small",
+      "variant": "projected",
+      "input_rows": 100,
+      "input_columns": 6,
+      "input_sha256": {
+        "facts.csv": "9766da014bc88d26fd405547288046901cc2635772879eac0213af138a48058c",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "2992a3473ecfd57499338692dc18d35e9d20fc9f4ba2ccb5e8751b3228cf7641",
+      "execution_seconds": 0.19325870000000123,
+      "input_rows_per_second": 517.4411294290987,
+      "block_duration_ms": {
+        "dimension": 16,
+        "facts": 10,
+        "project": 11,
+        "join": 14,
+        "aggregate": 10,
+        "sort": 7,
+        "sink": 12
+      },
+      "peak_process_rss_mib": 247.921875,
+      "preview_seconds": 0.006315618000030554,
+      "preview_rows": 25,
+      "preview_read_bytes": 486,
+      "query_first_seconds": 0.060823829000014484,
+      "query_repeat_seconds": [
+        0.019534393999947497,
+        0.019204371999990144
+      ],
+      "query_repeat_median_seconds": 0.01936938299996882,
+      "output_sha256": "5fc1674fac73ad15f5aa6c6edce678628676d77bbb6747c0c02b9e4ab5360de0",
+      "correctness": "passed"
+    },
+    {
+      "case": "small",
+      "variant": "baseline",
+      "input_rows": 100,
+      "input_columns": 6,
+      "input_sha256": {
+        "facts.csv": "9766da014bc88d26fd405547288046901cc2635772879eac0213af138a48058c",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "3b313370c5be69c61eed757bf57c6b584dcc8b9c510a53b50faadd9f17408c42",
+      "execution_seconds": 0.29060014799995315,
+      "input_rows_per_second": 344.1154475943905,
+      "block_duration_ms": {
+        "dimension": 19,
+        "facts": 17,
+        "join": 19,
+        "aggregate": 18,
+        "sort": 12,
+        "sink": 19
+      },
+      "peak_process_rss_mib": 252.8828125,
+      "preview_seconds": 0.00607940299994425,
+      "preview_rows": 25,
+      "preview_read_bytes": 486,
+      "query_first_seconds": 0.06440466600008676,
+      "query_repeat_seconds": [
+        0.02129961100001765,
+        0.020292745000006107
+      ],
+      "query_repeat_median_seconds": 0.020796178000011878,
+      "output_sha256": "5fc1674fac73ad15f5aa6c6edce678628676d77bbb6747c0c02b9e4ab5360de0",
+      "correctness": "passed"
+    },
+    {
+      "case": "medium",
+      "variant": "projected",
+      "input_rows": 1000,
+      "input_columns": 10,
+      "input_sha256": {
+        "facts.csv": "259c9312cd3986437e18ad1885b56225a8cace65a68bc890db089aa7f5fb0ad4",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "850caa449796cc52358da005a480c8493fb5337940a3213d7881d03a8a1b71c6",
+      "execution_seconds": 0.3974020319999454,
+      "input_rows_per_second": 2516.3434493966993,
+      "block_duration_ms": {
+        "dimension": 21,
+        "facts": 54,
+        "project": 63,
+        "join": 41,
+        "aggregate": 23,
+        "sort": 6,
+        "sink": 11
+      },
+      "peak_process_rss_mib": 245.56640625,
+      "preview_seconds": 0.007834604999970907,
+      "preview_rows": 25,
+      "preview_read_bytes": 816,
+      "query_first_seconds": 0.06393272400009664,
+      "query_repeat_seconds": [
+        0.01943765400005759,
+        0.019048228999963612
+      ],
+      "query_repeat_median_seconds": 0.019242941500010602,
+      "output_sha256": "a7ecde10fafafc5850af5a2f58a130e62693f7269fe895870146f0531f77cac8",
+      "correctness": "passed"
+    },
+    {
+      "case": "medium",
+      "variant": "baseline",
+      "input_rows": 1000,
+      "input_columns": 10,
+      "input_sha256": {
+        "facts.csv": "259c9312cd3986437e18ad1885b56225a8cace65a68bc890db089aa7f5fb0ad4",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "ad483ebc17a4b985b264ac7b81694fcdc4ea8ee1fa5d752a646c80df67a343e7",
+      "execution_seconds": 0.47532745800003795,
+      "input_rows_per_second": 2103.8128203397837,
+      "block_duration_ms": {
+        "dimension": 21,
+        "facts": 76,
+        "join": 134,
+        "aggregate": 70,
+        "sort": 7,
+        "sink": 14
+      },
+      "peak_process_rss_mib": 245.36328125,
+      "preview_seconds": 0.008455145000084485,
+      "preview_rows": 25,
+      "preview_read_bytes": 816,
+      "query_first_seconds": 0.06718373299997893,
+      "query_repeat_seconds": [
+        0.021303274000047168,
+        0.020559926000032647
+      ],
+      "query_repeat_median_seconds": 0.020931600000039907,
+      "output_sha256": "a7ecde10fafafc5850af5a2f58a130e62693f7269fe895870146f0531f77cac8",
+      "correctness": "passed"
+    },
+    {
+      "case": "wide",
+      "variant": "projected",
+      "input_rows": 3000,
+      "input_columns": 26,
+      "input_sha256": {
+        "facts.csv": "ba4a8b075ab9a8fb2ff9df4d440dd471a896e9ed08b3013d24363562aed5d98a",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "3a8128a76e215985c28875400779b2132336d6a2007a35c3f578088ff85a8e28",
+      "execution_seconds": 1.0280286180000076,
+      "input_rows_per_second": 2918.2066991835222,
+      "block_duration_ms": {
+        "dimension": 16,
+        "facts": 347,
+        "project": 362,
+        "join": 88,
+        "aggregate": 65,
+        "sort": 10,
+        "sink": 16
+      },
+      "peak_process_rss_mib": 255.44921875,
+      "preview_seconds": 0.012332510999954138,
+      "preview_rows": 25,
+      "preview_read_bytes": 2219,
+      "query_first_seconds": 0.06568561800008865,
+      "query_repeat_seconds": [
+        0.01909945499994592,
+        0.021059785000034026
+      ],
+      "query_repeat_median_seconds": 0.020079619999989973,
+      "output_sha256": "8a8804b7c01db5f4345d281f71ce490df8fdf16b128d5e37f6abeaa2594f81f8",
+      "correctness": "passed"
+    },
+    {
+      "case": "wide",
+      "variant": "baseline",
+      "input_rows": 3000,
+      "input_columns": 26,
+      "input_sha256": {
+        "facts.csv": "ba4a8b075ab9a8fb2ff9df4d440dd471a896e9ed08b3013d24363562aed5d98a",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "1fad3e2636ff6cfaacf3ee207b0f1f4ba6594a57213ba3c53696c1ecd5d2662f",
+      "execution_seconds": 2.263070189000018,
+      "input_rows_per_second": 1325.632768520365,
+      "block_duration_ms": {
+        "dimension": 17,
+        "facts": 495,
+        "join": 1083,
+        "aggregate": 507,
+        "sort": 9,
+        "sink": 23
+      },
+      "peak_process_rss_mib": 262.66015625,
+      "preview_seconds": 0.0342262499999606,
+      "preview_rows": 25,
+      "preview_read_bytes": 2219,
+      "query_first_seconds": 0.14836235400002806,
+      "query_repeat_seconds": [
+        0.03909096999996109,
+        0.03830671799994434
+      ],
+      "query_repeat_median_seconds": 0.038698843999952715,
+      "output_sha256": "8a8804b7c01db5f4345d281f71ce490df8fdf16b128d5e37f6abeaa2594f81f8",
+      "correctness": "passed"
+    },
+    {
+      "case": "small",
+      "variant": "baseline",
+      "input_rows": 100,
+      "input_columns": 6,
+      "input_sha256": {
+        "facts.csv": "9766da014bc88d26fd405547288046901cc2635772879eac0213af138a48058c",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "3b313370c5be69c61eed757bf57c6b584dcc8b9c510a53b50faadd9f17408c42",
+      "execution_seconds": 0.1891235670000242,
+      "input_rows_per_second": 528.754832548115,
+      "block_duration_ms": {
+        "dimension": 15,
+        "facts": 11,
+        "join": 15,
+        "aggregate": 11,
+        "sort": 8,
+        "sink": 13
+      },
+      "peak_process_rss_mib": 248.57421875,
+      "preview_seconds": 0.008342053999967902,
+      "preview_rows": 25,
+      "preview_read_bytes": 486,
+      "query_first_seconds": 0.11140270299995336,
+      "query_repeat_seconds": [
+        0.026669572000059816,
+        0.02400959600004171
+      ],
+      "query_repeat_median_seconds": 0.025339584000050763,
+      "output_sha256": "5fc1674fac73ad15f5aa6c6edce678628676d77bbb6747c0c02b9e4ab5360de0",
+      "correctness": "passed"
+    },
+    {
+      "case": "small",
+      "variant": "projected",
+      "input_rows": 100,
+      "input_columns": 6,
+      "input_sha256": {
+        "facts.csv": "9766da014bc88d26fd405547288046901cc2635772879eac0213af138a48058c",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "2992a3473ecfd57499338692dc18d35e9d20fc9f4ba2ccb5e8751b3228cf7641",
+      "execution_seconds": 0.23483770499990442,
+      "input_rows_per_second": 425.8259975758182,
+      "block_duration_ms": {
+        "dimension": 18,
+        "facts": 11,
+        "project": 15,
+        "join": 19,
+        "aggregate": 14,
+        "sort": 9,
+        "sink": 15
+      },
+      "peak_process_rss_mib": 251.31640625,
+      "preview_seconds": 0.006097804999967593,
+      "preview_rows": 25,
+      "preview_read_bytes": 486,
+      "query_first_seconds": 0.07666159399991557,
+      "query_repeat_seconds": [
+        0.019677608000051805,
+        0.019910522999907698
+      ],
+      "query_repeat_median_seconds": 0.01979406549997975,
+      "output_sha256": "5fc1674fac73ad15f5aa6c6edce678628676d77bbb6747c0c02b9e4ab5360de0",
+      "correctness": "passed"
+    },
+    {
+      "case": "medium",
+      "variant": "baseline",
+      "input_rows": 1000,
+      "input_columns": 10,
+      "input_sha256": {
+        "facts.csv": "259c9312cd3986437e18ad1885b56225a8cace65a68bc890db089aa7f5fb0ad4",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "ad483ebc17a4b985b264ac7b81694fcdc4ea8ee1fa5d752a646c80df67a343e7",
+      "execution_seconds": 0.4295783460000848,
+      "input_rows_per_second": 2327.8640772079384,
+      "block_duration_ms": {
+        "dimension": 34,
+        "facts": 57,
+        "join": 81,
+        "aggregate": 51,
+        "sort": 7,
+        "sink": 10
+      },
+      "peak_process_rss_mib": 244.16796875,
+      "preview_seconds": 0.007047169999964353,
+      "preview_rows": 25,
+      "preview_read_bytes": 816,
+      "query_first_seconds": 0.05389448999994784,
+      "query_repeat_seconds": [
+        0.017186045000016748,
+        0.017137542000000394
+      ],
+      "query_repeat_median_seconds": 0.01716179350000857,
+      "output_sha256": "a7ecde10fafafc5850af5a2f58a130e62693f7269fe895870146f0531f77cac8",
+      "correctness": "passed"
+    },
+    {
+      "case": "medium",
+      "variant": "projected",
+      "input_rows": 1000,
+      "input_columns": 10,
+      "input_sha256": {
+        "facts.csv": "259c9312cd3986437e18ad1885b56225a8cace65a68bc890db089aa7f5fb0ad4",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "850caa449796cc52358da005a480c8493fb5337940a3213d7881d03a8a1b71c6",
+      "execution_seconds": 0.309230102000015,
+      "input_rows_per_second": 3233.837823459863,
+      "block_duration_ms": {
+        "dimension": 13,
+        "facts": 49,
+        "project": 60,
+        "join": 33,
+        "aggregate": 22,
+        "sort": 6,
+        "sink": 11
+      },
+      "peak_process_rss_mib": 244.97265625,
+      "preview_seconds": 0.007727814999952898,
+      "preview_rows": 25,
+      "preview_read_bytes": 816,
+      "query_first_seconds": 0.06010480500003723,
+      "query_repeat_seconds": [
+        0.019949328999928184,
+        0.02062297400004809
+      ],
+      "query_repeat_median_seconds": 0.020286151499988136,
+      "output_sha256": "a7ecde10fafafc5850af5a2f58a130e62693f7269fe895870146f0531f77cac8",
+      "correctness": "passed"
+    },
+    {
+      "case": "wide",
+      "variant": "baseline",
+      "input_rows": 3000,
+      "input_columns": 26,
+      "input_sha256": {
+        "facts.csv": "ba4a8b075ab9a8fb2ff9df4d440dd471a896e9ed08b3013d24363562aed5d98a",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "1fad3e2636ff6cfaacf3ee207b0f1f4ba6594a57213ba3c53696c1ecd5d2662f",
+      "execution_seconds": 1.5381990809999024,
+      "input_rows_per_second": 1950.332721594046,
+      "block_duration_ms": {
+        "dimension": 14,
+        "facts": 324,
+        "join": 691,
+        "aggregate": 381,
+        "sort": 6,
+        "sink": 12
+      },
+      "peak_process_rss_mib": 261.8984375,
+      "preview_seconds": 0.012361924000060753,
+      "preview_rows": 25,
+      "preview_read_bytes": 2219,
+      "query_first_seconds": 0.07755596700008027,
+      "query_repeat_seconds": [
+        0.0195770039999843,
+        0.019497299000022394
+      ],
+      "query_repeat_median_seconds": 0.019537151500003347,
+      "output_sha256": "8a8804b7c01db5f4345d281f71ce490df8fdf16b128d5e37f6abeaa2594f81f8",
+      "correctness": "passed"
+    },
+    {
+      "case": "wide",
+      "variant": "projected",
+      "input_rows": 3000,
+      "input_columns": 26,
+      "input_sha256": {
+        "facts.csv": "ba4a8b075ab9a8fb2ff9df4d440dd471a896e9ed08b3013d24363562aed5d98a",
+        "dimension.csv": "6390690e0304c34accf5549be27942a9dc01b92ca77c2694a745be952c0748ca"
+      },
+      "graph_sha256": "3a8128a76e215985c28875400779b2132336d6a2007a35c3f578088ff85a8e28",
+      "execution_seconds": 1.2234522930000367,
+      "input_rows_per_second": 2452.0776307866304,
+      "block_duration_ms": {
+        "dimension": 15,
+        "facts": 349,
+        "project": 488,
+        "join": 101,
+        "aggregate": 77,
+        "sort": 6,
+        "sink": 11
+      },
+      "peak_process_rss_mib": 254.515625,
+      "preview_seconds": 0.013430692000042654,
+      "preview_rows": 25,
+      "preview_read_bytes": 2219,
+      "query_first_seconds": 0.08220196199999918,
+      "query_repeat_seconds": [
+        0.02251329600005647,
+        0.021703741999999693
+      ],
+      "query_repeat_median_seconds": 0.022108519000028082,
+      "output_sha256": "8a8804b7c01db5f4345d281f71ce490df8fdf16b128d5e37f6abeaa2594f81f8",
+      "correctness": "passed"
+    }
+  ],
+  "summary": {
+    "small/baseline": {
+      "execution_seconds": {
+        "min": 0.17142245000002276,
+        "median": 0.1891235670000242,
+        "max": 0.29060014799995315
+      },
+      "input_rows_per_second": {
+        "min": 344.1154475943905,
+        "median": 528.754832548115,
+        "max": 583.3541639381932
+      },
+      "peak_process_rss_mib": {
+        "min": 247.92578125,
+        "median": 248.57421875,
+        "max": 252.8828125
+      },
+      "preview_seconds": {
+        "min": 0.00607940299994425,
+        "median": 0.006617680999966069,
+        "max": 0.008342053999967902
+      },
+      "query_first_seconds": {
+        "min": 0.06440466600008676,
+        "median": 0.0669778489999544,
+        "max": 0.11140270299995336
+      },
+      "query_repeat_median_seconds": {
+        "min": 0.01912119899998288,
+        "median": 0.020796178000011878,
+        "max": 0.025339584000050763
+      }
+    },
+    "small/projected": {
+      "execution_seconds": {
+        "min": 0.18306542200002696,
+        "median": 0.19325870000000123,
+        "max": 0.23483770499990442
+      },
+      "input_rows_per_second": {
+        "min": 425.8259975758182,
+        "median": 517.4411294290987,
+        "max": 546.2528035468396
+      },
+      "peak_process_rss_mib": {
+        "min": 244.38671875,
+        "median": 247.921875,
+        "max": 251.31640625
+      },
+      "preview_seconds": {
+        "min": 0.006097804999967593,
+        "median": 0.006315618000030554,
+        "max": 0.013029654999968443
+      },
+      "query_first_seconds": {
+        "min": 0.060823829000014484,
+        "median": 0.07666159399991557,
+        "max": 0.08330947100000685
+      },
+      "query_repeat_median_seconds": {
+        "min": 0.01936938299996882,
+        "median": 0.01979406549997975,
+        "max": 0.04495230200001288
+      }
+    },
+    "medium/baseline": {
+      "execution_seconds": {
+        "min": 0.3698461879999968,
+        "median": 0.4295783460000848,
+        "max": 0.47532745800003795
+      },
+      "input_rows_per_second": {
+        "min": 2103.8128203397837,
+        "median": 2327.8640772079384,
+        "max": 2703.8267053870745
+      },
+      "peak_process_rss_mib": {
+        "min": 244.16796875,
+        "median": 245.36328125,
+        "max": 248.65625
+      },
+      "preview_seconds": {
+        "min": 0.007047169999964353,
+        "median": 0.008455145000084485,
+        "max": 0.009027492999962305
+      },
+      "query_first_seconds": {
+        "min": 0.05389448999994784,
+        "median": 0.062175183000022116,
+        "max": 0.06718373299997893
+      },
+      "query_repeat_median_seconds": {
+        "min": 0.01716179350000857,
+        "median": 0.020931600000039907,
+        "max": 0.02278094550001697
+      }
+    },
+    "medium/projected": {
+      "execution_seconds": {
+        "min": 0.309230102000015,
+        "median": 0.3974020319999454,
+        "max": 0.41455332300006376
+      },
+      "input_rows_per_second": {
+        "min": 2412.234915313527,
+        "median": 2516.3434493966993,
+        "max": 3233.837823459863
+      },
+      "peak_process_rss_mib": {
+        "min": 244.97265625,
+        "median": 245.56640625,
+        "max": 249.69921875
+      },
+      "preview_seconds": {
+        "min": 0.007727814999952898,
+        "median": 0.007834604999970907,
+        "max": 0.008610665999981393
+      },
+      "query_first_seconds": {
+        "min": 0.06010480500003723,
+        "median": 0.06393272400009664,
+        "max": 0.07454909600005521
+      },
+      "query_repeat_median_seconds": {
+        "min": 0.019242941500010602,
+        "median": 0.020286151499988136,
+        "max": 0.022101801500014062
+      }
+    },
+    "wide/baseline": {
+      "execution_seconds": {
+        "min": 1.5251968979999901,
+        "median": 1.5381990809999024,
+        "max": 2.263070189000018
+      },
+      "input_rows_per_second": {
+        "min": 1325.632768520365,
+        "median": 1950.332721594046,
+        "max": 1966.9591538862542
+      },
+      "peak_process_rss_mib": {
+        "min": 260.10546875,
+        "median": 261.8984375,
+        "max": 262.66015625
+      },
+      "preview_seconds": {
+        "min": 0.011505363999958718,
+        "median": 0.012361924000060753,
+        "max": 0.0342262499999606
+      },
+      "query_first_seconds": {
+        "min": 0.06053962100008903,
+        "median": 0.07755596700008027,
+        "max": 0.14836235400002806
+      },
+      "query_repeat_median_seconds": {
+        "min": 0.01948244400000476,
+        "median": 0.019537151500003347,
+        "max": 0.038698843999952715
+      }
+    },
+    "wide/projected": {
+      "execution_seconds": {
+        "min": 1.0280286180000076,
+        "median": 1.0538948959999743,
+        "max": 1.2234522930000367
+      },
+      "input_rows_per_second": {
+        "min": 2452.0776307866304,
+        "median": 2846.5836691935865,
+        "max": 2918.2066991835222
+      },
+      "peak_process_rss_mib": {
+        "min": 254.515625,
+        "median": 255.44921875,
+        "max": 257.80859375
+      },
+      "preview_seconds": {
+        "min": 0.012190308999947774,
+        "median": 0.012332510999954138,
+        "max": 0.013430692000042654
+      },
+      "query_first_seconds": {
+        "min": 0.0626530609999918,
+        "median": 0.06568561800008865,
+        "max": 0.08220196199999918
+      },
+      "query_repeat_median_seconds": {
+        "min": 0.020079619999989973,
+        "median": 0.020331849999990936,
+        "max": 0.022108519000028082
+      }
+    }
+  },
+  "failure_probes": [
+    {
+      "failure": "source",
+      "state": "failed",
+      "codes": [
+        "dependency_failed",
+        "table_limit"
+      ],
+      "expected_code": "table_limit",
+      "execution_seconds": 0.11745010399999956
+    },
+    {
+      "failure": "executor",
+      "state": "failed",
+      "codes": [
+        "data_limit",
+        "dependency_failed"
+      ],
+      "expected_code": "data_limit",
+      "execution_seconds": 0.11633146899998792
+    }
+  ],
+  "docker_constraints": {
+    "NanoCpus": 2000000000,
+    "Memory": 1073741824,
+    "MemorySwap": 2147483648,
+    "NetworkMode": "none"
+  },
+  "container_image_id": "sha256:28885cdc076da50cbbdfee13e5357d883b2b8b4af0f4cdf13dd3b2562cee0408",
+  "runner_sha256": "75ba31dfbf6041b82778bc4e2ea5e1cefbc7eed4bc78ead58291276441913c6d"
+}
