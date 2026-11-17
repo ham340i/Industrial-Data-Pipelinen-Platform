@@ -60,6 +60,14 @@ WRITE_INPUT = (
     "target.parent.mkdir(parents=True,exist_ok=True)\n"
     "target.write_bytes(sys.stdin.buffer.read())"
 )
+# Rehearsal only: makes the live database claim a schema this candidate lacks,
+# as data written by a newer release would.
+STAMP_SCHEMA = (
+    "import sqlite3,sys\n"
+    "c=sqlite3.connect(sys.argv[1])\n"
+    "c.execute('UPDATE alembic_version SET version_num=?',(sys.argv[2],))\n"
+    "c.commit()"
+)
 RESTORE = f"find {DATA_ROOT} -mindepth 1 -delete && tar -C {DATA_ROOT} -xzf -"
 
 Runner = Callable[[Sequence[str], bytes | None, Mapping[str, str]], bytes]
@@ -148,7 +156,7 @@ class Compose:
     def text(self, *args: str) -> str:
         return self(*args).decode().strip()
 
-    def up(self, build: bool = False) -> None:
+    def up(self, build: bool = False, recreate: bool = False) -> None:
         self(
             "up",
             "--detach",
@@ -156,6 +164,7 @@ class Compose:
             "--wait-timeout",
             "180",
             *(["--build"] if build else []),
+            *(["--force-recreate"] if recreate else []),
         )
 
     def running(self) -> bool:
@@ -238,18 +247,25 @@ def backup(compose: Compose, output: Path) -> Path:
 
 
 def restore(compose: Compose, manifest_path: Path, confirmed: bool) -> None:
-    """Replace the candidate's data with a verified backup."""
+    """Replace the candidate's data with a verified backup.
+
+    Rollback restores run after checking out an older revision while a newer
+    candidate may still be running. Building first makes both the schema
+    check and the restart use the checked-out code, never a cached newer
+    image that would migrate the restored data forward again.
+    """
     if not confirmed:
         raise CandidateError("Restore replaces all candidate data; rerun with --yes")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     archive = (manifest_path.parent / str(manifest.get("archive", ""))).read_bytes()
+    compose("build")
     known = json.loads(compose.api_python(KNOWN_SCHEMAS))
     check_manifest(manifest, archive, known)
     was_running = compose.running()
     compose("stop")
     compose.volume("sh", "-c", RESTORE, data=archive)
     if was_running:
-        compose.up()
+        compose.up(recreate=True)
 
 
 def reset(compose: Compose, confirmed: bool) -> None:
@@ -328,7 +344,33 @@ def smoke_steps(
     restore(compose, manifest, confirmed=True)
     acceptance.verify_evidence(acceptance.http_sender(verify_health(compose)), evidence)
     log("restore: the backup brought back every run and output row")
+    rehearse_rollback(compose, scratch, manifest, evidence)
+    log("rollback: newer-schema data refused untouched; older backup restored")
     return evidence
+
+
+def rehearse_rollback(
+    compose: Compose, scratch: Path, older: Path, evidence: dict[str, object]
+) -> None:
+    """Refuse a backup from a newer schema, then roll back to an older one."""
+    compose("stop")
+    compose.api_python(STAMP_SCHEMA, METADATA, "9999_newer_release")
+    newer = backup(compose, scratch / "newer")
+    try:
+        restore(compose, newer, confirmed=True)
+    except CandidateError as error:
+        if "newer than or unknown" not in str(error):
+            raise
+    else:
+        raise CandidateError("A backup from a newer schema was restored")
+    if (
+        compose.api_python(READ_SCHEMA, METADATA).decode().strip()
+        != "9999_newer_release"
+    ):
+        raise CandidateError("A refused restore changed the candidate's data")
+    restore(compose, older, confirmed=True)
+    compose.up()
+    acceptance.verify_evidence(acceptance.http_sender(verify_health(compose)), evidence)
 
 
 def smoke(report: Path | None, runner: Runner = subprocess_runner) -> dict[str, object]:

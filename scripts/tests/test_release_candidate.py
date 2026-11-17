@@ -222,6 +222,60 @@ class DataSafetyTests(unittest.TestCase):
         self.assertLess(stop, next(i for i, c in enumerate(docker.calls) if rc.RESTORE in c))
 
 
+class RollbackTests(unittest.TestCase):
+    """Ahmad's review of PR #106: restore must use the checked-out revision."""
+
+    write_backup = DataSafetyTests.write_backup
+
+    def position(self, docker, *parts):
+        return next(i for i, call in enumerate(docker.calls) if all(p in call for p in parts))
+
+    def test_restore_builds_before_checking_schemas_and_recreates_on_restart(self):
+        docker = FakeDocker(running=True)
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.write_backup(Path(folder))
+            rc.restore(compose(docker), path, confirmed=True)
+        build = docker.calls.index(["build"])
+        self.assertLess(build, self.position(docker, rc.KNOWN_SCHEMAS))
+        self.assertLess(build, docker.calls.index(["stop"]))
+        self.assertIn("--force-recreate", docker.calls[-1])
+
+    def test_schema_unknown_to_the_rebuilt_image_is_refused_before_stopping(self):
+        docker = FakeDocker(known=("0001", "0002", "0003"))
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.write_backup(Path(folder))
+            candidate = compose(docker)
+            with self.assertRaisesRegex(rc.CandidateError, "newer than or unknown"):
+                rc.restore(candidate, path, confirmed=True)
+        self.assertTrue(docker.ran("build"))
+        self.assertFalse(docker.ran("stop"))
+
+    def rehearse(self, docker):
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(rc, "verify_health", return_value="http://127.0.0.1:3000"), \
+                patch.object(rc.acceptance, "verify_evidence") as verify:
+            older = self.write_backup(Path(folder))
+            rc.rehearse_rollback(compose(docker), Path(folder), older, {})
+        return verify
+
+    def test_rollback_rehearsal_refuses_newer_data_then_restores_the_older_backup(self):
+        docker = FakeDocker(running=False, schema=b"9999_newer_release\n")
+        verify = self.rehearse(docker)
+        stamp = self.position(docker, rc.STAMP_SCHEMA)
+        self.assertEqual(docker.calls[stamp][-2:], [rc.METADATA, "9999_newer_release"])
+        restores = [i for i, call in enumerate(docker.calls) if rc.RESTORE in call]
+        self.assertEqual(len(restores), 1)
+        self.assertGreater(restores[0], stamp)
+        self.assertEqual(docker.calls[-1][0], "up")
+        verify.assert_called_once()
+
+    def test_rollback_rehearsal_fails_if_newer_data_is_accepted(self):
+        docker = FakeDocker(running=False, schema=b"9999_newer_release\n",
+                            known=("0004", "9999_newer_release"))
+        with self.assertRaisesRegex(rc.CandidateError, "newer schema was restored"):
+            self.rehearse(docker)
+
+
 class SmokeTests(unittest.TestCase):
     def test_smoke_tears_down_and_reports_even_when_acceptance_fails(self):
         docker = FakeDocker()
