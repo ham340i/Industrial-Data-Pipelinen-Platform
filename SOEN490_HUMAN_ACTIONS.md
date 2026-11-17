@@ -28,7 +28,7 @@ Updated November 17, 2026. These items need a person: a decision, a real event, 
 
 ## Engineering still open
 
-13. Review and merge [#105](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/105) (this readiness work), and finish packaging [#36](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/36).
+13. Release 1 engineering is complete (#105 and #106 merged). Tag `v1.0.0-release1` on `main` after this update merges.
 14. **Required checks.** Branch protection requires only the repository and documentation checks. In Settings → Branches → `main`, add `Backend checks`, `Frontend checks`, `Compose workspace smoke` and both `Standalone workspace smoke` jobs as required.
 15. **Merge method.** In Settings → General → Pull Requests, untick "Allow squash merging" and "Allow rebase merging" so only merge commits are possible.
 16. **Reviews.** From now on every approval must say what was examined. An approval without a technical comment does not count.
