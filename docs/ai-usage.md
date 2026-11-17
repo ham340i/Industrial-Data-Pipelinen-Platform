@@ -11,3 +11,12 @@ Verification performed: <actual commands/results or pending>
 ```
 
 Do not claim generated text/code was written manually, attribute team work to yourself, or claim review that has not happened. Add the recommended commit footer from the policy and summarize assistance in each personal contribution, iteration and release record.
+
+## Issue #31 workflow integration
+
+OpenAI Codex designed, implemented and tested nested quality/aggregate forms,
+validation controls, bounded output inspection and the real-service Playwright
+acceptance workflow at the user's direction. Actual checks, failed attempts
+and remaining review/signoff are in the
+[verification record](testing/issue-31-workflow.md). No independent human
+review or manual student authorship is asserted.

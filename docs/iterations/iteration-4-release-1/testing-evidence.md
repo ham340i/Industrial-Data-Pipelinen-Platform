@@ -71,3 +71,12 @@ frontend parser contract tests), the two cross-feature mismatches it found
 and fixed, the exact commands, environment and counts, and the CI result
 capture. Whole-release acceptance, independent review and stakeholder
 signoff remain pending.
+
+## November 16: issue #31 workflow integration
+
+[Design](../../design/issue-31-workflow.md) and
+[executed verification](../../testing/issue-31-workflow.md) cover nested
+quality/aggregate forms, real validation, saved execution, governed output
+inspection, and the full real-service Playwright acceptance scenario.
+All prerequisite issues were closed when checked. Independent review and
+stakeholder acceptance remain pending; this is not whole-iteration signoff.
