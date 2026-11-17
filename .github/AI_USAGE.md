@@ -295,3 +295,39 @@ the dependency audits and lockfile updates. The issue owner directed scope
 and reviewed the result. Every fix has a regression test; all backend,
 frontend, repository and documentation checks were run locally. Independent
 student review is pending.
+
+Declared per file, matching the `# AI contribution:` header in each file
+and the PR description. Levels come from the share of current lines
+(`git blame -w`) last written by commits that disclose AI assistance,
+plus the #32 changes.
+
+- `50% or more`: `app/secret_policy.py`, `app/runs/redaction.py`,
+  `app/sources/sql.py`, `app/blocks/files.py`, `app/blocks/file_sinks.py`,
+  `app/blocks/parquet_decode.py`, `app/blocks/csv_preview.py`,
+  `app/metadata/portable.py`, `scripts/check_repository.py`,
+  `tests/test_secret_policy.py`, `tests/test_run_redaction.py`,
+  `tests/test_env_examples.py`, `tests/test_security_boundaries.py`,
+  `tests/test_file_policy.py`, `tests/test_file_blocks.py`,
+  `tests/test_pipeline_api.py`, `tests/test_sql_source_execution.py`,
+  and the #32 documentation.
+- `below 50%` (human-written files with small #32 edits):
+  `app/artifacts/query.py`, `app/artifacts/registration.py`,
+  `app/blocks/contracts.py`, `app/blocks/file_preview.py`,
+  `app/blocks/json_preview.py`, `app/blocks/catalog.py`,
+  `app/runs/scheduler.py`, `tests/test_artifact_query.py`,
+  `tests/test_artifact_registration.py`, `tests/test_file_preview.py`,
+  `tests/test_scheduler.py`.
+
+Corrections from `menaboulus`'s review of
+[PR #88](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/88)
+(Claude Code; each change verified by the backend suite, ruff and mypy;
+see the [follow-up record](../docs/testing/issue-32-security-boundaries.md#review-follow-up-pr-88)):
+the Parquet decode-size checks moved to `app/blocks/parquet_decode.py`;
+`app/blocks/files.py` (734 lines) was split into `files.py`,
+`file_sinks.py` and `csv_preview.py`, and the JSON preview moved to
+`json_preview.py`. The four functions flagged for complexity were split
+into named steps, from 17-23 down to at most 8. The source and sink format
+hooks became abstract methods. Boundary tests now pin the Parquet
+declared-page budget at the 16x edge and at the 1 GiB cap. The PR
+description's AI section wrongly named OpenAI Codex; the tool was Claude
+Code, and the section now states the level and the per-file list above.

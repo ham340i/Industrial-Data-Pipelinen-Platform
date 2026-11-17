@@ -33,7 +33,7 @@ public error messages, and loopback-only Compose publishing.
 | Criterion | Tests |
 |---|---|
 | Workspace path confinement including traversal/symlink policy | `tests/test_security_boundaries.py`: `test_traversal_and_machine_paths_are_refused_before_persistence` (7 refs), `test_symlinked_inputs_folder_cannot_read_outside_the_project`, `test_symlinked_input_file_is_refused_by_preview_and_execute`, `test_sink_cannot_write_through_a_symlinked_output_folder`, `test_sink_replace_cannot_overwrite_a_symlinked_target_file`; `tests/test_sql_source_execution.py`: `test_database_path_must_be_a_workspace_relative_database` (12 paths), `test_symlink_escaping_the_workspace_is_refused_without_its_path`; existing unit coverage in `tests/test_file_blocks.py` and `tests/test_integration_failures.py` |
-| Read-only SQL/artifact-query restrictions and bounded inputs | `test_sql_write_queries_are_refused_at_validation` (5), `test_sql_introspection_and_extensions_are_refused_at_runtime` (3, database hash unchanged); `test_engine_budgets_stop_resource_exhausting_queries`, `test_row_and_file_budgets_are_enforced`, `test_query_and_parameters_are_bounded`; `tests/test_artifact_query.py`: `test_locked_connection_reads_only_the_resolved_artifact`, `test_locked_connection_refuses_reconfiguration_writes_and_extensions` (5); `tests/test_file_policy.py`: `test_parquet_dictionary_bomb_is_refused_before_expansion`, `test_parquet_large_declared_pages_are_refused_before_reading`, `test_parquet_row_count_is_checked_from_metadata_before_decoding`, `test_dictionary_strings_within_budget_decode_to_plain_values`, `test_decoded_bytes_counts_dictionary_expansion`; `tests/test_file_preview.py`: `test_parquet_preview_refuses_dictionary_expansion_before_decoding`; `test_oversized_input_fails_with_a_limit_code`, `test_malformed_input_fails_without_echoing_its_contents` |
+| Read-only SQL/artifact-query restrictions and bounded inputs | `test_sql_write_queries_are_refused_at_validation` (5), `test_sql_introspection_and_extensions_are_refused_at_runtime` (3, database hash unchanged); `test_engine_budgets_stop_resource_exhausting_queries`, `test_row_and_file_budgets_are_enforced`, `test_query_and_parameters_are_bounded`; `tests/test_artifact_query.py`: `test_locked_connection_reads_only_the_resolved_artifact`, `test_locked_connection_refuses_reconfiguration_writes_and_extensions` (5); `tests/test_file_policy.py`: `test_parquet_dictionary_bomb_is_refused_before_expansion`, `test_parquet_large_declared_pages_are_refused_before_reading`, `test_parquet_row_count_is_checked_from_metadata_before_decoding`, `test_dictionary_strings_within_budget_decode_to_plain_values`, `test_decoded_bytes_counts_dictionary_expansion`, and the budget boundaries `test_parquet_decode_budget_is_sixteen_times_capped_at_one_gib` (5), `test_parquet_declared_pages_just_within_and_just_over_the_budget`, `test_parquet_declared_pages_at_the_one_gib_cap` (2); `tests/test_file_preview.py`: `test_parquet_preview_refuses_dictionary_expansion_before_decoding`; `test_oversized_input_fails_with_a_limit_code`, `test_malformed_input_fails_without_echoing_its_contents` |
 | Env/example separation; no credentials in saved/exported definitions | `tests/test_env_examples.py` (6): example files hold only non-credential names/values, `.env*` ignored except examples, both Docker contexts exclude `.env`, `Settings` has no credential fields; `tests/test_secret_policy.py` (50); `tests/test_pipeline_api.py`: `test_credentials_never_reach_saved_definitions` (5, create and update, nothing persisted). Definitions are exported only through the pipeline GET responses, which return what `PortableJSON` admitted at write time |
 | Redact sensitive error/log fields; review actual dependency findings | `tests/test_run_redaction.py`: `test_compound_keys_and_auth_schemes_are_masked` (12), `test_lookalike_words_are_not_redacted` (4); `tests/test_scheduler.py`: `test_failed_tick_logs_the_exception_type_without_its_text`; path-free error assertions throughout `tests/test_security_boundaries.py`; [dependency review](#dependency-review) |
 | Abuse/regression fixtures and remaining threat-model decisions | `tests/test_security_boundaries.py` (21 API-level cases); [accepted risks](../security/security-plan.md#accepted-risks-and-threat-model-decisions) |
@@ -71,15 +71,19 @@ the PR.
 ```text
 python -m ruff check                      All checks passed!
 python -m ruff format --check             passed
-python -m mypy                            Success: no issues found in 108 source files
-python -m pytest                          1042 passed (913 before this branch; +129 new)
-python3 scripts/check_repository.py       Repository checks passed (451 files)
+python -m mypy                            Success: no issues found in 112 source files
+python -m pytest                          1052 passed (913 before this branch; +139 new)
+python3 scripts/check_repository.py       Repository checks passed (456 files)
 python3 scripts/check_docs.py             Documentation checks passed
 python3 scripts/check_release_plan.py     passed
 python3 -m unittest discover -s scripts/tests   Ran 16 tests, OK
 (frontend) npm ci --ignore-scripts && npm run check
                                           lint, format, typecheck, 209 tests, build: exit 0
 ```
+
+The backend, repository and documentation rows were rerun after the
+review follow-up below. The frontend row is from the first round: the
+follow-up changed no frontend file. CI reruns every job on the new head.
 
 E2E: not applicable. No Builder UI behavior changed; the Playwright suites
 were not rerun locally (`npm run check` covers the frontend unit tests and
@@ -92,6 +96,30 @@ committed): the redaction probe above, the SQLite authorizer probe
 Parquet bomb (accepted before, `file_limit` after) and the DuckDB lock probe
 (second file, `COPY`, `ATTACH`, `INSTALL` and `SET enable_external_access`
 all refused).
+
+## Review follow-up (PR #88)
+
+`menaboulus`'s rubric review of
+[PR #88](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/88)
+at `a5d8c18` asked for structural fixes, AI declarations and a boundary
+test. Each item became its own commit; behavior is unchanged except
+where stated.
+
+| Review item | Change | Evidence |
+|---|---|---|
+| Put the dictionary-size check in its own helper module | `app/blocks/parquet_decode.py` holds the decode budget, declared-page sum, dictionary-aware decoded size and the shared Arrow → SDK type map. Execution and preview both import it | Existing Parquet tests unchanged and passing |
+| `files.py` 734 lines (limit 500) | Writers moved to `app/blocks/file_sinks.py`; CSV preview moved to `app/blocks/csv_preview.py` | `files.py` 412 lines; largest new module 304 |
+| Complexity of `CsvSource._preview` (17), `JsonRecords.__next__` (22), `preview_json` (16), `preview_parquet` (23) | Split into one helper per step; the JSON preview moved to `app/blocks/json_preview.py` so `file_preview.py` stays under 500 lines | Highest complexity in the touched block modules is 8 (ruff C901); none over 50 statements (PLR0915) |
+| `NotImplementedError` placeholders | `FileSource._read` and `FileSink._write` are `@abstractmethod` | `test_file_block_hooks_are_abstract` (2) |
+| `print` in `scripts/check_repository.py` | Comment explains it is the CLI's report | Repository checks pass |
+| AI level missing from file headers | `# AI contribution: <level>` on every Python file the PR touches, from `git blame` shares | Per-file list in [AI_USAGE.md](../../.github/AI_USAGE.md#issue-32-file-sql-and-configuration-security-boundaries) |
+| Boundary test for the Parquet declared-page budget | Tests at the 16× edge (real file) and at the 1 GiB cap (declared size substituted, real comparison) | 8 new cases; a `>=` mutation and a removed cap are each caught |
+
+Two drifts were checked for while splitting `preview_parquet`: the check
+order, where a corrupt file still reports `unsupported_type` before
+`invalid_parquet`; and the sample slicing, where a footer that
+under-declares its rows still fails the metadata/sample comparison. Both
+were kept.
 
 ## AI assistance
 
