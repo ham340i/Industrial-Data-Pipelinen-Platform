@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Bounded DuckDB reads over registered Parquet artifacts only."""
 
 from __future__ import annotations

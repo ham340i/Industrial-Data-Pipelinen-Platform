@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """JSON storage validation without taking ownership of the future DAG contract."""
 
 import json

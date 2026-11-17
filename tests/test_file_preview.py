@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """JSON/Parquet previews: bounded reads, honest provenance and API isolation."""
 
 import io

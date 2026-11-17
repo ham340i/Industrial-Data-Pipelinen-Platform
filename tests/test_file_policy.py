@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Separate correctness pass: limits, partial writes and competing writers."""
 
 import os

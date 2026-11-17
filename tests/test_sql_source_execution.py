@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 from __future__ import annotations
 
 import sqlite3

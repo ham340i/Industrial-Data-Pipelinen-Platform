@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Bounded, registered-artifact-only DuckDB query policy (#28)."""
 
 from collections.abc import Iterator

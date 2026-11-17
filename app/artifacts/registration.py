@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Persist trusted file-sink outputs after their atomic publication."""
 
 from collections.abc import Mapping

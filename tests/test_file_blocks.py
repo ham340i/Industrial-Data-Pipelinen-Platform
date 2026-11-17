@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Requirements-derived reader/writer/SDK integration cases (#16, #20)."""
 
 import json

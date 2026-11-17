@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI contribution: 50% or more AI-generated
 """Validate repository configuration and run limited, path-only secret checks."""
 
 import ast

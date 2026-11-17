@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Bounded Parquet batches and the preview checks shared with JSON previews.
 
 JSON record framing lives in app/blocks/json_preview.py and CSV in

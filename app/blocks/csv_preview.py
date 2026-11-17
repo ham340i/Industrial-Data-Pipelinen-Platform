@@ -1,4 +1,4 @@
-# AI contribution: below 50% AI-generated
+# AI contribution: 50% or more AI-generated
 """Bounded CSV preview: header checks, a row-prefix sample and provenance.
 
 Moved out of ``CsvSource._preview`` in app/blocks/files.py (#32 review) and
