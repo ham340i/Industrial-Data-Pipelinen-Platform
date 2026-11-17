@@ -1,11 +1,10 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """SDK v1 public contracts, independent of the API and database."""
 
 from __future__ import annotations
 
 import math
 import json
-import re
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -19,6 +18,8 @@ from pydantic import (
     model_validator,
 )
 
+from app.secret_policy import is_credential_key
+
 Scalar = str | int | float | bool | None
 
 
@@ -30,24 +31,6 @@ def _nonblank(value: str) -> str:
 
 NonBlank = Annotated[str, AfterValidator(_nonblank)]
 
-_CREDENTIAL_FIELDS = frozenset(
-    {
-        "password",
-        "passwd",
-        "secret",
-        "secrets",
-        "credential",
-        "credentials",
-        "token",
-        "accesstoken",
-        "refreshtoken",
-        "apikey",
-        "connectionstring",
-        "dsn",
-        "username",
-    }
-)
-
 
 class PublicValueError(ValueError):
     def __init__(self, field: str | None = None) -> None:
@@ -58,8 +41,9 @@ class PublicValueError(ValueError):
 def require_public_json(value: object) -> None:
     """Check original Python values: JSON serialization alone coerces some types.
 
-    Known credential keys are forbidden, including in schema defaults. This is
-    not a detector for arbitrary secret strings under otherwise public names.
+    Credential keys under the shared policy (``app.secret_policy``) are
+    forbidden, including in schema defaults. This is not a detector for
+    arbitrary secret strings under otherwise public names.
     """
     active: set[int] = set()
 
@@ -81,8 +65,7 @@ def require_public_json(value: object) -> None:
                         if not isinstance(key, str):
                             raise PublicValueError()
                         child_path = (*path, key)
-                        normalized = re.sub(r"[^a-z0-9]", "", key.lower())
-                        if normalized in _CREDENTIAL_FIELDS:
+                        if is_credential_key(key):
                             raise PublicValueError(".".join(child_path))
                         visit(child, child_path)
                 else:

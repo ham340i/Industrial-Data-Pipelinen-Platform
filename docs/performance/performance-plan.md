@@ -1,8 +1,9 @@
 # Performance plan
 
-> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Performance](../wiki/Performance.md).
-
-No benchmarks have been run. Targets require representative stakeholder workloads and approved hardware; do not treat suggested metrics as achieved results.
+Synthetic measurements are recorded for the [Polars/Arrow spike](issue-13-polars-arrow.md)
+and [issue #35 service workflow benchmark](issue-35-workloads.md). Targets still
+require representative stakeholder workloads and approved hardware; these local
+observations are not accepted production limits or achieved release SLOs.
 
 | Metric | Measurement method | Target | Measured result |
 |---|---|---|---|

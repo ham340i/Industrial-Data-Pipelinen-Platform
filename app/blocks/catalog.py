@@ -7,8 +7,8 @@ from app.blocks.contracts import BlockMetadata
 from app.blocks.registry import BlockRegistry
 from app.blocks.sample import AddConstantBlock
 from app.blocks.sql import SqlSource
+from app.blocks.file_sinks import CsvSink, ParquetSink
 from app.blocks.files import CsvSource, JsonSource, ParquetSource
-from app.blocks.sinks import CsvSink, ParquetSink
 from app.blocks.relational import Aggregate, Join
 from app.blocks.transforms import Cast, Filter, RenameColumns, SelectColumns, Sort
 from app.blocks.quality import NullHandling, SchemaValidation, NullCheck, RowCount

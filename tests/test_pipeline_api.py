@@ -160,6 +160,40 @@ def test_invalid_definitions_are_rejected_without_persistence(
     assert client.get(path).json()["total"] == 0
 
 
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"client_secret": "PRIVATE_SENTINEL"},
+        {"db_password": "PRIVATE_SENTINEL"},
+        {"options": {"github_token": "PRIVATE_SENTINEL"}},
+        {"source": "postgresql://operator:PRIVATE_SENTINEL@db.example/plant"},
+        {"source": "~/PRIVATE_SENTINEL.csv"},
+    ],
+)
+def test_credentials_never_reach_saved_definitions(
+    client: TestClient, config: dict[str, Any]
+):
+    """Create and update both refuse compound credential keys and URLs (#32)."""
+    path = project_path(client)
+    rejected = graph()
+    rejected["nodes"][0]["config"] = config
+    created = client.post(path, json={"name": "Rejected", "definition": rejected})
+    assert created.status_code == 422, created.text
+    assert "PRIVATE_SENTINEL" not in created.text
+    assert client.get(path).json()["total"] == 0
+
+    saved = client.post(path, json={"name": "Saved", "definition": graph()}).json()
+    url = f"{path}/{saved['id']}"
+    updated = client.put(
+        url, json={"name": "Saved", "expected_revision": 1, "definition": rejected}
+    )
+    assert updated.status_code == 422, updated.text
+    assert "PRIVATE_SENTINEL" not in updated.text
+    reloaded = client.get(url)
+    assert reloaded.json()["revision"] == 1
+    assert "PRIVATE_SENTINEL" not in reloaded.text
+
+
 def test_interrupted_save_rolls_back_name_and_revision(client: TestClient):
     path = project_path(client)
     original = client.post(

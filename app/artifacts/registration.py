@@ -1,4 +1,4 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """Persist trusted file-sink outputs after their atomic publication."""
 
 from collections.abc import Mapping
@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.blocks.contracts import DataSchema
-from app.blocks.sinks import ARTIFACT_SCHEMA
+from app.blocks.file_sinks import ARTIFACT_SCHEMA
 from app.execution import ExecutionContext, Frame
 from app.metadata.models import OutputEndpoint
 

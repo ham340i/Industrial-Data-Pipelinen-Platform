@@ -63,6 +63,19 @@ budgets use `sql_query_failed`; type/order failures use `schema_mismatch`.
 The block emits fixed messages without the SQL, bound values, paths or raw SQLite
 exception. Correct the local file or configuration and save before rerunning.
 
+## Standalone reader (`app.sources.sql`)
+
+`read_sqlite_source(config, *, workspace_root=...)` is the engine-free SQLite
+reader from the #23 contract. Since #32 it applies the same boundary as the
+block: `SqlSourceConfig.database_path` must be a workspace-relative `.sqlite3`,
+`.sqlite` or `.db` name (absolute, drive, UNC, `~` and `..` paths are rejected
+lexically), and it must resolve, after following links, to a file inside
+`workspace_root`. Errors never include the machine path. The connection uses
+`mode=ro`, `query_only`, the read authorizer, a 16 MiB value/file limit, a
+1,000,000-instruction budget and a 100,000-row result budget; callers may pass
+tighter `max_bytes`, `max_rows` and `max_steps`. Query text is capped at 20,000
+characters and parameters at 100 names.
+
 ## Synthetic join example
 
 The [portable example](examples/sql-join-pipeline.json) contains

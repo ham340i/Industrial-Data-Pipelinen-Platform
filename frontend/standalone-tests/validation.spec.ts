@@ -6,13 +6,13 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   page,
 }) => {
   await page.goto("/#/builder");
-  const run = page.getByRole("button", { name: "Run pipeline" });
+  const run = page.getByRole("button", { name: "Run saved pipeline" });
   const status = page.getByRole("status").filter({ hasText: /problem|Ready/ });
   await expect(status).toHaveText("1 problem must be fixed before running.");
   await expect(
     page.getByText("Add at least one block before running the pipeline."),
   ).toBeVisible();
-  await expect(run).toBeDisabled();
+  await expect(run).toHaveCount(0);
 
   const add = page.getByRole("button", { name: "Add Row Count" });
   await add.click();
@@ -23,7 +23,7 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   await expect(status).toHaveText("2 problems must be fixed before running.");
   await expect(nodes.first().getByText(missing)).toBeVisible();
   await expect(nodes.last().getByText(missing)).toBeVisible();
-  await expect(run).toBeDisabled();
+  await expect(run).toHaveCount(0);
   const ids = await nodes.evaluateAll((all) =>
     all.map((n) => n.getAttribute("data-id")),
   );
@@ -42,7 +42,7 @@ test("real API diagnoses the draft, maps problems to nodes and gates running", a
   await expect(status).toHaveText("1 problem must be fixed before running.");
   await expect(nodes.first().getByText(missing)).toBeVisible();
   await expect(nodes.last().getByText(missing)).toHaveCount(0);
-  await expect(run).toBeDisabled();
+  await expect(run).toHaveCount(0);
   // Showing diagnostics never replaced or reset the draft.
   expect(
     await nodes.evaluateAll((all) => all.map((n) => n.getAttribute("data-id"))),

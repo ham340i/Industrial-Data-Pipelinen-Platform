@@ -294,15 +294,67 @@ the Builder's guards reject; the rules are now bound to the requested ids
 and fixed pagination, with negative cases for each reproduction. Both
 corrections by Claude Code, each verified by a new automated test.
 
+## Issue #32 file, SQL and configuration security boundaries
+
+Tool: Claude Code (Claude Opus 5.5). AI contribution: 50% or more
+AI-generated overall. Claude Code probed the existing controls with
+synthetic inputs, found the gaps listed in the
+[verification record](../docs/testing/issue-32-security-boundaries.md),
+drafted the fixes in `app/secret_policy.py`, `app/runs/redaction.py`,
+`app/runs/scheduler.py`, `app/sources/sql.py`, `app/blocks/files.py`,
+`app/blocks/file_preview.py`, `app/artifacts/query.py`,
+`app/blocks/contracts.py`, `app/metadata/portable.py` and
+`scripts/check_repository.py`, wrote the tests and documentation, and ran
+the dependency audits and lockfile updates. The issue owner directed scope
+and reviewed the result. Every fix has a regression test; all backend,
+frontend, repository and documentation checks were run locally. Independent
+student review is pending.
+
+Declared per file, matching the `# AI contribution:` header in each file
+and the PR description. Levels come from the share of current lines
+(`git blame -w`) last written by commits that disclose AI assistance,
+plus the #32 changes.
+
+- `50% or more`: `app/secret_policy.py`, `app/runs/redaction.py`,
+  `app/sources/sql.py`, `app/blocks/files.py`, `app/blocks/file_sinks.py`,
+  `app/blocks/parquet_decode.py`, `app/blocks/csv_preview.py`,
+  `app/metadata/portable.py`, `scripts/check_repository.py`,
+  `tests/test_secret_policy.py`, `tests/test_run_redaction.py`,
+  `tests/test_env_examples.py`, `tests/test_security_boundaries.py`,
+  `tests/test_file_policy.py`, `tests/test_file_blocks.py`,
+  `tests/test_pipeline_api.py`, `tests/test_sql_source_execution.py`,
+  and the #32 documentation.
+- `below 50%` (human-written files with small #32 edits):
+  `app/artifacts/query.py`, `app/artifacts/registration.py`,
+  `app/blocks/contracts.py`, `app/blocks/file_preview.py`,
+  `app/blocks/json_preview.py`, `app/blocks/catalog.py`,
+  `app/runs/scheduler.py`, `tests/test_artifact_query.py`,
+  `tests/test_artifact_registration.py`, `tests/test_file_preview.py`,
+  `tests/test_scheduler.py`.
+
+Corrections from `menaboulus`'s review of
+[PR #88](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/88)
+(Claude Code; each change verified by the backend suite, ruff and mypy;
+see the [follow-up record](../docs/testing/issue-32-security-boundaries.md#review-follow-up-pr-88)):
+the Parquet decode-size checks moved to `app/blocks/parquet_decode.py`;
+`app/blocks/files.py` (734 lines) was split into `files.py`,
+`file_sinks.py` and `csv_preview.py`, and the JSON preview moved to
+`json_preview.py`. The four functions flagged for complexity were split
+into named steps, from 17-23 down to at most 8. The source and sink format
+hooks became abstract methods. Boundary tests now pin the Parquet
+declared-page budget at the 16x edge and at the 1 GiB cap. The PR
+description's AI section wrongly named OpenAI Codex; the tool was Claude
+Code, and the section now states the level and the per-file list above.
+
 ## Release 1 readiness refactor and documentation (#36)
 
 Tool: Claude Code, directed by ham340i. AI contribution: 50% or more AI-generated.
 
-What it did: split `app/blocks/files.py`, `file_preview.py` and `transforms.py` into smaller modules; extracted helpers so that no backend file exceeds 500 lines, no function exceeds 50 lines and none exceeds cyclomatic complexity 15; added central logging configuration and request logging; replaced silently ignored exceptions with log statements; moved test-only dependencies out of the runtime manifest; extended Dependabot; rewrote the README, the Wiki sources, the Release 1 notes and the remaining-actions list from repository and GitHub data.
+What it did: split `app/blocks/transforms.py` into row and column transforms and `relational.py`; after #88 merged its own split of the file blocks, finished the remaining extractions in the team's `files.py`, `file_preview.py` and `file_sinks.py`; extracted helpers so that no backend file exceeds 500 lines, no function exceeds 50 lines and none exceeds cyclomatic complexity 15; added central logging configuration and request logging; replaced silently ignored exceptions with log statements; moved test-only dependencies out of the runtime manifest; extended Dependabot; rewrote the README, the Wiki sources, the Release 1 notes and the remaining-actions list from repository and GitHub data.
 
-AI-assisted files: `app/blocks/resources.py`, `sinks.py`, `csv_preview.py`, `inference.py`, `relational.py`, `parquet_preview.py`, `file_preview.py`, `files.py`, `transforms.py`, `base.py`, `quality.py`, `sql.py`, `tabular.py`, `context.py`, `app/pipelines/validation.py`, `app/execution/runtime.py`, `app/preview/service.py`, `app/preview/api.py`, `app/artifacts/query.py`, `app/sources/sql.py`, `app/workspace.py`, `app/main.py`, `app/config.py`, `app/logging_config.py`, `tests/test_logging_config.py`, `scripts/check_repository.py`, `scripts/check_release_plan.py`, `scripts/check_ai_declarations.py`.
+AI-assisted files: `app/blocks/relational.py`, `transforms.py`, `files.py`, `file_preview.py`, `file_sinks.py`, `base.py`, `quality.py`, `sql.py`, `tabular.py`, `context.py`, `app/pipelines/validation.py`, `app/execution/runtime.py`, `app/preview/service.py`, `app/preview/api.py`, `app/artifacts/query.py`, `app/sources/sql.py`, `app/workspace.py`, `app/main.py`, `app/config.py`, `app/logging_config.py`, `tests/test_logging_config.py`, `scripts/check_repository.py`, `scripts/check_release_plan.py`, `scripts/check_docs.py`, `scripts/smoke_workspace.py`, `scripts/check_ai_declarations.py`, `frontend/src/api/artifacts.ts`.
 
-Verification: the refactor changed structure, not behaviour. The existing 913 backend tests passed unchanged apart from import paths, four logging tests were added (917 pass), and Ruff, Ruff format and mypy strict are clean. Frontend code was not changed.
+Verification: the refactor changed structure, not behaviour. After merging the team's #88, #89 and #90, all 1,070 backend tests pass (including four new logging tests), the 226 frontend tests pass, and Ruff, Ruff format, mypy strict, ESLint, Prettier, the TypeScript compiler and the repository and documentation checks are clean. The Compose smoke script was restructured without a local Docker run; the CI Compose job exercises it.
 
 Problems found and corrected during the work: an automatic unused-import fix removed `typing` imports that a moved class still needed, caught by mypy and restored; the first logging configuration disabled propagation and broke an existing telemetry test that captures log records, so propagation was kept on; a repository-tool test pinned the exact contents of `.env.example` and was updated for the new non-secret `LPS_LOG_LEVEL` default.
 
@@ -310,10 +362,10 @@ Not verified: no human review has taken place yet. The documentation states fact
 
 ## Source-file declarations added at Release 1
 
-At Release 1 only 58 of 201 source files carried a declaration. Claude Code added 104 more, using evidence only, never a guess:
+Before this work, 58 of 201 source files carried a declaration. Claude Code added declarations using evidence only, never a guess; after the team's #88 to #90 merged, 179 of 213 files declare:
 
 1. For each undeclared file, `git log --first-parent -m` on `main` listed every merged pull request that changed it.
-2. Each of those pull requests' own "AI Assistance" section was read. Pull requests #3, #39, #43, #46, #47, #59, #61, #62, #63, #64, #66, #67, #69, #70, #71, #77, #81, #82 and #83 state that an AI tool generated the implementation, tests or tooling.
+2. Each of those pull requests' own "AI Assistance" section was read. Pull requests #3, #39, #43, #46, #47, #59, #61, #62, #63, #64, #66, #67, #69, #70, #71, #77, #81, #82, #83, #88, #89 and #90 state that an AI tool generated the implementation, tests or tooling.
 3. A file received `50% or more AI-generated` only when every pull request that changed it is in that list. Repository scripts committed directly to `main` before pull requests were used are covered by the "This repository foundation" entry above.
 4. `app/blocks/relational.py` holds the Join and Aggregate logic from #72, whose author reports AI help only with tests, documentation and formatting; it is declared `below 50% AI-generated` even though Claude Code restructured it.
 5. Files changed by #44, #48, #51, #52, #65 or #72 were left undeclared, because those pull requests do not say how much code AI generated. Their authors must declare them.
@@ -322,4 +374,4 @@ Authors who find a declaration wrong for their file should correct it; the pull 
 
 ## Frontend response parsers (#36)
 
-Tool: Claude Code. AI contribution: 50% or more AI-generated. AI-assisted files: `frontend/src/api/pipelines.ts`, `runs.ts`, `preview.ts`, `blocks.ts`. The validation chains in `parseDefinition`, `parseRun`, `executePipeline`, `parsePreview`, `previewNode` and the block catalog parser were split into named predicates so each function is within 50 lines and complexity 15. Verification: the rules are unchanged; all 209 frontend tests, ESLint, Prettier, the TypeScript compiler and the production build pass.
+Tool: Claude Code. AI contribution: 50% or more AI-generated. AI-assisted files: `frontend/src/api/pipelines.ts`, `runs.ts`, `preview.ts`, `blocks.ts`, `artifacts.ts`. The validation chains in `parseDefinition`, `parseRun`, `executePipeline`, `parsePreview`, `previewNode`, `queryArtifact` and the block catalog parser were split into named predicates so each function is within 50 lines and complexity 15. Verification: the rules are unchanged; all 226 frontend tests, ESLint, Prettier, the TypeScript compiler and the production build pass.

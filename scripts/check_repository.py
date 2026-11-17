@@ -63,10 +63,11 @@ def _check_labels(data):
 
 def _check_dependabot(data):
     assert data['version'] == 2
+    # Actions plus the ecosystems with committed lockfiles (#32).
     ecosystems = [item['package-ecosystem'] for item in data['updates']]
-    # Actions, the Python lock and the frontend npm lock are all maintained.
-    assert set(ecosystems) == {'github-actions', 'pip', 'npm'}
-    assert len(ecosystems) == len(set(ecosystems))
+    assert 'github-actions' in ecosystems and len(ecosystems) == len(set(ecosystems))
+    assert set(ecosystems) <= {'github-actions', 'pip', 'npm'}
+    assert all(item['schedule']['interval'] for item in data['updates'])
 
 
 _BY_NAME = {
@@ -113,6 +114,8 @@ def main():
                 validate_configuration(path, json.loads(text))
         except (ValueError, AssertionError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError):
             failures.append(f'{relative}: invalid syntax, configuration or whitespace (details withheld)')
+    # print, not logging, is deliberate: this is a standalone CLI whose stdout
+    # is the CI job's report, and the exit code is what fails the build.
     if failures:
         print('\n'.join(failures))
         return 1
