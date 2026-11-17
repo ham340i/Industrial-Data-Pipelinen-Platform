@@ -207,6 +207,15 @@ export class ExecutionRequestError extends ApiError {
 export const isActiveRun = (state: RunState) =>
   state === "queued" || state === "running";
 
+/**
+ * Execute answers only after the whole synchronous run finishes, and the API
+ * has no wall-clock run limit. The shared 10 s timeout suits quick reads, but
+ * here it reported real, still-running executions as failures on slower
+ * machines. Five minutes outlasts any Release 1 workload; past that, the UI
+ * still points the user to run history instead of retrying blindly.
+ */
+export const EXECUTION_REQUEST_TIMEOUT_MS = 300_000;
+
 export async function executePipeline(
   projectId: string,
   pipelineId: string,
@@ -224,7 +233,7 @@ export async function executePipeline(
     expectedRevision === undefined
       ? undefined
       : { expected_revision: expectedRevision },
-    { validateStatus: () => true },
+    { validateStatus: () => true, timeout: EXECUTION_REQUEST_TIMEOUT_MS },
   );
   const { data, status } = response;
   if (status >= 400) {

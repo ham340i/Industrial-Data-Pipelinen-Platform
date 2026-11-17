@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Durable registration of atomically published file-sink artifacts (#28)."""
 
 from collections.abc import Iterator
@@ -8,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.blocks.contracts import Table
-from app.blocks.files import ARTIFACT_SCHEMA
+from app.blocks.file_sinks import ARTIFACT_SCHEMA
 from app.blocks.sample import VALUE_SCHEMA
 from app.execution import ExecutionContext, Frame, StateEvent
 from app.execution.runtime import State

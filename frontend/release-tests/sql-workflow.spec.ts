@@ -48,6 +48,14 @@ test("author SQL source, validate, save, execute, reload, rerun and inspect a fa
   }))
     await form.getByRole("textbox", { name: label, exact: true }).fill(value);
   const run = page.getByRole("button", { name: "Run saved pipeline" });
+  // Execute is synchronous: wait for the API before asserting on the result.
+  const runSaved = async () => {
+    const executing = page.waitForResponse(
+      (r) => r.request().method() === "POST" && r.url().endsWith("/execute"),
+    );
+    await run.click();
+    await executing;
+  };
   await expect(run).toBeDisabled();
   await page
     .getByRole("button", { name: "Save pipeline", exact: true })
@@ -56,7 +64,7 @@ test("author SQL source, validate, save, execute, reload, rerun and inspect a fa
     page.getByText("Pipeline saved.", { exact: true }),
   ).toBeVisible();
   await expect(run).toBeEnabled();
-  await run.click();
+  await runSaved();
   await expect(page.getByText("Run succeeded · revision 1")).toBeVisible();
   await expect(
     page.getByText(/Duration: \d+ ms · Output rows: 2/),
@@ -67,7 +75,7 @@ test("author SQL source, validate, save, execute, reload, rerun and inspect a fa
     .getByRole("button", { name: "Open SQL assets (revision 1)" })
     .click();
   await expect(run).toBeEnabled();
-  await run.click();
+  await runSaved();
   await expect(page.getByText("Run succeeded · revision 1")).toBeVisible();
   await expect(
     page.getByText(/Duration: \d+ ms · Output rows: 2/),
@@ -81,7 +89,7 @@ test("author SQL source, validate, save, execute, reload, rerun and inspect a fa
     .getByRole("button", { name: "Save pipeline", exact: true })
     .click();
   await expect(run).toBeEnabled();
-  await run.click();
+  await runSaved();
   await expect(page.getByText("Run failed · revision 2")).toBeVisible();
   await expect(page.getByText(/sql_query_failed/).first()).toBeVisible();
 });

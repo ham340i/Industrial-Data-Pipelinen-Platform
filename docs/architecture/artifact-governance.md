@@ -49,6 +49,13 @@ The service permits at most 500 returned rows, 100 columns and 50,100 fetched
 cells. Projection and limit are pushed into DuckDB; Python never loads the
 whole Parquet file or creates an unbounded duplicate table.
 
+Since #32 the connection is also locked before the query runs
+(`locked_connection` in `app/artifacts/query.py`): extension install and
+autoload are off, `allowed_paths` holds only the resolved artifact file,
+`enable_external_access` is off (no other files, `COPY`, `ATTACH` or writes),
+and `lock_configuration` prevents any later statement from undoing this. The
+fixed SQL template remains the primary control; the lock is defense in depth.
+
 ## PyArrow and DuckDB boundary
 
 PyArrow remains the sink serialization boundary. It maps SDK `string`,

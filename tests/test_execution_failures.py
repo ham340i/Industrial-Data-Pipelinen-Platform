@@ -15,7 +15,7 @@ from app.blocks.context import BlockContext
 from app.artifacts.registration import register_published_artifacts
 from app.artifacts import ArtifactQuery, ArtifactUnavailable, query_artifact
 from app.blocks.contracts import Table
-from app.blocks.files import CsvSink, FileSink, ParquetSink, SinkConfig
+from app.blocks.file_sinks import CsvSink, FileSink, ParquetSink, SinkConfig
 from app.blocks.errors import BlockError
 from app.blocks.sql import SqlSource
 from app.execution import Cancellation, ExecutionLimits, Executor
@@ -114,9 +114,9 @@ def test_failed_stage_preserves_target_and_registers_no_output(
             CsvSink if format_ == "csv" else ParquetSink, "_write", broken_write
         )
     elif fault == "flush":
-        monkeypatch.setattr("app.blocks.files.os.fsync", broken_io)
+        monkeypatch.setattr("app.blocks.file_sinks.os.fsync", broken_io)
     elif fault == "publish":
-        monkeypatch.setattr("app.blocks.files.os.replace", broken_io)
+        monkeypatch.setattr("app.blocks.file_sinks.os.replace", broken_io)
     outcome = execute_revision(
         db, executor, seed_revision(db, graph), workspace_root=tmp_path
     )
@@ -162,7 +162,7 @@ def test_cancellation_before_publication_preserves_previous_output(
     if checkpoint == "write":
         monkeypatch.setattr(sink_type, "_write", cancel_after_write)
     else:
-        monkeypatch.setattr("app.blocks.files.os.fsync", lambda _: token.cancel())
+        monkeypatch.setattr("app.blocks.file_sinks.os.fsync", lambda _: token.cancel())
     outcome = execute_revision(
         db,
         executor,

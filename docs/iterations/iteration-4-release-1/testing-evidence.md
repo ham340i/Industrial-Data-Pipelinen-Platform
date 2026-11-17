@@ -72,6 +72,17 @@ browser failure/correction/rerun scenario on November 17, 2026. It also records
 the local runtime versions, runner teardown limitation and uncommitted base
 revision. This does not establish hosted CI, independent approval or release
 acceptance.
+
+
+## Issue #32 feature verification
+
+[Security boundary evidence](../../testing/issue-32-security-boundaries.md)
+records the gaps found by probing (redaction, timer logging, credential-key
+policy, standalone SQLite confinement, Parquet decode bounds, DuckDB lock,
+Dependabot coverage), the 129 new backend tests, the dependency audit and
+the accepted risks. Independent review and stakeholder signoff remain
+pending.
+
 ## Issue #37 feature verification
 
 [Integration matrix evidence](../../testing/issue-37-integration-matrix.md)

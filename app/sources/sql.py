@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import sqlite3
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.secret_policy import is_credential_key
 
 
 _CREDENTIAL_KEYS = {
@@ -70,16 +72,28 @@ def _validate_read_query(value: str) -> str:
     return query
 
 
+# Work budgets for the standalone reader; the workspace block (app.blocks.sql)
+# exposes the same bounds as per-node configuration.
+DEFAULT_MAX_BYTES = 16 * 1024 * 1024
+DEFAULT_MAX_ROWS = 100_000
+DEFAULT_MAX_STEPS = 1_000_000
+_DATABASE_SUFFIXES = (".sqlite3", ".sqlite", ".db")
+
+
 class SqlSourceConfig(BaseModel):
-    """Credential-free configuration for the local SQL source proof."""
+    """Credential-free configuration for the local SQL source proof.
+
+    ``database_path`` is a workspace-relative resource, never a machine path:
+    ``read_sqlite_source`` resolves it beneath the caller's workspace root.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     dialect: Literal["sqlite"] = "sqlite"
-    database_path: str = Field(min_length=1)
+    database_path: str = Field(min_length=1, max_length=1024)
     read_only: Literal[True] = True
-    query: str = Field(min_length=1)
-    parameters: dict[str, Any] = Field(default_factory=dict)
+    query: str = Field(min_length=1, max_length=20000)
+    parameters: dict[str, Any] = Field(default_factory=dict, max_length=100)
 
     @field_validator("database_path")
     @classmethod
@@ -92,6 +106,23 @@ class SqlSourceConfig(BaseModel):
         if path in {".", ".."}:
             raise ValueError("database_path must identify a database file")
 
+        # Lexical checks only: no filesystem access for configuration data.
+        windows = PureWindowsPath(path)
+        if (
+            "\x00" in path
+            or path.startswith(("~", "/", "\\"))
+            or windows.drive
+            or windows.is_absolute()
+            or Path(path).is_absolute()
+            or ".." in windows.parts
+        ):
+            raise ValueError(
+                "database_path must be relative to the workspace without traversal"
+            )
+
+        if not path.lower().endswith(_DATABASE_SUFFIXES):
+            raise ValueError("database_path must name a .sqlite3, .sqlite or .db file")
+
         return path
 
     @field_validator("query")
@@ -102,7 +133,7 @@ class SqlSourceConfig(BaseModel):
     @model_validator(mode="after")
     def reject_credential_parameters(self) -> SqlSourceConfig:
         for key in self.parameters:
-            if key.lower() in _CREDENTIAL_KEYS:
+            if key.lower() in _CREDENTIAL_KEYS or is_credential_key(key):
                 raise ValueError(
                     "credential-like parameters are not allowed in portable definitions"
                 )
@@ -208,26 +239,55 @@ def execute_read_only_sqlite(
         connection.set_authorizer(None)
 
 
-def read_sqlite_source(config: SqlSourceConfig) -> SqlQueryResult:
-    """Open a SQLite database read-only and execute the configured query."""
-    database_path = Path(config.database_path).expanduser()
+def read_sqlite_source(
+    config: SqlSourceConfig,
+    *,
+    workspace_root: Path,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    max_rows: int = DEFAULT_MAX_ROWS,
+    max_steps: int = DEFAULT_MAX_STEPS,
+) -> SqlQueryResult:
+    """Open a workspace SQLite database read-only and run the bounded query.
 
-    if not database_path.is_file():
-        raise SqlSourceError(f"SQLite database does not exist: {database_path}")
+    The database must resolve, after following links, to a file inside
+    ``workspace_root``. Errors never include the resolved machine path (#32).
+    Engine limits mirror the workspace block: value length, VM steps, and
+    streamed row/byte budgets.
+    """
+    try:
+        root = workspace_root.resolve(strict=True)
+        database_path = (root / config.database_path).resolve(strict=True)
+        database_path.relative_to(root)
+        if not database_path.is_file():
+            raise ValueError("Not a file")
+        size = database_path.stat().st_size
+    except (OSError, ValueError, RuntimeError):
+        raise SqlSourceError(
+            "SQLite database is missing or outside the workspace"
+        ) from None
+    if size > max_bytes:
+        raise SqlSourceError("SQLite database exceeds the byte budget")
 
-    connection_uri = database_path.resolve().as_uri() + "?mode=ro"
-
-    connection = sqlite3.connect(
-        connection_uri,
-        uri=True,
-    )
+    connection = sqlite3.connect(database_path.as_uri() + "?mode=ro", uri=True)
     connection.row_factory = sqlite3.Row
 
     try:
+        connection.execute("PRAGMA query_only = ON")
+        connection.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, max_bytes)
+        steps = 0
+
+        def progress() -> int:
+            nonlocal steps
+            steps += 1000
+            return int(steps > max_steps)
+
+        connection.set_progress_handler(progress, 1000)
         return execute_read_only_sqlite(
             connection,
             config.query,
             config.parameters,
+            max_rows=max_rows,
+            max_bytes=max_bytes,
         )
     finally:
         connection.close()

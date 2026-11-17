@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """JSON/Parquet previews: bounded reads, honest provenance and API isolation."""
 
 import io
@@ -16,6 +17,7 @@ from app.blocks.contracts import PreviewLimits, PreviewObservation, Table
 from app.blocks.errors import BlockError
 from app.blocks.file_preview import BudgetFile, MAX_DECODE_BYTES, MAX_FOOTER_BYTES
 from app.blocks.files import FileSource, JsonSource, ParquetSource
+from app.blocks.parquet_decode import decoded_bytes
 from app.blocks.transforms import SelectColumns
 from app.config import settings
 from app.main import app
@@ -385,7 +387,7 @@ def test_new_source_cancellation_during_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, suffix: str
 ):
     from threading import Event
-    from app.blocks.file_preview import JsonRecords
+    from app.blocks.json_preview import JsonRecords
 
     cancelled = Event()
     block: JsonSource | ParquetSource
@@ -428,3 +430,29 @@ def test_new_source_cancellation_during_read(
             PreviewLimits(),
         )
     assert exc.value.failure.code == "cancelled"
+
+
+def test_parquet_preview_refuses_dictionary_expansion_before_decoding(
+    tmp_path: Path,
+):
+    """Strings stay dictionary-encoded until their expanded size fits (#32)."""
+    pq.write_table(
+        pa.table({"payload": pa.array(["A" * 200_000] * 100)}),
+        tmp_path / "input.parquet",
+        compression="zstd",
+    )
+
+    from app.blocks import file_preview
+
+    checked: list[pa.DataType] = []
+
+    def recording(batch: pa.RecordBatch) -> int:
+        checked.append(batch.schema.field("payload").type)
+        return decoded_bytes(batch)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(file_preview, "decoded_bytes", recording)
+        with pytest.raises(BlockError) as exc:
+            preview_file(tmp_path, "parquet", max_rows=100, max_cells=2000)
+    assert exc.value.failure.code == "preview_decode_limit"
+    assert checked and all(pa.types.is_dictionary(kind) for kind in checked)

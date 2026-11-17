@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Requirements-derived reader/writer/SDK integration cases (#16, #20)."""
 
 import json
@@ -13,7 +14,8 @@ from app.blocks.catalog import registry
 from app.blocks.context import BlockContext, BlockEvent
 from app.blocks.contracts import Column, DataSchema, Table
 from app.blocks.errors import BlockError
-from app.blocks.files import CsvSink, CsvSource, JsonSource, ParquetSink, ParquetSource
+from app.blocks.file_sinks import CsvSink, ParquetSink
+from app.blocks.files import CsvSource, JsonSource, ParquetSource
 from app.blocks.registry import RegisteredBlock
 
 FIXTURES = Path(__file__).parent / "fixtures" / "blocks"
@@ -357,7 +359,7 @@ def test_overwrite_and_failure_cleanup(
 )
 def test_publish_failure_cleanup(tmp_path: Path, operation: str, overwrite: str):
     with patch(
-        "app.blocks.files.os." + operation, side_effect=OSError("not supported")
+        "app.blocks.file_sinks.os." + operation, side_effect=OSError("not supported")
     ):
         with pytest.raises(BlockError) as error:
             run(
