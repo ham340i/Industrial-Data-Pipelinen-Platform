@@ -53,3 +53,37 @@ async function requestWorkspace(
 }
 export const getWorkspace = () => requestWorkspace();
 export const saveWorkspace = (root: string | null) => requestWorkspace(root);
+
+/** The native dialog can stay open while the user chooses a folder. */
+export async function pickWorkspaceFolder(
+  initialPath: string | null,
+): Promise<string | null> {
+  const response = await api.post<unknown>(
+    "/settings/workspace/pick-folder",
+    { initial_path: initialPath },
+    { timeout: 310_000, validateStatus: () => true },
+  );
+  const value = response.data as {
+    path?: unknown;
+    error?: { message?: unknown };
+  } | null;
+  if (response.status >= 400) {
+    throw new ApiError(
+      typeof value?.error?.message === "string"
+        ? value.error.message
+        : "File Explorer could not open. Try again or enter a folder path.",
+      "http",
+      response.status,
+    );
+  }
+  if (
+    !value ||
+    (value.path !== null && (typeof value.path !== "string" || !value.path))
+  ) {
+    throw new ApiError(
+      "The API returned an invalid folder selection.",
+      "invalid-response",
+    );
+  }
+  return value.path as string | null;
+}

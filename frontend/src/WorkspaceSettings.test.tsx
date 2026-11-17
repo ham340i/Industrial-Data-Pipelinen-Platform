@@ -1,6 +1,6 @@
 // AI contribution: 50% or more AI-generated
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { http, HttpResponse } from "msw";
@@ -30,7 +30,7 @@ function mount() {
     </QueryClientProvider>,
   );
 }
-it("saves a validated path, shows the project folder, and restores environment configuration", async () => {
+it("saves a validated path and restores environment configuration", async () => {
   useEditorStore.getState().setProject("project-id");
   const sent: unknown[] = [];
   server.use(
@@ -48,7 +48,9 @@ it("saves a validated path, shows the project folder, and restores environment c
     }),
   );
   mount();
-  await screen.findByText("No workspace root configured");
+  await waitFor(() =>
+    expect(screen.getByLabelText("Workspace root folder")).toBeEnabled(),
+  );
   expect(screen.getByText("Permitted folder: /data/workspaces")).toBeVisible();
   await userEvent.type(
     screen.getByLabelText("Workspace root folder"),
@@ -56,14 +58,18 @@ it("saves a validated path, shows the project folder, and restores environment c
   );
   await userEvent.click(screen.getByRole("button", { name: "Save workspace" }));
   expect(await screen.findByText(/Workspace saved/)).toBeVisible();
-  expect(screen.getByText(/Current project inputs:/)).toHaveTextContent(
-    "/data/workspaces/project-id/inputs",
+  expect(screen.getByLabelText("Workspace root folder")).toHaveValue(
+    "/data/workspaces",
   );
   expect(sent).toEqual([{ root_path: "/data/workspaces" }]);
   await userEvent.click(
     screen.getByRole("button", { name: "Use environment setting" }),
   );
-  expect(await screen.findByText("/environment")).toBeVisible();
+  await waitFor(() =>
+    expect(screen.getByLabelText("Workspace root folder")).toHaveValue(
+      "/environment",
+    ),
+  );
   expect(
     screen.getByRole("link", { name: "Return to project builder" }),
   ).toHaveAttribute("href", "/projects/project-id/builder");
@@ -90,8 +96,8 @@ it("keeps the entered path and current setting when validation fails", async () 
     ),
   );
   mount();
-  await screen.findByText("/existing");
   const field = screen.getByLabelText("Workspace root folder");
+  await waitFor(() => expect(field).toHaveValue("/existing"));
   await userEvent.clear(field);
   await userEvent.type(field, "/missing");
   await userEvent.click(screen.getByRole("button", { name: "Save workspace" }));
@@ -99,7 +105,6 @@ it("keeps the entered path and current setting when validation fails", async () 
     "Choose an existing folder",
   );
   expect(field).toHaveValue("/missing");
-  expect(screen.getByText("/existing")).toBeVisible();
 });
 it("allows repairing settings after a load error", async () => {
   server.use(
@@ -127,3 +132,78 @@ it.each([undefined, "not-a-list", [123]])(
     await expect(getWorkspace()).rejects.toThrow("invalid workspace settings");
   },
 );
+
+it("opens the native picker and saves the returned path only when Save is clicked", async () => {
+  const sent: unknown[] = [];
+  const pickerRequests: unknown[] = [];
+  server.use(
+    http.get(url, () => HttpResponse.json(initial)),
+    http.post(`${url}/pick-folder`, async ({ request }) => {
+      pickerRequests.push(await request.json());
+      return HttpResponse.json({ path: "/data/New workspace" });
+    }),
+    http.put(url, async ({ request }) => {
+      const body = (await request.json()) as { root_path: string };
+      sent.push(body);
+      return HttpResponse.json({
+        ...initial,
+        root_path: body.root_path,
+        source: "application",
+        ready: true,
+      });
+    }),
+  );
+  mount();
+  const browse = screen.getByRole("button", { name: /Browse/ });
+  await waitFor(() => expect(browse).toBeEnabled());
+  await userEvent.click(browse);
+  await waitFor(() =>
+    expect(screen.getByLabelText("Workspace root folder")).toHaveValue(
+      "/data/New workspace",
+    ),
+  );
+  expect(pickerRequests).toEqual([{ initial_path: null }]);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(sent).toEqual([]);
+  await userEvent.click(screen.getByRole("button", { name: "Save workspace" }));
+  await screen.findByText(/Workspace saved/);
+  expect(sent).toEqual([{ root_path: "/data/New workspace" }]);
+});
+
+it("keeps an entered workspace path when the native picker is cancelled", async () => {
+  server.use(
+    http.get(url, () => HttpResponse.json(initial)),
+    http.post(`${url}/pick-folder`, () => HttpResponse.json({ path: null })),
+  );
+  mount();
+  const field = screen.getByLabelText("Workspace root folder");
+  await waitFor(() => expect(field).toBeEnabled());
+  await userEvent.type(field, "/data/typed");
+  await userEvent.click(screen.getByRole("button", { name: /Browse/ }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /Browse/ })).toBeEnabled(),
+  );
+  expect(field).toHaveValue("/data/typed");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("shows native-picker errors and keeps manual entry available", async () => {
+  server.use(
+    http.get(url, () => HttpResponse.json(initial)),
+    http.post(`${url}/pick-folder`, () =>
+      HttpResponse.json(
+        { error: { message: "Enter a workspace folder path instead." } },
+        { status: 409 },
+      ),
+    ),
+  );
+  mount();
+  const browse = screen.getByRole("button", { name: /Browse/ });
+  await waitFor(() => expect(browse).toBeEnabled());
+  await userEvent.click(browse);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Enter a workspace folder path instead.",
+  );
+  expect(screen.getByLabelText("Workspace root folder")).toBeEnabled();
+  expect(browse).toBeEnabled();
+});
