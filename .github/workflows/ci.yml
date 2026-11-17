@@ -180,6 +180,34 @@
         }
       ]
     },
+    "candidate": {
+      "name": "Release candidate rehearsal",
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 15,
+      "steps": [
+        {
+          "name": "Check out repository",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Rehearse Release 1 candidate install, backup, reset and restore",
+          "run": "python3 scripts/release_candidate.py smoke --report"
+        },
+        {
+          "name": "Upload release candidate rehearsal evidence",
+          "if": "always()",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "release-candidate-rehearsal",
+            "path": "test-results/release-candidate.json",
+            "if-no-files-found": "warn"
+          }
+        }
+      ]
+    },
     "standalone": {
       "name": "Standalone workspace smoke (${{ matrix.os }})",
       "strategy": {
