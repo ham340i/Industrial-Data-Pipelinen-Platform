@@ -226,8 +226,9 @@ def status(db: Database) -> WorkspaceStatus:
     if root is not None:
         try:
             ready = root.is_dir() and os.access(root, os.R_OK | os.W_OK | os.X_OK)
-        except OSError:
-            pass
+        except OSError as exc:
+            # An unreadable folder is reported to the user as "not ready".
+            logger.info("Workspace readiness check failed: %s", type(exc).__name__)
     return WorkspaceStatus(
         root_path=str(root) if root else None,
         source=source,

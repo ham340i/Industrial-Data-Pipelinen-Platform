@@ -21,7 +21,10 @@ class WorkspaceTests(unittest.TestCase):
     def test_example_has_only_public_port_defaults(self):
         settings = dict(line.split('=', 1) for line in (ROOT / '.env.example').read_text().splitlines()
                         if line and not line.startswith('#'))
-        self.assertEqual(settings, {'FRONTEND_PORT': '3000', 'API_PORT': '8000'})
+        self.assertEqual(
+            settings,
+            {'FRONTEND_PORT': '3000', 'API_PORT': '8000', 'LPS_LOG_LEVEL': 'INFO'},
+        )
 
 
 if __name__ == '__main__':
