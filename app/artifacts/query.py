@@ -1,4 +1,4 @@
-# AI contribution: 50% or more AI-generated
+# AI contribution: below 50% AI-generated
 """Bounded DuckDB reads over registered Parquet artifacts only."""
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.blocks.context import BlockContext
 from app.blocks.contracts import DataSchema, Scalar
 from app.blocks.errors import BlockError
-from app.blocks.resources import resource_path
+from app.blocks.files import resource_path
 from app.metadata.database import Database
 from app.metadata.models import OutputEndpoint
 
@@ -139,6 +139,32 @@ def _scalar(value: object) -> Scalar:
     raise ArtifactUnavailable("Artifact contains an unsupported result value")
 
 
+def locked_connection(path: Path) -> Any:
+    """An in-memory DuckDB connection that can read only ``path`` (#32).
+
+    The query text is a fixed template, but the engine itself is also locked:
+    no extension install/autoload, no file access other than the resolved
+    artifact (no other files, COPY, ATTACH or writes), and the configuration
+    cannot be changed back by a later statement.
+    """
+    import duckdb
+
+    connection = duckdb.connect(database=":memory:")
+    try:
+        connection.execute("SET threads = 1")
+        connection.execute("SET memory_limit = '64MB'")
+        connection.execute("SET preserve_insertion_order = false")
+        connection.execute("SET autoinstall_known_extensions = false")
+        connection.execute("SET autoload_known_extensions = false")
+        connection.execute("SET allowed_paths = ?", [[str(path)]])
+        connection.execute("SET enable_external_access = false")
+        connection.execute("SET lock_configuration = true")
+    except BaseException:
+        connection.close()
+        raise
+    return connection
+
+
 def _artifact_path(run_id: str, artifact_ref: str, workspace_root: Path) -> Path:
     """Resolve a registered artifact inside the workspace, or report it missing."""
     try:
@@ -147,23 +173,11 @@ def _artifact_path(run_id: str, artifact_ref: str, workspace_root: Path) -> Path
             artifact_ref,
             ".parquet",
         )
+        if not path.is_file():
+            raise ArtifactUnavailable("Registered artifact is unavailable")
     except BlockError:
         raise ArtifactUnavailable("Registered artifact is unavailable") from None
-    if not path.is_file():
-        raise ArtifactUnavailable("Registered artifact is unavailable")
     return path
-
-
-def _bounded_connection() -> Any:
-    """An in-memory DuckDB session with fixed thread and memory ceilings."""
-    # Keep the native query engine out of API startup and non-query processes.
-    import duckdb
-
-    connection = duckdb.connect(database=":memory:")
-    connection.execute("SET threads = 1")
-    connection.execute("SET memory_limit = '64MB'")
-    connection.execute("SET preserve_insertion_order = false")
-    return connection
 
 
 def query_artifact(
@@ -173,6 +187,8 @@ def query_artifact(
     query: ArtifactQuery,
 ) -> ArtifactQueryResult:
     """Read a bounded projection without loading the full Parquet artifact."""
+    # The native query engine is imported lazily by locked_connection, keeping
+    # it out of API startup and non-query processes.
     artifact = get_artifact(db, artifact_id)
     if artifact.format != "parquet":
         raise ArtifactNotQueryable("Only registered Parquet artifacts are queryable")
@@ -182,10 +198,9 @@ def query_artifact(
     if len(columns) * (query.limit + 1) > MAX_CELLS:
         raise ArtifactNotQueryable("Requested result exceeds the cell limit")
     path = _artifact_path(artifact.run_id, artifact.artifact_ref, workspace_root)
-
     connection: Any = None
     try:
-        connection = _bounded_connection()
+        connection = locked_connection(path)
         projection = ", ".join(_quoted(name) for name in columns)
         cursor = connection.execute(
             f"SELECT {projection} FROM read_parquet(?) LIMIT ? OFFSET ?",

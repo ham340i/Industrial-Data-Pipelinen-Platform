@@ -141,7 +141,7 @@ export function usePipelineValidation(
         : null,
     canRun: current && query.data?.valid === true,
     retry: () => {
-      if (checked === key && query.isError) void query.refetch();
+      if (checked === key) void query.refetch();
     },
   };
 }

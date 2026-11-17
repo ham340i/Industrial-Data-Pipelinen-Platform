@@ -87,3 +87,26 @@ Opening a saved pipeline shows [Run monitoring](run-monitoring.md): recent runs,
 per-block states/timings/counts and redacted logs. Select a run or inspect a failed
 block; the monitor preserves unsaved graph edits. Runs originate from the execute
 API or timer. See the linked guide for retention, reconnect and history limits.
+
+## Author, preview, execute and inspect
+
+Choose a project, add/configure blocks and connect compatible handles. Validate
+Schema's Columns and Aggregate's Operations accept JSON lists of closed objects
+from their public schemas. For example, an aggregate operation is
+`[{"column":"reading","function":"sum","output_name":"total"}]`.
+The API also checks cross-field rules. Invalid edits remain visible for correction.
+
+The pipeline check updates after semantic edits; **Validate pipeline** explicitly
+rechecks the current draft. Select a supported source and use **Preview selected
+node** for a bounded sample. Unsupported preview capabilities explain their
+limits. Save the valid graph, then use **Run saved pipeline**. Unsaved edits
+must be saved before execution. Statuses, counts, timings and redacted logs
+appear with the run's revision.
+
+Use **Inspect output** to query a registered Parquet artifact in pages of up
+to 50 rows, from execution results or Run monitoring after reopening a pipeline.
+Switching runs clears inspection. If another run replaced the same output
+file, inspect the newer run or rerun the intended revision. A failed output
+query preserves the graph and run evidence; **Retry output rows** only retries
+the read. See [design](../design/issue-31-workflow.md) and
+[verification](../testing/issue-31-workflow.md).

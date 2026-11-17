@@ -10,7 +10,7 @@ import { sampleBlock } from "./test/blocks";
 import { useEditorStore } from "./state/editor";
 
 const url = "http://127.0.0.1:8000/api/v1/pipelines/validate";
-const run = () => screen.getByRole("button", { name: "Run pipeline" });
+const check = () => screen.getByRole("button", { name: "Validate pipeline" });
 
 function renderBuilder() {
   server.use(
@@ -85,7 +85,6 @@ it("shows each problem on its node and in the list, keeps edits and disables run
   expect(
     await screen.findByText("3 problems must be fixed before running."),
   ).toBeVisible();
-  expect(run()).toBeDisabled();
 
   const list = screen.getByRole("list", { name: "Pipeline problems" });
   const items = within(list).getAllByRole("listitem");
@@ -129,7 +128,6 @@ it("re-checks after a fix and enables running only for the current valid graph",
   );
   renderBuilder();
   await screen.findByText("1 problem must be fixed before running.");
-  expect(run()).toBeDisabled();
   act(() => useEditorStore.getState().selectNode(b));
   const field = await screen.findByRole("spinbutton", { name: "Amount" });
   expect(field).toHaveAttribute("aria-invalid", "true");
@@ -152,19 +150,21 @@ it("re-checks after a fix and enables running only for the current valid graph",
   ).toHaveTextContent("Fix it.");
   expect(screen.getByText("Previous check: Fix it.")).toBeVisible();
   expect(field).toHaveAttribute("aria-invalid", "false");
-  expect(run()).toBeDisabled();
   expect(
     await screen.findByText("Ready to run. No problems found."),
   ).toBeVisible();
-  expect(run()).toBeEnabled();
   expect(
     screen.queryByRole("list", { name: "Previous pipeline problems" }),
   ).not.toBeInTheDocument();
   expect(requests.at(-1)?.edges).toHaveLength(1);
   expect(useEditorStore.getState().nodes.map((n) => n.id)).toEqual([a, b]);
 
-  await userEvent.click(run());
-  expect(await screen.findByText(/The pipeline is valid/)).toBeVisible();
+  const count = requests.length;
+  await userEvent.click(check());
+  await waitFor(() => expect(requests.length).toBeGreaterThan(count));
+  expect(
+    screen.queryByRole("button", { name: "Run pipeline" }),
+  ).not.toBeInTheDocument();
 });
 
 it("drops old markers immediately when the draft identity changes", async () => {
@@ -194,7 +194,6 @@ it("moving nodes does not trigger a new check", async () => {
   );
   await new Promise((resolve) => setTimeout(resolve, 400));
   expect(requests).toHaveLength(count);
-  expect(run()).toBeEnabled();
 });
 
 it("retries the same draft from the keyboard without exposing transport details", async () => {
@@ -231,7 +230,6 @@ it("retries the same draft from the keyboard without exposing transport details"
   expect(
     screen.queryByText(/private\.db|synthetic-only/),
   ).not.toBeInTheDocument();
-  expect(run()).toBeDisabled();
   const retry = screen.getByRole("button", {
     name: "Retry pipeline check",
   });
@@ -240,7 +238,6 @@ it("retries the same draft from the keyboard without exposing transport details"
   expect(
     await screen.findByText("Ready to run. No problems found."),
   ).toHaveFocus();
-  expect(run()).toBeEnabled();
   expect(requests).toHaveLength(2);
   expect(requests[1]).toEqual(requests[0]);
   expect(useEditorStore.getState().nodes).toBe(nodes);
@@ -297,7 +294,6 @@ it("keeps previous diagnostics visible through a pending validation request", as
   expect(
     screen.queryByLabelText("Problems in Synthetic Add Constant"),
   ).not.toBeInTheDocument();
-  expect(run()).toBeDisabled();
   finishCheck();
   expect(
     await screen.findByText("Ready to run. No problems found."),
@@ -340,7 +336,6 @@ it("a slow stale answer never enables running for a newer graph", async () => {
         [sampleBlock],
       ),
   );
-  expect(run()).toBeDisabled();
   await waitFor(
     () =>
       expect(
@@ -348,6 +343,5 @@ it("a slow stale answer never enables running for a newer graph", async () => {
       ).toBeVisible(),
     { timeout: 2000 },
   );
-  expect(run()).toBeDisabled();
   expect(screen.getByText("This connection is part of a cycle.")).toBeVisible();
 });

@@ -31,5 +31,7 @@ Each student must have their own `[LLL]` issue on the Release 1 milestone. At Re
 |---|---|
 | Al-Yousef | [#80](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/80): accessible React focus and error announcements |
 | menaboulus | [#87](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/87): workspace containment and cross-feature contracts |
+| adamoug | [#92](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/92): visual pipeline builder graph contract; the title is missing the required `Spike - <technical unknown>` part |
+| karimikhaeil | [#91](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/91): title does not yet follow the required format and the issue has no milestone |
 
-The other team members have not yet opened theirs. An issue without the `[LLL]` prefix in its title is not assessed.
+ham340i, aboudka2003, joedaswagger, MarcElHaddad1, GeorgesOgeil and PenguKev have not yet opened theirs. The title must be `[LLL] [Architecture: <subsystem>] Spike - <technical unknown>` on the Release 1 milestone; an issue without the `[LLL]` prefix is not assessed.

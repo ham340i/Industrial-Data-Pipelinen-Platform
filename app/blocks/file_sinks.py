@@ -1,5 +1,10 @@
 # AI contribution: 50% or more AI-generated
-"""Atomic, workspace-bound CSV and Parquet file writers (#20)."""
+"""Atomic, no-clobber-by-default file writers (#20).
+
+Split from app/blocks/files.py so readers and writers stay separately
+reviewable. Targets are confined to the workspace by the same
+resource_path rule the readers use.
+"""
 
 from __future__ import annotations
 
@@ -24,7 +29,7 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
-from app.blocks.resources import ResourceConfig, resource_path
+from app.blocks.files import ResourceConfig, resource_path
 from app.blocks.tabular import TABLE_PORT, descriptor_values, to_frame
 
 ARROW_TYPES = {
@@ -57,7 +62,7 @@ class FileSink(Block[SinkConfig]):
 
     @abstractmethod
     def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        """Serialize ``table`` to ``path`` in this sink's format."""
+        """Serialize ``table`` to the temporary ``path``; each format implements it."""
 
     def _artifact(self, config: SinkConfig, table: Table) -> Table:
         return Table(

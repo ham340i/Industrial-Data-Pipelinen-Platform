@@ -11,7 +11,7 @@ from app.blocks.base import Block
 from app.blocks.context import BlockContext
 from app.blocks.contracts import BlockDescriptor, PortValues, Table, require_public_json
 from app.blocks.errors import BlockError
-from app.blocks.resources import (
+from app.blocks.files import (
     SourceConfig,
     check_source_file,
     resource_path,

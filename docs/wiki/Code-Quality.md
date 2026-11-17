@@ -29,12 +29,12 @@ The backend is grouped by feature, and each feature keeps the same internal spli
 |---|---|
 | Static validation of a pipeline graph: duplicates, dangling edges, cycles by strongly connected component, port and schema compatibility, input cardinality | [pipelines/validation.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/pipelines/validation.py) |
 | Topological DAG execution with failure propagation, cancellation and a retained-data budget | [execution/runtime.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/execution/runtime.py) |
-| Bounded streaming previews of CSV, JSON and Parquet | [csv_preview.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/csv_preview.py), [file_preview.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/file_preview.py), [parquet_preview.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/parquet_preview.py) |
+| Bounded streaming previews of CSV, JSON and Parquet | [csv_preview.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/csv_preview.py), [json_preview.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/json_preview.py), [file_preview.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/file_preview.py), [parquet_decode.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/parquet_decode.py) |
 | Join with cardinality checks, aggregate with overflow detection, lossless casts | [relational.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/relational.py), [tabular.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/tabular.py) |
 | Data-quality gates that pass, warn or stop a run | [quality.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/quality.py) |
 | Durable run telemetry with recovery of interrupted runs and log redaction | [runs/recorder.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/runs/recorder.py), [runs/redaction.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/runs/redaction.py) |
 | In-process interval timer with safe stop and shutdown | [runs/scheduler.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/runs/scheduler.py) |
-| Atomic, no-clobber publication of outputs and governed artifact queries | [sinks.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/sinks.py), [artifacts/query.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/artifacts/query.py) |
+| Atomic, no-clobber publication of outputs and governed artifact queries | [file_sinks.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/blocks/file_sinks.py), [artifacts/query.py](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/app/artifacts/query.py) |
 
 ## Logging
 
@@ -55,11 +55,11 @@ The backend is grouped by feature, and each feature keeps the same internal spli
 
 Backend source files are at most 500 lines, functions at most 50 lines and cyclomatic complexity at most 15. Two exceptions are recorded with their reasons:
 
-- [Frontend components](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/refactoring/exceptions/frontend-components.md): React components and response parsers over the limits, with the plan to reduce them.
+- [Frontend components](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/refactoring/exceptions/frontend-components.md): React components over the limits, with the plan to reduce them. The API response parsers are within the limits.
 - [Test modules and migrations](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/refactoring/exceptions/tests-and-migrations.md).
 
 Guidelines: [refactoring guidelines](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/refactoring/refactoring-guidelines.md).
 
 ## AI-generated code
 
-Each source file declares its AI contribution level on its first line, each pull request declares it in its description, and the [AI usage record](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/.github/AI_USAGE.md) lists the tools, the AI-assisted features, how each was verified and problems found. At Release 1, 163 of 201 files carry one; the rest need their authors and are listed in [remaining actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/SOEN490_HUMAN_ACTIONS.md).
+Each source file declares its AI contribution level on its first line, each pull request declares it in its description, and the [AI usage record](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/.github/AI_USAGE.md) lists the tools, the AI-assisted features, how each was verified and problems found. At Release 1, 179 of 213 files carry one; the rest need their authors and are listed in [remaining actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/SOEN490_HUMAN_ACTIONS.md).

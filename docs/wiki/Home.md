@@ -6,9 +6,9 @@ The platform is a local-first visual ETL workbench. A process specialist draws a
 
 ## Status at Release 1 (November 17, 2026)
 
-- 28 of the 34 planned Release 1 work items are closed (195 of 232 story points). The open items are listed in the [release notes](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Iteration-and-Release-Notes).
-- Implemented and tested: visual builder, block library, schema-driven configuration, graph validation, bounded preview, local DAG execution, manual and timer triggers, run telemetry and monitoring, governed Parquet artifacts with bounded queries, and a read-only SQL source.
-- 917 backend tests pass with 96% line coverage; frontend unit, HTTP-mock and Chromium smoke tests run in CI.
+- 32 of the 34 planned Release 1 work items are closed (216 of 232 story points). The open items are listed in the [release notes](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Iteration-and-Release-Notes).
+- Implemented and tested: visual builder, block library, schema-driven configuration, graph validation, bounded preview, local DAG execution, manual and timer triggers, run telemetry and monitoring, governed Parquet artifacts with bounded queries, a read-only SQL source, hardened file and SQL boundaries, and an end-to-end author, preview, execute and inspect workflow.
+- 1,070 backend tests pass with 96% line coverage, and 226 frontend tests plus Playwright workflow tests run in CI.
 - No stakeholder signoff, software license or demo video is recorded yet. Those are tracked in [remaining actions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/SOEN490_HUMAN_ACTIONS.md).
 
 ## Contents

@@ -1,6 +1,11 @@
 // AI contribution: 50% or more AI-generated
-import { expect, it } from "vitest";
-import { parseRun } from "./runs";
+import { expect, it, vi } from "vitest";
+import { api } from "./client";
+import {
+  EXECUTION_REQUEST_TIMEOUT_MS,
+  executePipeline,
+  parseRun,
+} from "./runs";
 const detail = {
   schema_version: 1,
   id: "33333333-3333-4333-8333-333333333333",
@@ -73,4 +78,17 @@ it.each([
       "33333333-3333-4333-8333-333333333333",
     ),
   ).toThrow("unsupported or mismatched run evidence");
+});
+
+it("gives execute its own timeout because the API answers only after the run", async () => {
+  const projectId = "11111111-1111-4111-8111-111111111111";
+  const pipelineId = "22222222-2222-4222-8222-222222222222";
+  const post = vi.spyOn(api, "post").mockRejectedValue(new Error("stop"));
+  await expect(executePipeline(projectId, pipelineId, 1)).rejects.toThrow();
+  const options = post.mock.calls[0][2];
+  expect(options?.timeout).toBe(EXECUTION_REQUEST_TIMEOUT_MS);
+  expect(EXECUTION_REQUEST_TIMEOUT_MS).toBeGreaterThan(
+    api.defaults.timeout ?? 0,
+  );
+  post.mockRestore();
 });

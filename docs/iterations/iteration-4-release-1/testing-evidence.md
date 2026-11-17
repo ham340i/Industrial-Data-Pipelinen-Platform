@@ -63,6 +63,15 @@ Not recorded. Add actual evidence and distinguish planned checks from executed c
 component, API and real-browser checks, environment and limitations. Whole-release
 acceptance, independent review and stakeholder signoff remain pending.
 
+## Issue #32 feature verification
+
+[Security boundary evidence](../../testing/issue-32-security-boundaries.md)
+records the gaps found by probing (redaction, timer logging, credential-key
+policy, standalone SQLite confinement, Parquet decode bounds, DuckDB lock,
+Dependabot coverage), the 129 new backend tests, the dependency audit and
+the accepted risks. Independent review and stakeholder signoff remain
+pending.
+
 ## Issue #37 feature verification
 
 [Integration matrix evidence](../../testing/issue-37-integration-matrix.md)
@@ -71,3 +80,12 @@ frontend parser contract tests), the two cross-feature mismatches it found
 and fixed, the exact commands, environment and counts, and the CI result
 capture. Whole-release acceptance, independent review and stakeholder
 signoff remain pending.
+
+## November 16: issue #31 workflow integration
+
+[Design](../../design/issue-31-workflow.md) and
+[executed verification](../../testing/issue-31-workflow.md) cover nested
+quality/aggregate forms, real validation, saved execution, governed output
+inspection, and the full real-service Playwright acceptance scenario.
+All prerequisite issues were closed when checked. Independent review and
+stakeholder acceptance remain pending; this is not whole-iteration signoff.

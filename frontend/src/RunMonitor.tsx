@@ -1,4 +1,5 @@
 // AI contribution: 50% or more AI-generated
+import { OutputInspection } from "./OutputInspection";
 import { useState, useSyncExternalStore } from "react";
 import { onlineManager, useQuery } from "@tanstack/react-query";
 import {
@@ -86,6 +87,7 @@ function Evidence({ run }: { run: RunDetail }) {
           <InspectNode id={block.node_id} />
         </Paper>
       ))}
+      <OutputInspection run={run} />
       <Typography component="h3" variant="h2">
         Redacted logs
       </Typography>
@@ -209,8 +211,8 @@ export function RunMonitor({
         )}
         {runs.data?.length === 0 && (
           <Typography>
-            No runs yet. Execute this saved pipeline through the API or its
-            timer to see evidence here.
+            No runs yet. Use Run saved pipeline to execute this graph and see
+            evidence here.
           </Typography>
         )}
         {runId && (

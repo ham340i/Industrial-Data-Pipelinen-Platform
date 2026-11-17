@@ -1,5 +1,10 @@
 # AI contribution: 50% or more AI-generated
-"""Bounded CSV prefix preview, independent of the execution reader (#26)."""
+"""Bounded CSV preview: header checks, a row-prefix sample and provenance.
+
+Moved out of ``CsvSource._preview`` in app/blocks/files.py (#32 review) and
+split into one helper per step, like the JSON and Parquet previews in
+app/blocks/json_preview.py and app/blocks/file_preview.py.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +23,7 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
+from app.blocks.files import CsvConfig, resource_path
 from app.blocks.preview_policy import (
     MAX_COLUMN_CHARS,
     MAX_COLUMNS,
@@ -25,13 +31,12 @@ from app.blocks.preview_policy import (
     MAX_READ_BYTES,
     CsvLines,
 )
-from app.blocks.resources import CsvConfig, resource_path
 from app.blocks.tabular import cast_column, checked_names, from_frame
 
-Row = dict[str, str | None]
+CsvRows = list[dict[str, str | None]]
 
 
-def _checked_header(reader: Iterator[list[str]], config: CsvConfig) -> list[str]:
+def csv_header(reader: Iterator[list[str]], config: CsvConfig) -> list[str]:
     header = next(reader, [])
     if not header or len(header) > min(config.max_columns, MAX_COLUMNS):
         raise BlockError(
@@ -53,12 +58,12 @@ def _checked_header(reader: Iterator[list[str]], config: CsvConfig) -> list[str]
     return header
 
 
-def _row_budget(width: int, config: CsvConfig, limits: PreviewLimits) -> int:
+def csv_row_budget(header: list[str], config: CsvConfig, limits: PreviewLimits) -> int:
     count = min(
         limits.max_rows,
-        limits.max_cells // width,
+        limits.max_cells // len(header),
         config.max_rows,
-        config.max_cells // width,
+        config.max_cells // len(header),
     )
     if count < 1:
         raise BlockError(
@@ -68,15 +73,19 @@ def _row_budget(width: int, config: CsvConfig, limits: PreviewLimits) -> int:
     return count
 
 
-def _sample(
-    reader: Iterator[list[str]],
+def csv_sample(
     lines: CsvLines,
+    reader: Iterator[list[str]],
     header: list[str],
-    config: CsvConfig,
     count: int,
-) -> tuple[list[Row], int, bool]:
-    """Read up to ``count`` rows; return them, rows inspected and truncation."""
-    rows: list[Row] = []
+    null_value: str,
+) -> tuple[CsvRows, int, bool]:
+    """Up to ``count`` rows, how many records were inspected, and truncation.
+
+    One record past ``count`` is inspected so truncation is known, and that
+    record is still checked for width and field length.
+    """
+    rows: CsvRows = []
     inspected = 0
     while True:
         lines.next_record()
@@ -95,70 +104,64 @@ def _sample(
             return rows, inspected, True
         rows.append(
             {
-                name: None if value == config.null_value else value
+                name: None if value == null_value else value
                 for name, value in zip(header, values, strict=True)
             }
         )
 
 
-def _typed_table(
-    rows: list[Row], header: list[str], config: CsvConfig, context: BlockContext
+def csv_table(
+    rows: CsvRows, header: list[str], config: CsvConfig, context: BlockContext
 ) -> Table:
     frame = pl.DataFrame(rows, schema={name: pl.String for name in header})
     if config.columns:
         for name, kind in zip(config.columns, config.types, strict=True):
             context.check_cancelled()
             frame = cast_column(frame, name, kind)
-        return from_frame(frame, config.declared_schema())
-    # A prefix cannot establish whole-file non-nullability.
-    schema = DataSchema(
-        columns=tuple(
-            Column(name=name, dtype="string", nullable=True) for name in header
-        )
-    )
-    return from_frame(frame, schema)
-
-
-def _read_preview(
-    config: CsvConfig, context: BlockContext, limits: PreviewLimits
-) -> PortValues:
-    path = resource_path(context, config.resource_ref, ".csv")
-    if not path.is_file():
-        raise OSError
-    with path.open("rb", buffering=0) as stream:
-        lines = CsvLines(
-            stream,
-            config.encoding,
-            min(config.max_bytes, MAX_READ_BYTES),
-            context,
-        )
-        reader = csv.reader(lines, strict=True)
-        header = _checked_header(reader, config)
-        count = _row_budget(len(header), config, limits)
-        rows, inspected, truncated = _sample(reader, lines, header, config, count)
-        context.check_cancelled()
-        table = _typed_table(rows, header, config, context)
-        context.check_cancelled()
-        if context.observe_preview is not None:
-            context.observe_preview(
-                PreviewObservation(
-                    inspected_rows=inspected,
-                    full_row_count=None if truncated else len(rows),
-                    truncated=truncated,
-                    schema_scope="declared" if config.columns else "header",
-                    full_count_scope="unknown" if truncated else "observed",
-                    read_bytes=lines.read_bytes,
-                )
+        schema = config.declared_schema()
+    else:
+        # A prefix cannot establish whole-file non-nullability.
+        schema = DataSchema(
+            columns=tuple(
+                Column(name=name, dtype="string", nullable=True) for name in header
             )
-        return {"table": (table,)}
+        )
+    return from_frame(frame, schema)
 
 
 def preview_csv(
     config: CsvConfig, context: BlockContext, limits: PreviewLimits
 ) -> PortValues:
     context.check_cancelled()
+    path = resource_path(context, config.resource_ref, ".csv")
     try:
-        return _read_preview(config, context, limits)
+        if not path.is_file():
+            raise OSError
+        with path.open("rb", buffering=0) as stream:
+            lines = CsvLines(
+                stream, config.encoding, min(config.max_bytes, MAX_READ_BYTES), context
+            )
+            reader = csv.reader(lines, strict=True)
+            header = csv_header(reader, config)
+            count = csv_row_budget(header, config, limits)
+            rows, inspected, truncated = csv_sample(
+                lines, reader, header, count, config.null_value
+            )
+            context.check_cancelled()
+            table = csv_table(rows, header, config, context)
+            context.check_cancelled()
+            if context.observe_preview is not None:
+                context.observe_preview(
+                    PreviewObservation(
+                        inspected_rows=inspected,
+                        full_row_count=None if truncated else len(rows),
+                        truncated=truncated,
+                        schema_scope="declared" if config.columns else "header",
+                        full_count_scope="unknown" if truncated else "observed",
+                        read_bytes=lines.read_bytes,
+                    )
+                )
+            return {"table": (table,)}
     except BlockError:
         raise
     except OSError:

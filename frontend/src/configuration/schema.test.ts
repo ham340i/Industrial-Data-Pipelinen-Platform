@@ -1,5 +1,6 @@
 // AI contribution: 50% or more AI-generated
 import { describe, expect, it } from "vitest";
+import type { Configuration } from "./schema";
 import {
   assertPublic,
   defaultsFor,
@@ -145,4 +146,59 @@ describe("bounded public configuration schema", () => {
       }),
     ).not.toThrow();
   });
+});
+
+// Regression: the actual quality/aggregate registry uses referenced objects.
+const nestedSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["columns"],
+  $defs: {
+    Column: {
+      type: "object",
+      additionalProperties: false,
+      required: ["name", "dtype"],
+      properties: {
+        name: { type: "string", minLength: 1 },
+        dtype: { type: "string", enum: ["integer", "string"] },
+        nullable: { type: "boolean", default: false },
+      },
+    },
+  },
+  properties: {
+    columns: { type: "array", minItems: 1, items: { $ref: "#/$defs/Column" } },
+  },
+};
+it("accepts public referenced object lists and applies nested validation/defaults", () => {
+  const fields = fieldsFromSchema(nestedSchema);
+  expect(
+    validateConfiguration(fields, {
+      columns: [{ name: "reading", dtype: "integer" }],
+    }),
+  ).toEqual([]);
+  for (const column of [
+    { name: "x" },
+    { name: "", dtype: "integer" },
+    { name: "x", dtype: "unknown" },
+    { name: "x", dtype: "integer", nullable: "false" },
+    { name: "x", dtype: "integer", extra: 1 },
+  ] as Configuration[])
+    expect(validateConfiguration(fields, { columns: [column] })).toHaveLength(
+      1,
+    );
+});
+it("rejects recursive, missing and external schema definitions", () => {
+  for (const ref of [
+    "https://example.invalid/schema",
+    "#/$defs/Missing",
+    "#/$defs/Loop",
+  ])
+    expect(() =>
+      fieldsFromSchema({
+        ...nestedSchema,
+        $defs: { Loop: { type: "array", items: { $ref: "#/$defs/Loop" } } },
+        properties: { value: { $ref: ref } },
+        required: ["value"],
+      }),
+    ).toThrow();
 });

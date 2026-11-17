@@ -7,7 +7,7 @@ export interface ConfigField {
   name: string;
   label: string;
   description?: string;
-  type: "string" | "integer" | "number" | "boolean" | "array";
+  type: "string" | "integer" | "number" | "boolean" | "array" | "object";
   nullable: boolean;
   required: boolean;
   schema: Schema;
@@ -96,6 +96,9 @@ const allowed = new Set([
   "uniqueItems",
   "items",
   "anyOf",
+  "properties",
+  "required",
+  "additionalProperties",
 ]);
 
 function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
@@ -133,11 +136,16 @@ function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
   if (Object.keys(schema).some((key) => !allowed.has(key)))
     throw new Error("This field uses an unsupported schema rule.");
   if (
-    !["string", "integer", "number", "boolean", "array"].includes(
+    !["string", "integer", "number", "boolean", "array", "object"].includes(
       String(schema.type),
     )
   )
     throw new Error("This field type is not supported.");
+  if (schema.type === "object") {
+    if (!object(schema.properties) || schema.additionalProperties !== false)
+      throw new Error("Only closed configuration objects are supported.");
+    fieldsFromSchema(schema);
+  }
   if (schema.type === "array") {
     const item = fieldSchema(schema.items);
     if (item.schema.type === "array")
@@ -193,8 +201,49 @@ function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
   return { schema, nullable };
 }
 
+// Registry references are local definitions only; cycles and expansion are bounded.
+function resolveDefinitions(input: unknown): unknown {
+  const definitions = object(input) && object(input.$defs) ? input.$defs : {};
+  let remaining = 5000;
+  function visit(value: unknown, trail: string[] = [], depth = 0): unknown {
+    if (--remaining < 0) throw new Error("Schema expansion is too large.");
+    if (depth > 20) throw new Error("Schema is too deeply nested.");
+    if (Array.isArray(value))
+      return value.map((v) => visit(v, trail, depth + 1));
+    if (!object(value)) return value;
+    if (value.$ref !== undefined) {
+      const ref = value.$ref;
+      if (
+        typeof ref !== "string" ||
+        !/^#\/\$defs\/[A-Za-z0-9_]+$/.test(ref) ||
+        trail.includes(ref)
+      )
+        throw new Error(
+          "Only nonrecursive local schema references are supported.",
+        );
+      const name = ref.slice("#/$defs/".length);
+      if (!Object.hasOwn(definitions, name) || !object(definitions[name]))
+        throw new Error("Schema definition is unavailable.");
+      const { $ref: _, ...siblings } = value;
+      void _;
+      return visit(
+        { ...definitions[name], ...siblings },
+        [...trail, ref],
+        depth + 1,
+      );
+    }
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => key !== "$defs")
+        .map(([key, v]) => [key, visit(v, trail, depth + 1)]),
+    );
+  }
+  return visit(input);
+}
+
 export function fieldsFromSchema(input: unknown): ConfigField[] {
   assertPublic(input);
+  input = resolveDefinitions(input);
   if (!object(input) || input.type !== "object" || !object(input.properties))
     throw new Error("A configuration object schema is required.");
   const topAllowed = new Set([
@@ -253,7 +302,9 @@ function validValue(
         ? typeof value === "number" && Number.isFinite(value)
         : schema.type === "array"
           ? Array.isArray(value)
-          : typeof value === schema.type;
+          : schema.type === "object"
+            ? object(value)
+            : typeof value === schema.type;
   if (!matches) return `Enter a valid ${String(schema.type)}.`;
   if (
     Array.isArray(schema.enum) &&
@@ -289,6 +340,16 @@ function validValue(
       return `Use at least ${schema.minLength} characters.`;
     if (typeof schema.maxLength === "number" && length > schema.maxLength)
       return `Use at most ${schema.maxLength} characters.`;
+  }
+  if (object(value) && schema.type === "object") {
+    const issues = validateConfiguration(
+      fieldsFromSchema(schema),
+      value as Configuration,
+    );
+    if (issues.length) {
+      const issue = issues[0];
+      return `${issue.field ? `${issue.field}: ` : ""}${issue.message}`;
+    }
   }
   if (Array.isArray(value)) {
     if (typeof schema.minItems === "number" && value.length < schema.minItems)
