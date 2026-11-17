@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Runtime-only services. Context is deliberately not a serializable model."""
 
 import logging

@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { defineConfig } from "@playwright/test";
 
 if (!process.env.COMPOSE_BASE_URL) {

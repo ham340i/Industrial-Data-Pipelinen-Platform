@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Portable graph contracts; importing this package performs no I/O."""
 
 from app.pipelines.models import (

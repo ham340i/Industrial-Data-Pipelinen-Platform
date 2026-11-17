@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Real CSV/Select previews, resource bounds and read-only API guarantees."""
 
 from concurrent.futures import ThreadPoolExecutor

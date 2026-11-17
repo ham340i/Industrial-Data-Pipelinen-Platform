@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Real API/SQLite tests for project creation, listing and reopening (#19)."""
 
 from pathlib import Path

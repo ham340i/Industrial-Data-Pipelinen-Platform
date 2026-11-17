@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { describe, expect, it } from "vitest";
 import {
   assertPublic,

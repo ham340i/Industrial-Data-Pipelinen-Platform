@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Explicit registration and exact version resolution; no dynamic imports."""
 
 from __future__ import annotations

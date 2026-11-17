@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { useState, useSyncExternalStore } from "react";
 import { onlineManager, useQuery } from "@tanstack/react-query";
 import {

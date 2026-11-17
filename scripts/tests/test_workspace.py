@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Local workspace configuration contracts (issue #4)."""
 
 import json

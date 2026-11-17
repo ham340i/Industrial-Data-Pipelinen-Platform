@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI contribution: 50% or more AI-generated
 """Check local and maintained repository/Wiki links, anchors and whitespace.
 
 External URLs are not fetched; maintained GitHub links use local source files.

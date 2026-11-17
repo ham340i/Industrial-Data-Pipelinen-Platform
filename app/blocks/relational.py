@@ -1,3 +1,4 @@
+# AI contribution: below 50% AI-generated
 """Deterministic Join and Aggregate blocks that combine or reduce tables (#24)."""
 
 from __future__ import annotations

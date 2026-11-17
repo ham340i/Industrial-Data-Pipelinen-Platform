@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
 
 test("real SDK config survives selection, failed copy, export and API save/reopen", async ({

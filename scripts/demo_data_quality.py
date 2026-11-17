@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Synthetic, local-only quality gate demonstration (#25); no real data."""
 
 from pathlib import Path

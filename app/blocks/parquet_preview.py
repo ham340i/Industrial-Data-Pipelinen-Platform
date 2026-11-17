@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Bounded Parquet batch preview, independent of the execution reader.
 
 Parquet limits bound reads and declared decoding work, not native allocator RSS.

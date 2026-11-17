@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI contribution: 50% or more AI-generated
 """Validate Release 1 estimates, student-only ownership and dependency integrity."""
 
 from collections import Counter

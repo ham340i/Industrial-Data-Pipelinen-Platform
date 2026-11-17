@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Executor publication -> metadata -> bounded DuckDB acceptance path (#28)."""
 
 from collections.abc import Iterator

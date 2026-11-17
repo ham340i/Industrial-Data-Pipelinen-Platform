@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Bounded SDK/Polars adapter shared by the Iteration 2 file blocks."""
 
 from typing import Any, Literal

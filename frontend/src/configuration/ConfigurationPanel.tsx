@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { Alert, Box } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { getBlocks } from "../api/blocks";

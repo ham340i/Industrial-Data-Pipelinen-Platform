@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Database-backed project create/list/open operations."""
 
 from typing import Annotated, cast

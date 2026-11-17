@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Real SQLite authoring roundtrips, isolation and conflict handling (#14)."""
 
 from concurrent.futures import ThreadPoolExecutor
