@@ -90,6 +90,8 @@ def main():
                 validate_configuration(path, json.loads(text))
         except (ValueError, AssertionError, KeyError, TypeError, SyntaxError, subprocess.CalledProcessError):
             failures.append(f'{relative}: invalid syntax, configuration or whitespace (details withheld)')
+    # print, not logging, is deliberate: this is a standalone CLI whose stdout
+    # is the CI job's report, and the exit code is what fails the build.
     if failures:
         print('\n'.join(failures))
         return 1
