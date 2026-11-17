@@ -1,0 +1,146 @@
+{
+  "image": "python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3",
+  "limits": "1 GiB, no swap, 2 CPUs, no network",
+  "cases": [
+    {
+      "mode": "product",
+      "rows": 150000,
+      "runs": [
+        {
+          "seconds": 26.505,
+          "peak_mib": 585.8
+        },
+        {
+          "seconds": 26.422,
+          "peak_mib": 581.6
+        },
+        {
+          "seconds": 27.447,
+          "peak_mib": 553.3
+        }
+      ],
+      "median_seconds": 26.505,
+      "median_peak_mib": 581.6
+    },
+    {
+      "mode": "eager",
+      "rows": 150000,
+      "runs": [
+        {
+          "seconds": 0.317,
+          "peak_mib": 110.0
+        },
+        {
+          "seconds": 0.289,
+          "peak_mib": 109.7
+        },
+        {
+          "seconds": 0.261,
+          "peak_mib": 109.6
+        }
+      ],
+      "median_seconds": 0.289,
+      "median_peak_mib": 109.7
+    },
+    {
+      "mode": "lazy",
+      "rows": 150000,
+      "runs": [
+        {
+          "seconds": 0.205,
+          "peak_mib": 84.5
+        },
+        {
+          "seconds": 0.298,
+          "peak_mib": 90.3
+        },
+        {
+          "seconds": 0.287,
+          "peak_mib": 87.6
+        }
+      ],
+      "median_seconds": 0.287,
+      "median_peak_mib": 87.6
+    },
+    {
+      "mode": "eager",
+      "rows": 2000000,
+      "runs": [
+        {
+          "seconds": 0.875,
+          "peak_mib": 672.2
+        },
+        {
+          "seconds": 0.834,
+          "peak_mib": 672.1
+        },
+        {
+          "seconds": 0.71,
+          "peak_mib": 671.4
+        }
+      ],
+      "median_seconds": 0.834,
+      "median_peak_mib": 672.1
+    },
+    {
+      "mode": "lazy",
+      "rows": 2000000,
+      "runs": [
+        {
+          "seconds": 0.39,
+          "peak_mib": 265.5
+        },
+        {
+          "seconds": 0.396,
+          "peak_mib": 263.6
+        },
+        {
+          "seconds": 0.362,
+          "peak_mib": 265.1
+        }
+      ],
+      "median_seconds": 0.39,
+      "median_peak_mib": 265.1
+    }
+  ],
+  "output_checks": [
+    {
+      "rows": 150000,
+      "compared": [
+        "out-eager-0.parquet",
+        "out-lazy-0.parquet"
+      ],
+      "values_equal": true,
+      "arrow_schema_equal": true,
+      "types_equal": true
+    },
+    {
+      "rows": 150000,
+      "compared": [
+        "out-product-0.parquet",
+        "out-lazy-0.parquet"
+      ],
+      "values_equal": true,
+      "arrow_schema_equal": false,
+      "types_equal": false
+    },
+    {
+      "rows": 2000000,
+      "compared": [
+        "out-eager-0.parquet",
+        "out-lazy-0.parquet"
+      ],
+      "values_equal": true,
+      "arrow_schema_equal": true,
+      "types_equal": true
+    }
+  ],
+  "product_budget_probe": {
+    "rows": 200000,
+    "returncode": 1,
+    "outcome": [
+      "RuntimeError: product run failed: {'aggregate': 'data_limit', 'sort': 'dependency_failed', 'sink': 'dependency_failed'}"
+    ]
+  },
+  "optimized_plan": "SORT BY [col(\"segment\")]\n  AGGREGATE[maintain_order: false]\n    [col(\"value\").sum().alias(\"total\"), col(\"value\").count().alias(\"rows\")] BY [col(\"segment\")]\n    FROM\n    simple \u03c0 2/2 [\"segment\", \"value\"]\n      INNER JOIN:\n      LEFT PLAN ON: [col(\"key\")]\n        simple \u03c0 2/2 [\"value\", \"key\"]\n          Csv SCAN [/data/fact.csv]\n          PROJECT 2/10 COLUMNS\n          SELECTION: col(\"value\") > 2000\n      RIGHT PLAN ON: [col(\"key\")]\n        Csv SCAN [/data/dimension.csv]\n        PROJECT */2 COLUMNS\n      END INNER JOIN\n"
+}
