@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI contribution: 50% or more AI-generated
 """Publish maintained Wiki navigation pages; preserve unrelated Wiki pages.
 
 Requires the first Wiki page to have been saved through GitHub's web interface.
@@ -14,6 +15,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 REMOTE = 'git@github.com:ham340i/Industrial-Data-Pipelinen-Platform.wiki.git'
 SSH = 'ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes'
+RETIRED = ('Planning-and-Iterations.md', 'Testing-and-Quality.md', 'Stakeholder-and-Releases.md',
+           'SOEN-490-Evaluation.md', 'Engineering-Workflow.md')
 
 
 def git(*args, cwd=None):
@@ -36,6 +39,10 @@ def main():
             stage = 'preparing maintained pages'
             for page in pages:
                 shutil.copyfile(page, checkout / page.name)
+            # Pages this repository used to maintain and has since replaced.
+            for name in RETIRED:
+                if (checkout / name).exists():
+                    git('rm', '--quiet', '--', name, cwd=checkout)
             changes = git('status', '--short', cwd=checkout)
             if not changes:
                 print('Wiki is already up to date.')

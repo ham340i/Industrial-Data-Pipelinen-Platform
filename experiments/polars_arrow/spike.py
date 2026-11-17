@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Issue #13: reproducible interchange checks and isolated Linux RSS measurements."""
 
 from __future__ import annotations

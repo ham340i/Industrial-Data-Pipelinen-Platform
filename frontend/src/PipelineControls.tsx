@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Stack, Typography } from "@mui/material";

@@ -1,5 +1,7 @@
 # Accessibility and equitable usability
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Diversity Statement](../wiki/Diversity-Statement.md).
+
 Design for different technical backgrounds and working conditions without assuming ability, language fluency or visual acuity. These are planned commitments, not verified accessibility claims.
 
 - Provide keyboard access to pipeline creation, configuration and inspection; validate an alternative to pointer-only dragging.

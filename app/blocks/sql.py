@@ -21,6 +21,7 @@ from app.blocks.tabular import TABLE_PORT, descriptor_values, to_frame
 from app.sources.sql import (
     _validate_read_query,
     execute_read_only_sqlite,
+    SqlQueryResult,
     SqlSourceError,
 )
 
@@ -58,6 +59,27 @@ class SqlSource(Block[SqlConfig]):
         outputs=(TABLE_PORT,),
     )
 
+    @staticmethod
+    def _declared_table(result: SqlQueryResult, config: SqlConfig) -> Table:
+        """Check the result against the declared columns and scalar schema."""
+        if result.columns != config.columns or not config.columns:
+            raise BlockError("schema_mismatch", "Declare SQL columns in result order.")
+        try:
+            table = Table(data_schema=config.declared_schema(), rows=tuple(result.rows))
+        except ValidationError:
+            raise BlockError(
+                "schema_mismatch", "SQL values violate the declared scalar schema."
+            ) from None
+        try:
+            to_frame(table)
+        except BlockError as exc:
+            if exc.failure.code != "unsupported_value":
+                raise
+            raise BlockError(
+                "schema_mismatch", "SQL values violate the declared scalar schema."
+            ) from None
+        return table
+
     def _execute(
         self, config: SqlConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
@@ -88,26 +110,7 @@ class SqlSource(Block[SqlConfig]):
                 ),
                 max_bytes=config.max_bytes,
             )
-            if result.columns != config.columns or not config.columns:
-                raise BlockError(
-                    "schema_mismatch", "Declare SQL columns in result order."
-                )
-            try:
-                table = Table(
-                    data_schema=config.declared_schema(), rows=tuple(result.rows)
-                )
-            except ValidationError:
-                raise BlockError(
-                    "schema_mismatch", "SQL values violate the declared scalar schema."
-                ) from None
-            try:
-                to_frame(table)
-            except BlockError as exc:
-                if exc.failure.code != "unsupported_value":
-                    raise
-                raise BlockError(
-                    "schema_mismatch", "SQL values violate the declared scalar schema."
-                ) from None
+            table = self._declared_table(result, config)
             return {"table": (table,)}
         except BlockError:
             raise

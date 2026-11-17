@@ -2,6 +2,7 @@
 """Private local workspace settings; never part of portable pipeline definitions."""
 
 import json
+import logging
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -15,6 +16,8 @@ from sqlalchemy import select
 from app.config import settings
 from app.metadata.database import Database
 from app.metadata.models import Project
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/settings/workspace", tags=["settings"])
 workspace_lock = RLock()
@@ -223,8 +226,9 @@ def status(db: Database) -> WorkspaceStatus:
     if root is not None:
         try:
             ready = root.is_dir() and os.access(root, os.R_OK | os.W_OK | os.X_OK)
-        except OSError:
-            pass
+        except OSError as exc:
+            # An unreadable folder is reported to the user as "not ready".
+            logger.info("Workspace readiness check failed: %s", type(exc).__name__)
     return WorkspaceStatus(
         root_path=str(root) if root else None,
         source=source,
@@ -244,6 +248,45 @@ def get_workspace(
 ) -> WorkspaceStatus:
     response.headers["Cache-Control"] = "no-store"
     return status(db)
+
+
+def _store_setting(db: Database, root: Path | None) -> None:
+    """Atomically replace the saved workspace override; ``None`` removes it."""
+    temporary: Path | None = None
+    try:
+        if root is None:
+            settings_file(db).unlink(missing_ok=True)
+            return
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=db.path.parent,
+            prefix=".workspace-",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump({"root_path": str(root)}, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, settings_file(db))
+    except OSError:
+        raise WorkspaceError(
+            "workspace_save_failed",
+            "Workspace settings could not be saved. "
+            "The previous setting remains active.",
+            503,
+        ) from None
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError as exc:
+                # Only a stale temporary file remains; the setting is decided.
+                logger.warning(
+                    "Could not remove temporary workspace settings file: %s",
+                    type(exc).__name__,
+                )
 
 
 @router.put("", response_model=WorkspaceStatus)
@@ -269,35 +312,5 @@ def save_workspace(
                 projects = list(session.scalars(select(Project.id)))
             for project in projects:
                 prepare_project(root, project)
-        temporary: Path | None = None
-        try:
-            if payload.root_path is None:
-                settings_file(db).unlink(missing_ok=True)
-            else:
-                with NamedTemporaryFile(
-                    mode="w",
-                    encoding="utf-8",
-                    dir=db.path.parent,
-                    prefix=".workspace-",
-                    suffix=".tmp",
-                    delete=False,
-                ) as stream:
-                    temporary = Path(stream.name)
-                    json.dump({"root_path": str(root)}, stream)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                os.replace(temporary, settings_file(db))
-        except OSError:
-            raise WorkspaceError(
-                "workspace_save_failed",
-                "Workspace settings could not be saved. "
-                "The previous setting remains active.",
-                503,
-            ) from None
-        finally:
-            if temporary is not None:
-                try:
-                    temporary.unlink(missing_ok=True)
-                except OSError:
-                    pass
+        _store_setting(db, None if payload.root_path is None else root)
         return status(db)

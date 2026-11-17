@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

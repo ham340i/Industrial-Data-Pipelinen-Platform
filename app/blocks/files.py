@@ -307,9 +307,8 @@ class JsonSource(FileSource[JsonConfig]):
 
         return preview_json(config, context, limits)
 
-    def _read(
-        self, path: Path, config: JsonConfig
-    ) -> tuple[pl.DataFrame, DataSchema | None]:
+    @staticmethod
+    def _records(path: Path, config: JsonConfig) -> list[dict[str, Any]]:
         data = path.read_bytes()
         if len(data) > config.max_bytes:
             raise BlockError("file_limit", "Input exceeds the configured byte limit.")
@@ -318,6 +317,40 @@ class JsonSource(FileSource[JsonConfig]):
             raise ValueError("JSON requires an array of record objects")
         if len(rows) > config.max_rows:
             raise BlockError("table_limit", "Input exceeds the configured row limit.")
+        return rows
+
+    @staticmethod
+    def _column_type(kinds: set[type]) -> DType:
+        """SDK type for the Python types seen in one column (empty means string)."""
+        if kinds and kinds <= {int, float}:
+            return "number" if float in kinds else "integer"
+        if kinds <= {str}:
+            return "string"
+        if kinds == {bool}:
+            return "boolean"
+        raise BlockError(
+            "unsupported_type", "JSON columns require consistent scalar types."
+        )
+
+    @classmethod
+    def _inferred_schema(
+        cls, rows: list[dict[str, Any]], names: list[str]
+    ) -> DataSchema:
+        columns = []
+        for name in names:
+            values = [row[name] for row in rows if name in row]
+            kinds = {type(value) for value in values if value is not None}
+            columns.append(
+                Column(
+                    name=name, dtype=cls._column_type(kinds), nullable=None in values
+                )
+            )
+        return DataSchema(columns=tuple(columns))
+
+    def _read(
+        self, path: Path, config: JsonConfig
+    ) -> tuple[pl.DataFrame, DataSchema | None]:
+        rows = self._records(path, config)
         if not rows:
             if not config.columns:
                 raise BlockError(
@@ -340,23 +373,7 @@ class JsonSource(FileSource[JsonConfig]):
             raise BlockError(
                 "table_limit", "Input exceeds the configured table limits."
             )
-        columns = []
-        for name in names:
-            kind: DType
-            values = [row[name] for row in rows if name in row]
-            kinds = {type(value) for value in values if value is not None}
-            if kinds <= {int, float} and kinds:
-                kind = "number" if float in kinds else "integer"
-            elif kinds <= {str}:
-                kind = "string"
-            elif kinds == {bool}:
-                kind = "boolean"
-            else:
-                raise BlockError(
-                    "unsupported_type", "JSON columns require consistent scalar types."
-                )
-            columns.append(Column(name=name, dtype=kind, nullable=None in values))
-        table = Table(data_schema=DataSchema(columns=tuple(columns)), rows=tuple(rows))
+        table = Table(data_schema=self._inferred_schema(rows, names), rows=tuple(rows))
         return to_frame(table), table.data_schema
 
 

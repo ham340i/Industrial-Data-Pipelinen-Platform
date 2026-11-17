@@ -1,5 +1,7 @@
 # Economic impact measurement plan
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Economic](../wiki/Economic.md).
+
 No savings have been measured. Validate the baseline workflow with the stakeholder and compare equivalent tasks after implementation.
 
 | Outcome | Evidence to collect |

@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

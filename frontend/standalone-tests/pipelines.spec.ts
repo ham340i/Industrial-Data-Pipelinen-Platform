@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
 
 test("real API saves and reloads the canvas, then renames the pipeline", async ({

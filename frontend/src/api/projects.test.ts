@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { http, HttpResponse } from "msw";
 import { expect, it } from "vitest";
 import { server } from "../test/server";

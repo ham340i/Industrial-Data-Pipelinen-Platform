@@ -1,5 +1,7 @@
 # Legal and ethical review checklist
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Legal and Ethical Issues](../wiki/Legal-and-Ethical-Issues.md).
+
 Status: questions for authorized team/stakeholder review, not legal conclusions or signed agreements.
 
 | Area | Decision/evidence needed |

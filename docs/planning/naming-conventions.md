@@ -1,5 +1,7 @@
 # Naming and traceability
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Naming Conventions](../wiki/Naming-Conventions.md).
+
 - Product display name: **Local Pipeline Studio**. Repository slug remains `Industrial-Data-Pipelinen-Platform`; do not assume it has been renamed.
 - Branches: `feature/<issue>-short-description`, `bugfix/<issue>-short-description`, `spike/<issue>-short-description`, `docs/<issue>-short-description`.
 - Commits: `type(scope): concrete change (#issue)`; see [contribution guide](../../.github/CONTRIBUTING.md).

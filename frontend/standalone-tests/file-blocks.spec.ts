@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
 
 test("all nine real file/column block schemas configure and persist", async ({

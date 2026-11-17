@@ -31,6 +31,10 @@ class Settings(BaseModel):
         ),
         validate_default=True,
     )
+    # DEBUG, INFO, WARNING, ERROR or CRITICAL; see app/logging_config.py.
+    log_level: str = Field(
+        default_factory=lambda: os.environ.get("LPS_LOG_LEVEL", "INFO")
+    )
     allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

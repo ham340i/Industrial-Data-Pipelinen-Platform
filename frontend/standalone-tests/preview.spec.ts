@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";

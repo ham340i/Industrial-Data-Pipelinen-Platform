@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Governed artifact registration and query services (#28)."""
 
 from app.artifacts.registration import register_published_artifacts, sink_format

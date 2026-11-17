@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Headless local execution; no API, database or React dependencies."""
 
 from app.execution.frames import Frame, FrameValues

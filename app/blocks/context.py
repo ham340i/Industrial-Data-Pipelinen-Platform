@@ -1,5 +1,7 @@
+# AI contribution: 50% or more AI-generated
 """Runtime-only services. Context is deliberately not a serializable model."""
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -9,6 +11,8 @@ from app.blocks.contracts import Contract, NonBlank, PreviewObservation
 from app.blocks.errors import BlockError, QualityDiagnostic
 
 EventKind = Literal["started", "succeeded", "failed", "previewed", "quality"]
+
+logger = logging.getLogger(__name__)
 
 
 class BlockEvent(Contract):
@@ -70,6 +74,10 @@ class BlockContext:
         if self.log_sink is not None:
             try:
                 self.log_sink(event)
-            except Exception:
+            except Exception as exc:
                 # A log callback must not fail a block invocation.
-                pass
+                logger.warning(
+                    "Block event sink failed for node %s: %s",
+                    self.node_id,
+                    type(exc).__name__,
+                )

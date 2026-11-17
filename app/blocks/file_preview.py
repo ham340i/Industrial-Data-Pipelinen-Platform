@@ -236,6 +236,48 @@ def parquet_sample(
     return rows, inspected
 
 
+def _sample_file(
+    file: pq.ParquetFile,
+    source: BudgetFile,
+    config: SourceConfig,
+    context: BlockContext,
+    limits: PreviewLimits,
+) -> PortValues:
+    """Decode the bounded leading sample of an already opened Parquet file."""
+    metadata = file.metadata
+    check_parquet_metadata(metadata)
+    schema = parquet_schema(file.schema_arrow)
+    count = names_and_limit([c.name for c in schema.columns], config, limits)
+    total = declared_rows(metadata)
+    wanted = min(count, total)
+    groups = preview_row_groups(metadata, wanted, context)
+    rows, inspected = (
+        parquet_sample(source, metadata, schema, groups, count, wanted, context)
+        if total
+        else ([], 0)
+    )
+    if len(rows) != wanted:
+        raise ValueError("Metadata and sample disagree")
+    for row in rows:
+        check_values(row)
+    table = configured_table(
+        Table(data_schema=schema, rows=tuple(rows)), config, context
+    )
+    context.check_cancelled()
+    if context.observe_preview:
+        context.observe_preview(
+            PreviewObservation(
+                inspected_rows=inspected,
+                full_row_count=total,
+                truncated=len(rows) < total,
+                schema_scope="declared" if config.columns else "file_metadata",
+                full_count_scope="file_metadata",
+                read_bytes=source.read_bytes,
+            )
+        )
+    return {"table": (table,)}
+
+
 def preview_parquet(
     config: SourceConfig, context: BlockContext, limits: PreviewLimits
 ) -> PortValues:
@@ -259,44 +301,7 @@ def preview_parquet(
                 thrift_string_size_limit=MAX_RECORD_BYTES,
                 thrift_container_size_limit=10000,
             ) as file:
-                metadata = file.metadata
-                check_parquet_metadata(metadata)
-                schema = parquet_schema(file.schema_arrow)
-                count = names_and_limit(
-                    [c.name for c in schema.columns], config, limits
-                )
-                total = declared_rows(metadata)
-                wanted = min(count, total)
-                groups = preview_row_groups(metadata, wanted, context)
-                rows, inspected = (
-                    parquet_sample(
-                        source, metadata, schema, groups, count, wanted, context
-                    )
-                    if total
-                    else ([], 0)
-                )
-                if len(rows) != wanted:
-                    raise ValueError("Metadata and sample disagree")
-                for row in rows:
-                    check_values(row)
-                table = configured_table(
-                    Table(data_schema=schema, rows=tuple(rows)), config, context
-                )
-                context.check_cancelled()
-                if context.observe_preview:
-                    context.observe_preview(
-                        PreviewObservation(
-                            inspected_rows=inspected,
-                            full_row_count=total,
-                            truncated=len(rows) < total,
-                            schema_scope="declared"
-                            if config.columns
-                            else "file_metadata",
-                            full_count_scope="file_metadata",
-                            read_bytes=source.read_bytes,
-                        )
-                    )
-                return {"table": (table,)}
+                return _sample_file(file, source, config, context, limits)
     except BlockError:
         raise
     except Exception:

@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { api, ApiError } from "./client";
 
 export interface Column {
@@ -62,37 +63,41 @@ function ports(value: unknown): value is Port[] {
     new Set(value.map((p: Port) => p.name)).size === value.length
   );
 }
+const BLOCK_TYPES = ["trigger", "source", "transform", "quality", "sink"];
+const optionalBoolean = (v: unknown) =>
+  v === undefined || typeof v === "boolean";
+
+/** A previewable block has no reason; any other block must explain why. */
+function previewFieldsValid(b: Record<string, unknown>): boolean {
+  if (b.supports_preview === undefined) return true;
+  if (typeof b.supports_preview !== "boolean") return false;
+  if (b.supports_preview)
+    return (
+      b.preview_reason === null &&
+      ["source", "transform"].includes(String(b.block_type))
+    );
+  return typeof b.preview_reason === "string" && !!b.preview_reason.trim();
+}
+function validBlock(b: unknown): boolean {
+  if (!object(b)) return false;
+  return [
+    b.sdk_version === 1,
+    ["block_id", "version", "name", "category"].every(
+      (k) => typeof b[k] === "string" && !!b[k].trim(),
+    ),
+    optionalBoolean(b.library_visible),
+    b.block_type === undefined || BLOCK_TYPES.includes(String(b.block_type)),
+    previewFieldsValid(b),
+    ports(b.inputs),
+    ports(b.outputs),
+    object(b.config_schema),
+  ].every(Boolean);
+}
 export async function getBlocks(
   signal?: AbortSignal,
 ): Promise<BlockMetadata[]> {
   const { data } = await api.get<unknown>("/blocks", { signal });
-  if (
-    !Array.isArray(data) ||
-    !data.every(
-      (b: unknown) =>
-        object(b) &&
-        b.sdk_version === 1 &&
-        ["block_id", "version", "name", "category"].every(
-          (k) => typeof b[k] === "string" && b[k].trim(),
-        ) &&
-        (b.library_visible === undefined ||
-          typeof b.library_visible === "boolean") &&
-        (b.block_type === undefined ||
-          ["trigger", "source", "transform", "quality", "sink"].includes(
-            String(b.block_type),
-          )) &&
-        (b.supports_preview === undefined ||
-          (typeof b.supports_preview === "boolean" &&
-            (b.supports_preview
-              ? b.preview_reason === null &&
-                ["source", "transform"].includes(String(b.block_type))
-              : typeof b.preview_reason === "string" &&
-                !!b.preview_reason.trim()))) &&
-        ports(b.inputs) &&
-        ports(b.outputs) &&
-        object(b.config_schema),
-    )
-  ) {
+  if (!Array.isArray(data) || !data.every(validBlock)) {
     throw new ApiError(
       "The API returned unsupported block metadata.",
       "invalid-response",

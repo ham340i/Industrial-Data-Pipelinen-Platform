@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Headless topology, serialization, portability and SDK integration for #9."""
 
 import json

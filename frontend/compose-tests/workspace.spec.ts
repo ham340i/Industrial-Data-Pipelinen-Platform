@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
 
 test("built shell connects to the real API and supports direct navigation", async ({

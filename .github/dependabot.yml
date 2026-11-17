@@ -5,7 +5,12 @@
       "package-ecosystem": "github-actions",
       "directory": "/",
       "schedule": {
-        "interval": "weekly"
+        "interval": "monthly"
+      },
+      "groups": {
+        "github-actions": {
+          "patterns": ["*"]
+        }
       },
       "open-pull-requests-limit": 5
     },
@@ -13,7 +18,12 @@
       "package-ecosystem": "pip",
       "directory": "/",
       "schedule": {
-        "interval": "weekly"
+        "interval": "monthly"
+      },
+      "groups": {
+        "python": {
+          "patterns": ["*"]
+        }
       },
       "open-pull-requests-limit": 5
     },
@@ -21,7 +31,12 @@
       "package-ecosystem": "npm",
       "directory": "/frontend",
       "schedule": {
-        "interval": "weekly"
+        "interval": "monthly"
+      },
+      "groups": {
+        "frontend": {
+          "patterns": ["*"]
+        }
       },
       "open-pull-requests-limit": 5
     }

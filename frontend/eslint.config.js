@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import hooks from "eslint-plugin-react-hooks";

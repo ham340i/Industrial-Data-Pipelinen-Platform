@@ -1,5 +1,7 @@
 # User consent and EULA — draft for review
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [User Consent and EULA](wiki/User-Consent-and-EULA.md).
+
 **DRAFT — not legally reviewed, approved, accepted or in effect.** No application or user-consent mechanism exists. The team and stakeholder must first decide whether this local-first tool needs consent, contractual terms, an EULA, or a different agreement. Do not present this text as a valid consent flow or license grant.
 
 ## Applicability decision

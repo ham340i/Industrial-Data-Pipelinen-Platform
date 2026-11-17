@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Requirements-derived typed/null/boundary and diagnostic cases for #25."""
 
 import json

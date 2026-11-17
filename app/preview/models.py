@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Strict public preview contracts, independent of persistence and execution."""
 
 import json
