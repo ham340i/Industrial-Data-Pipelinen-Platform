@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { api } from "../api/client";
 import { isProjectId } from "../api/projects";
 

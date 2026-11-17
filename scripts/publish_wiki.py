@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI contribution: 50% or more AI-generated
 """Publish maintained Wiki navigation pages; preserve unrelated Wiki pages.
 
 Requires the first Wiki page to have been saved through GitHub's web interface.

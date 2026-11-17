@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Actual catalog → executor → filesystem tests for required quality gates."""
 
 from pathlib import Path

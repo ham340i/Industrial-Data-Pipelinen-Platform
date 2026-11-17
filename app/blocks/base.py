@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Execution boundary: config, ports, lifecycle, preview and public failures."""
 
 from __future__ import annotations

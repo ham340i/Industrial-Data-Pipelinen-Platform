@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI contribution: 50% or more AI-generated
 """Create missing labels/milestones; preview by default, preserve existing records."""
 
 import argparse

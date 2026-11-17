@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """SDK failures carry public context, never raw exceptions or input values."""
 
 from __future__ import annotations

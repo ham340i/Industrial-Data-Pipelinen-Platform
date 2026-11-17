@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import type { BlockMetadata } from "../api/blocks";
 import type { PreviewRequest, PreviewResult } from "../api/preview";
 

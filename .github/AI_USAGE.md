@@ -307,3 +307,19 @@ Verification: the refactor changed structure, not behaviour. The existing 913 ba
 Problems found and corrected during the work: an automatic unused-import fix removed `typing` imports that a moved class still needed, caught by mypy and restored; the first logging configuration disabled propagation and broke an existing telemetry test that captures log records, so propagation was kept on; a repository-tool test pinned the exact contents of `.env.example` and was updated for the new non-secret `LPS_LOG_LEVEL` default.
 
 Not verified: no human review has taken place yet. The documentation states facts taken from the repository and the GitHub API on November 17, 2026; judgements in the retrospective are observations for the team to confirm.
+
+## Source-file declarations added at Release 1
+
+At Release 1 only 58 of 201 source files carried a declaration. Claude Code added 104 more, using evidence only, never a guess:
+
+1. For each undeclared file, `git log --first-parent -m` on `main` listed every merged pull request that changed it.
+2. Each of those pull requests' own "AI Assistance" section was read. Pull requests #3, #39, #43, #46, #47, #59, #61, #62, #63, #64, #66, #67, #69, #70, #71, #77, #81, #82 and #83 state that an AI tool generated the implementation, tests or tooling.
+3. A file received `50% or more AI-generated` only when every pull request that changed it is in that list. Repository scripts committed directly to `main` before pull requests were used are covered by the "This repository foundation" entry above.
+4. `app/blocks/relational.py` holds the Join and Aggregate logic from #72, whose author reports AI help only with tests, documentation and formatting; it is declared `below 50% AI-generated` even though Claude Code restructured it.
+5. Files changed by #44, #48, #51, #52, #65 or #72 were left undeclared, because those pull requests do not say how much code AI generated. Their authors must declare them.
+
+Authors who find a declaration wrong for their file should correct it; the pull request record is the evidence used, not the final word.
+
+## Frontend response parsers (#36)
+
+Tool: Claude Code. AI contribution: 50% or more AI-generated. AI-assisted files: `frontend/src/api/pipelines.ts`, `runs.ts`, `preview.ts`, `blocks.ts`. The validation chains in `parseDefinition`, `parseRun`, `executePipeline`, `parsePreview`, `previewNode` and the block catalog parser were split into named predicates so each function is within 50 lines and complexity 15. Verification: the rules are unchanged; all 209 frontend tests, ESLint, Prettier, the TypeScript compiler and the production build pass.

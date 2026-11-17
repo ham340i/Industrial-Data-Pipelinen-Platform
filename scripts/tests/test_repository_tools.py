@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Regression tests for failure detection and non-destructive GitHub setup."""
 
 import contextlib

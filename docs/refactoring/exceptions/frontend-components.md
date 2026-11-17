@@ -17,9 +17,6 @@ Measured with ESLint's `max-lines-per-function` (50) and `complexity` (15) rules
 | `WorkspaceSettings.tsx` | `WorkspaceSettings` | 148 | 25 |
 | `PreviewPanel.tsx` | `Results`, `Session`, `Controls` | 141, 94, 76 | within limit, 17, within limit |
 | `ValidationPanel.tsx` | `ValidationPanel` | 118 | within limit |
-| `api/preview.ts` | `parsePreview` | 100 | 53 |
-| `api/runs.ts` | `parseRun`, `executePipeline` | 69, 64 | 38, 25 |
-| `api/pipelines.ts` | `parseDefinition` | 53 | 34 |
 
 Other components exceed 50 lines by smaller margins. No frontend source file exceeds 500 lines of code.
 
@@ -29,13 +26,12 @@ Other components exceed 50 lines by smaller margins. No frontend source file exc
 
 ## What is not justified
 
-The complexity figures above are real and are not defended here:
+The complexity figures above are real and are not defended here. `RunControls`, `PipelineControls`, `WorkspaceSettings`, `ConfigForm`, `BlockCard`, `Projects` and `Session` mix request state, derived status text and rendering. The state handling belongs in hooks and the per-field rendering in child components.
 
-- `parsePreview`, `parseRun` and `parseDefinition` validate an API payload field by field in one function. They should be composed from small per-field guards, as [api/guards.ts](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/frontend/src/api/guards.ts) already does for simple cases.
-- `RunControls`, `PipelineControls`, `WorkspaceSettings` and `ConfigForm` mix request state, derived status text and rendering. The state handling belongs in hooks and the per-field rendering in child components.
+These were not refactored for Release 1 because the end-to-end browser workflow that would catch regressions in them ([#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31)) is not merged yet. Refactoring user-interface state without that safety net on the release date was judged a larger risk than carrying the debt for one iteration.
 
-These were not refactored for Release 1 because the end-to-end browser workflow that would catch regressions in them ([#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31)) is not merged yet. Refactoring user-interface state without that safety net on the release date was judged a larger risk than carrying the debt for one iteration. The backend, which has full test coverage, was brought within all three limits.
+The API response parsers (`parsePreview`, `parseRun`, `parseDefinition`, `executePipeline`, `previewNode` and the block catalog parser), which were the worst offenders at complexity 25 to 53, were split into small predicates at Release 1 and are now within both limits; their existing unit tests pass unchanged.
 
 ## Plan
 
-Refactor the parsers first (pure functions with existing unit tests), then the four components after [#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31) merges. Add the two ESLint rules as warnings, then as errors once the list above is empty.
+Refactor the components listed above after [#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31) merges. Add the two ESLint rules as warnings, then as errors once the list above is empty.

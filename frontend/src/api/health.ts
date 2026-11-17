@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "./client";
 

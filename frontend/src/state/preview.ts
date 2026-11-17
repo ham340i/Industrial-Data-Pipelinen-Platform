@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { normalizeApiError } from "../api/client";
 import { useEffect, useRef, useState } from "react";
 import {

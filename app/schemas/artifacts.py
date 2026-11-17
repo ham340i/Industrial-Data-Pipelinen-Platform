@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Stable artifact metadata and bounded-query response contracts (#28)."""
 
 from datetime import datetime

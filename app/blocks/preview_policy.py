@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Fixed source-work ceilings in addition to SDK returned-row/cell limits."""
 
 from collections.abc import Iterator

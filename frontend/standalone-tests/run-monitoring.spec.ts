@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
 
 test("real execute/status/detail evidence stays isolated and preserves the draft", async ({

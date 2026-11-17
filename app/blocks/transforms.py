@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Deterministic, structured Polars row and column transforms.
 
 Join and Aggregate live in ``app.blocks.relational``.

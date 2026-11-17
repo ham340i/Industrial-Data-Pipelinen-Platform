@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Explicit null policies and required/optional data-quality gates (#25)."""
 
 from __future__ import annotations

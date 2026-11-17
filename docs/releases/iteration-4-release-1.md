@@ -46,7 +46,7 @@ The team has not held and recorded a retrospective. The points below are observa
 **What we will change**
 
 - Every approval states what was checked; the reviewer named on the issue is requested when the pull request opens.
-- An item is closed only when its pull request is merged and its evidence is linked, and late items are moved to the next milestone explicitly.
+- An item is closed only when its pull request is merged and its evidence is linked.
 - Minutes, AI declarations and contribution records are part of the definition of done and are checked at each iteration boundary.
 
 ### Open items carried forward

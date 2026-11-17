@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Durable registration of atomically published file-sink artifacts (#28)."""
 
 from collections.abc import Iterator

@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Read-only draft preview with bounded request admission and cancellation."""
 
 import asyncio

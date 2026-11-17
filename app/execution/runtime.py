@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Validated sequential DAG execution with isolated per-run data and history."""
 
 import logging

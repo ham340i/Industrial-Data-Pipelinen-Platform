@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Bounded JSON record preview, independent of the execution reader.
 
 Also holds the column, value and schema checks shared with the Parquet preview.

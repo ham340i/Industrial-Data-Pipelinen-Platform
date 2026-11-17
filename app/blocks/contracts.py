@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """SDK v1 public contracts, independent of the API and database."""
 
 from __future__ import annotations

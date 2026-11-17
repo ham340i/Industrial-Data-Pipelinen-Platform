@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """SDK reference retained for authors, contract tests and saved pipelines.
 
 Hidden from the builder library. This deliberately small transform accepts only

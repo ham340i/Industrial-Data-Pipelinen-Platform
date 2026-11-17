@@ -1,3 +1,4 @@
+// AI contribution: 50% or more AI-generated
 import { beforeEach, expect, it } from "vitest";
 import { useEditorStore } from "./editor";
 import { compatible, serializeGraph } from "./graph";

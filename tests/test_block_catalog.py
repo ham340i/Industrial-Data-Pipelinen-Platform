@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Public discovery and library visibility preserve saved-pipeline contracts."""
 
 from fastapi.testclient import TestClient

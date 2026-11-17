@@ -1,3 +1,4 @@
+# AI contribution: 50% or more AI-generated
 """Experiment correctness tests; no production dependency changes."""
 
 from pathlib import Path
