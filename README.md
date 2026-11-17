@@ -86,6 +86,7 @@ Not linked yet. The repository owner must create the GitHub Project, share it wi
 - [Personas](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Personas)
 - [Diversity statement](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Diversity-Statement)
 - [Overall architecture and class diagrams](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Architecture)
+- [UI mockups (Figma prototype)](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/UI-Mockups)
 - [Infrastructure and tools](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Infrastructure-and-Tools)
 - [Name conventions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Naming-Conventions)
 - [Testing plan and continuous integration](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Testing-Plan-and-Continuous-Integration)

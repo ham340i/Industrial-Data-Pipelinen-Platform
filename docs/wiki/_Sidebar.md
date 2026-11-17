@@ -11,6 +11,7 @@
 - [Personas](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Personas)
 - [Diversity statement](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Diversity-Statement)
 - [Architecture and class diagrams](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Architecture)
+- [UI mockups](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/UI-Mockups)
 - [Infrastructure and tools](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Infrastructure-and-Tools)
 - [Name conventions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Naming-Conventions)
 - [Testing plan and CI](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Testing-Plan-and-Continuous-Integration)

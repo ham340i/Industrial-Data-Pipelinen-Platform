@@ -25,6 +25,7 @@ The platform is a local-first visual ETL workbench. A process specialist draws a
 | Who we build for | [Personas](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Personas) |
 | Equity and accessibility | [Diversity statement](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Diversity-Statement) |
 | Layers, components, domain model | [Overall architecture and class diagrams](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Architecture) |
+| Screens and user flows | [UI mockups (Figma prototype)](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/UI-Mockups) |
 | Every library and tool, and why | [Infrastructure and tools](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Infrastructure-and-Tools) |
 | Naming rules | [Name conventions](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Naming-Conventions) |
 | Tests, CI and review | [Testing plan and continuous integration](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/Testing-Plan-and-Continuous-Integration) |

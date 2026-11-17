@@ -152,6 +152,10 @@ sequenceDiagram
     API-->>UI: run and block evidence
 ```
 
+## UI mockups
+
+The workbench screens and user flows are modelled as a clickable Figma prototype; see [UI mockups](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/wiki/UI-Mockups).
+
 ## Design decisions
 
 Recorded as architecture decision records: [workbench shell](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/architecture/decisions/ADR-0001-workbench-shell.md), [SQLite metadata](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/architecture/decisions/ADR-0002-sqlite-metadata.md), [block SDK contract](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/architecture/decisions/ADR-0003-block-sdk-contract.md), [portable DAG](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/architecture/decisions/ADR-0004-portable-dag.md), [local projects](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/architecture/decisions/ADR-0005-local-projects.md).
