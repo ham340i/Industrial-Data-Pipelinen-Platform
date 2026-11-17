@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -24,6 +25,9 @@ from app.blocks.contracts import (
     require_public_json,
 )
 from app.blocks.errors import BlockError
+
+
+logger = logging.getLogger(__name__)
 
 
 class Block[ConfigT: BlockConfig](ABC):
@@ -112,36 +116,34 @@ class Block[ConfigT: BlockConfig](ABC):
                 raise BlockError(code, "Port values must be tuples.", field=name)
             if (port.required and not items) or (not port.many and len(items) > 1):
                 raise BlockError(code, "Port cardinality is invalid.", field=name)
-            validated: list[Payload] = []
-            for item in items:
-                if port.kind == "control":
-                    if not isinstance(item, ControlSignal):
-                        raise BlockError(code, "Expected a control signal.", field=name)
-                    try:
-                        signal = ControlSignal.model_validate(item.model_dump())
-                    except ValidationError:
-                        raise BlockError(
-                            code, "Control signal is invalid.", field=name
-                        ) from None
-                    validated.append(signal)
-                else:
-                    if not isinstance(item, Table):
-                        raise BlockError(code, "Expected a table.", field=name)
-                    try:
-                        # Recheck and detach nested dictionaries at the boundary.
-                        table = Table.model_validate(item.model_dump())
-                    except ValidationError:
-                        raise BlockError(
-                            code, "Table data is invalid.", field=name
-                        ) from None
-                    assert port.data_schema is not None
-                    if not schemas_compatible(table.data_schema, port.data_schema):
-                        raise BlockError(
-                            code, "Table schema is incompatible.", field=name
-                        )
-                    validated.append(table)
+            validated = [self._checked_payload(port, item, code) for item in items]
             checked[name] = tuple(validated)
         return checked
+
+    @staticmethod
+    def _checked_payload(port: Port, item: object, code: str) -> Payload:
+        """Revalidate one port value and detach it from the caller's objects."""
+        name = port.name
+        if port.kind == "control":
+            if not isinstance(item, ControlSignal):
+                raise BlockError(code, "Expected a control signal.", field=name)
+            try:
+                return ControlSignal.model_validate(item.model_dump())
+            except ValidationError:
+                raise BlockError(
+                    code, "Control signal is invalid.", field=name
+                ) from None
+        if not isinstance(item, Table):
+            raise BlockError(code, "Expected a table.", field=name)
+        try:
+            # Recheck and detach nested dictionaries at the boundary.
+            table = Table.model_validate(item.model_dump())
+        except ValidationError:
+            raise BlockError(code, "Table data is invalid.", field=name) from None
+        assert port.data_schema is not None
+        if not schemas_compatible(table.data_schema, port.data_schema):
+            raise BlockError(code, "Table schema is incompatible.", field=name)
+        return table
 
     def _event(
         self,
@@ -163,9 +165,14 @@ class Block[ConfigT: BlockConfig](ABC):
                     error_code=error_code,
                 )
             )
-        except Exception:
-            # Logging is observational and must not change execution outcomes.
-            pass
+        except Exception as exc:
+            # Events are observational and must not change execution outcomes.
+            logger.warning(
+                "Block event %s for node %s was not recorded: %s",
+                event,
+                context.node_id,
+                type(exc).__name__,
+            )
 
     @staticmethod
     def _check_context(context: BlockContext) -> None:
@@ -203,6 +210,34 @@ class Block[ConfigT: BlockConfig](ABC):
                 node_id=context.node_id,
             ) from None
 
+    @staticmethod
+    def _preview_budget(limits: PreviewLimits | None) -> PreviewLimits:
+        try:
+            if limits is not None and not isinstance(limits, PreviewLimits):
+                raise ValueError("Expected preview limits")
+            return PreviewLimits.model_validate(
+                limits.model_dump() if limits is not None else {}
+            )
+        except (ValueError, TypeError):
+            raise BlockError(
+                "invalid_preview_limits", "Preview limits are invalid."
+            ) from None
+
+    @staticmethod
+    def _check_preview_size(outputs: PortValues, budget: PreviewLimits) -> None:
+        tables = [
+            item
+            for items in outputs.values()
+            for item in items
+            if isinstance(item, Table)
+        ]
+        rows = sum(len(table.rows) for table in tables)
+        cells = sum(
+            len(table.rows) * len(table.data_schema.columns) for table in tables
+        )
+        if rows > budget.max_rows or cells > budget.max_cells:
+            raise BlockError("preview_limit", "Preview exceeded its output budget.")
+
     def preview(
         self,
         config: dict[str, Any],
@@ -219,34 +254,14 @@ class Block[ConfigT: BlockConfig](ABC):
                     "preview_unsupported",
                     descriptor.preview_reason or "Preview is unsupported.",
                 )
-            try:
-                if limits is not None and not isinstance(limits, PreviewLimits):
-                    raise ValueError("Expected preview limits")
-                budget = PreviewLimits.model_validate(
-                    limits.model_dump() if limits is not None else {}
-                )
-            except (ValueError, TypeError):
-                raise BlockError(
-                    "invalid_preview_limits", "Preview limits are invalid."
-                ) from None
+            budget = self._preview_budget(limits)
             parsed, checked = self._prepare(config, inputs, descriptor)
             outputs = self._check_ports(
                 descriptor.outputs,
                 self._preview(parsed, checked, context, budget),
                 "invalid_outputs",
             )
-            tables = [
-                item
-                for items in outputs.values()
-                for item in items
-                if isinstance(item, Table)
-            ]
-            rows = sum(len(table.rows) for table in tables)
-            cells = sum(
-                len(table.rows) * len(table.data_schema.columns) for table in tables
-            )
-            if rows > budget.max_rows or cells > budget.max_cells:
-                raise BlockError("preview_limit", "Preview exceeded its output budget.")
+            self._check_preview_size(outputs, budget)
             self._event(context, "previewed", descriptor)
             return outputs
         except BlockError as exc:

@@ -12,7 +12,8 @@ import pytest
 from app.blocks.context import BlockEvent
 from app.blocks.contracts import Table
 from app.blocks.errors import BlockError
-from app.blocks.files import CsvSink, CsvSource, JsonSource, ParquetSource
+from app.blocks.files import CsvSource, JsonSource, ParquetSource
+from app.blocks.sinks import CsvSink
 from app.blocks.registry import RegisteredBlock
 from tests.test_file_blocks import run, scalar_table
 
@@ -76,7 +77,7 @@ def test_no_clobber_publication_race(tmp_path: Path):
         target.write_bytes(b"other writer")
         link(source, destination)
 
-    with patch("app.blocks.files.os.link", side_effect=competing_writer):
+    with patch("app.blocks.sinks.os.link", side_effect=competing_writer):
         with pytest.raises(BlockError) as error:
             run(CsvSink(), tmp_path, {"resource_ref": "output.csv"}, scalar_table())
     assert error.value.failure.code == "output_exists"

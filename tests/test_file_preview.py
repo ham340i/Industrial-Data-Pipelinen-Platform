@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from app.blocks.context import BlockContext
 from app.blocks.contracts import PreviewLimits, PreviewObservation, Table
 from app.blocks.errors import BlockError
-from app.blocks.file_preview import BudgetFile, MAX_DECODE_BYTES, MAX_FOOTER_BYTES
+from app.blocks.parquet_preview import BudgetFile, MAX_DECODE_BYTES, MAX_FOOTER_BYTES
 from app.blocks.files import FileSource, JsonSource, ParquetSource
 from app.blocks.transforms import SelectColumns
 from app.config import settings

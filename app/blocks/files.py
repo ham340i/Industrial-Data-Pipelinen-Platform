@@ -1,46 +1,42 @@
 # AI contribution: 50% or more AI-generated
-"""Workspace-bound file readers and atomic file writers (#16, #20)."""
+"""Workspace-bound file readers (#16). Sinks live in ``app.blocks.sinks``."""
 
 from __future__ import annotations
 
 import csv
 import io
 import json
-import os
-import re
+from abc import abstractmethod
 from pathlib import Path
-from tempfile import NamedTemporaryFile
-from typing import Any, Literal
+from typing import Any
 
 import polars as pl
-import pyarrow as pa
 import pyarrow.parquet as pq
-from pydantic import Field, field_validator, model_validator
 
 from app.blocks.base import Block
 from app.blocks.context import BlockContext
 from app.blocks.contracts import (
-    BlockConfig,
     BlockDescriptor,
     Column,
     DataSchema,
-    NonBlank,
-    Port,
     PortValues,
     PreviewLimits,
-    PreviewObservation,
     Table,
 )
+from app.blocks.csv_preview import preview_csv
 from app.blocks.errors import BlockError
-from app.blocks.preview_policy import (
-    CsvLines,
-    MAX_READ_BYTES,
-    MAX_FIELD_CHARS,
-    MAX_COLUMNS,
-    MAX_COLUMN_CHARS,
+from app.blocks.file_preview import preview_json
+from app.blocks.inference import arrow_dtype, scalar_dtype
+from app.blocks.parquet_preview import preview_parquet
+from app.blocks.resources import (
+    CsvConfig,
+    JsonConfig,
+    SourceConfig,
+    check_source_file,
+    resource_path,
+    unique_object,
 )
 from app.blocks.tabular import (
-    DType,
     POLARS_TYPES,
     TABLE_PORT,
     cast_column,
@@ -50,146 +46,15 @@ from app.blocks.tabular import (
     to_frame,
 )
 
-ARROW_TYPES = {
-    "string": pa.string(),
-    "integer": pa.int64(),
-    "number": pa.float64(),
-    "boolean": pa.bool_(),
-}
-
-
-class ResourceConfig(BlockConfig):
-    resource_ref: NonBlank = Field(
-        max_length=256,
-        description="Relative workspace resource, such as inputs/readings.csv.",
-    )
-
-    @field_validator("resource_ref")
-    @classmethod
-    def relative_resource(cls, value: str) -> str:
-        if (
-            not re.fullmatch(r"[A-Za-z0-9_./ -]+", value)
-            or any(part in ("", ".", "..") for part in value.split("/"))
-            or any(part.endswith((" ", ".")) for part in value.split("/"))
-            or any(
-                part.split(".")[0].upper()
-                in {
-                    "CON",
-                    "PRN",
-                    "AUX",
-                    "NUL",
-                    *(f"COM{i}" for i in range(1, 10)),
-                    *(f"LPT{i}" for i in range(1, 10)),
-                }
-                for part in value.split("/")
-            )
-        ):
-            raise ValueError("Use a relative resource without traversal")
-        return value
-
-
-def resource_path(context: BlockContext, resource: str, suffix: str) -> Path:
-    if context.workspace_root is None:
-        raise BlockError("workspace_required", "A runtime workspace root is required.")
-    try:
-        root = context.workspace_root.resolve(strict=True)
-        candidate = (
-            context.resolve_resource(resource)
-            if context.resolve_resource
-            else root / resource
-        )
-        if not isinstance(candidate, Path):
-            raise ValueError("Resolver must return a path")
-        target = candidate.resolve()
-        target.relative_to(root)
-        if not root.is_dir() or target == root or target.suffix.lower() != suffix:
-            raise ValueError("Unsupported resource")
-        return target
-    except Exception:
-        raise BlockError(
-            "unsafe_resource",
-            "Resource must be a supported file inside the workspace.",
-            field="resource_ref",
-        ) from None
-
-
-class SourceConfig(ResourceConfig):
-    columns: list[str] = Field(default_factory=list, max_length=1000)
-    types: list[DType] = Field(
-        default_factory=list,
-        max_length=1000,
-        description="Parallel SDK types: string, integer, number, boolean.",
-    )
-    nullable: list[bool] = Field(default_factory=list, max_length=1000)
-    max_bytes: int = Field(default=16777216, ge=1, le=134217728)
-    max_rows: int = Field(default=100000, ge=1, le=1000000)
-    max_columns: int = Field(default=256, ge=1, le=1000)
-    max_cells: int = Field(default=1000000, ge=1, le=2000000)
-
-    @model_validator(mode="after")
-    def schema_lists(self) -> SourceConfig:
-        checked_names(self.columns)
-        if len(self.columns) != len(self.types) or len(self.columns) != len(
-            self.nullable
-        ):
-            raise ValueError("Schema lists must have the same length")
-        if any(kind not in POLARS_TYPES for kind in self.types):
-            raise ValueError("Unsupported SDK type")
-        return self
-
-    def declared_schema(self) -> DataSchema:
-        return DataSchema(
-            columns=tuple(
-                Column(name=n, dtype=t, nullable=v)
-                for n, t, v in zip(self.columns, self.types, self.nullable, strict=True)
-            )
-        )
-
-
-def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("Duplicate JSON key")
-        result[key] = value
-    return result
-
-
-class CsvConfig(SourceConfig):
-    encoding: Literal["utf-8", "utf-8-sig", "latin-1"] = "utf-8"
-    null_value: str = Field(default="NULL", min_length=1, max_length=64)
-
-
-class JsonConfig(SourceConfig):
-    encoding: Literal["utf-8", "utf-8-sig", "latin-1"] = "utf-8"
-
-
-def check_source_file(path: Path, max_bytes: int) -> None:
-    """Apply the shared availability and on-disk byte budget for sources."""
-    try:
-        if not path.is_file():
-            raise BlockError(
-                "file_unavailable",
-                "Input file is missing or unreadable.",
-                field="resource_ref",
-            )
-        if path.stat().st_size > max_bytes:
-            raise BlockError("file_limit", "Input exceeds the configured byte limit.")
-    except OSError:
-        raise BlockError(
-            "file_unavailable",
-            "Input file is missing or unreadable.",
-            field="resource_ref",
-        ) from None
-
 
 class FileSource[SourceT: SourceConfig](Block[SourceT]):
     suffix = ""
 
+    @abstractmethod
     def _read(
         self, path: Path, config: SourceT
     ) -> tuple[pl.DataFrame, DataSchema | None]:
-        raise NotImplementedError
+        """Read ``path`` into a frame, with its schema when the format has one."""
 
     def _execute(
         self, config: SourceT, inputs: PortValues, context: BlockContext
@@ -248,118 +113,7 @@ class CsvSource(FileSource[CsvConfig]):
         context: BlockContext,
         limits: PreviewLimits,
     ) -> PortValues:
-        context.check_cancelled()
-        path = resource_path(context, config.resource_ref, self.suffix)
-        try:
-            if not path.is_file():
-                raise OSError
-            with path.open("rb", buffering=0) as stream:
-                lines = CsvLines(
-                    stream,
-                    config.encoding,
-                    min(config.max_bytes, MAX_READ_BYTES),
-                    context,
-                )
-                reader = csv.reader(lines, strict=True)
-                header = next(reader, [])
-                if not header or len(header) > min(config.max_columns, MAX_COLUMNS):
-                    raise BlockError(
-                        "preview_columns",
-                        "CSV preview requires 1 to 128 columns "
-                        "within the source limit.",
-                    )
-                checked_names(header)
-                if any(len(name) > MAX_COLUMN_CHARS for name in header):
-                    raise BlockError(
-                        "preview_columns",
-                        "CSV preview column names exceed the supported length.",
-                    )
-                if config.columns and header != config.columns:
-                    raise BlockError(
-                        "schema_mismatch",
-                        "Declared columns must match source order and names.",
-                        field="columns",
-                    )
-                count = min(
-                    limits.max_rows,
-                    limits.max_cells // len(header),
-                    config.max_rows,
-                    config.max_cells // len(header),
-                )
-                if count < 1:
-                    raise BlockError(
-                        "preview_limit",
-                        "The cell limit cannot hold one row of this schema.",
-                    )
-                rows: list[dict[str, str | None]] = []
-                inspected = 0
-                truncated = False
-                while True:
-                    lines.next_record()
-                    values = next(reader, None)
-                    if values is None:
-                        break
-                    inspected += 1
-                    if len(values) != len(header):
-                        raise BlockError(
-                            "invalid_csv", "CSV row width differs from its header."
-                        )
-                    if any(len(value) > MAX_FIELD_CHARS for value in values):
-                        raise BlockError(
-                            "preview_field_limit",
-                            "A CSV preview field exceeds 4096 characters.",
-                        )
-                    if len(rows) == count:
-                        truncated = True
-                        break
-                    rows.append(
-                        {
-                            name: None if value == config.null_value else value
-                            for name, value in zip(header, values, strict=True)
-                        }
-                    )
-                context.check_cancelled()
-                frame = pl.DataFrame(rows, schema={name: pl.String for name in header})
-                if config.columns:
-                    for name, kind in zip(config.columns, config.types, strict=True):
-                        context.check_cancelled()
-                        frame = cast_column(frame, name, kind)
-                    schema = config.declared_schema()
-                else:
-                    # A prefix cannot establish whole-file non-nullability.
-                    schema = DataSchema(
-                        columns=tuple(
-                            Column(name=name, dtype="string", nullable=True)
-                            for name in header
-                        )
-                    )
-                table = from_frame(frame, schema)
-                context.check_cancelled()
-                if context.observe_preview is not None:
-                    context.observe_preview(
-                        PreviewObservation(
-                            inspected_rows=inspected,
-                            full_row_count=None if truncated else len(rows),
-                            truncated=truncated,
-                            schema_scope="declared" if config.columns else "header",
-                            full_count_scope="unknown" if truncated else "observed",
-                            read_bytes=lines.read_bytes,
-                        )
-                    )
-                return {"table": (table,)}
-        except BlockError:
-            raise
-        except OSError:
-            raise BlockError(
-                "file_unavailable",
-                "Input file is missing or unreadable.",
-                field="resource_ref",
-            ) from None
-        except Exception:
-            raise BlockError(
-                "invalid_csv",
-                "CSV format, encoding, headers or scalar values are invalid.",
-            ) from None
+        return preview_csv(config, context, limits)
 
     def _read(
         self, path: Path, config: CsvConfig
@@ -421,13 +175,10 @@ class JsonSource(FileSource[JsonConfig]):
         context: BlockContext,
         limits: PreviewLimits,
     ) -> PortValues:
-        from app.blocks.file_preview import preview_json
-
         return preview_json(config, context, limits)
 
-    def _read(
-        self, path: Path, config: JsonConfig
-    ) -> tuple[pl.DataFrame, DataSchema | None]:
+    @staticmethod
+    def _records(path: Path, config: JsonConfig) -> list[dict[str, Any]]:
         data = path.read_bytes()
         if len(data) > config.max_bytes:
             raise BlockError("file_limit", "Input exceeds the configured byte limit.")
@@ -436,6 +187,27 @@ class JsonSource(FileSource[JsonConfig]):
             raise ValueError("JSON requires an array of record objects")
         if len(rows) > config.max_rows:
             raise BlockError("table_limit", "Input exceeds the configured row limit.")
+        return rows
+
+    @staticmethod
+    def _inferred_schema(rows: list[dict[str, Any]], names: list[str]) -> DataSchema:
+        columns = []
+        for name in names:
+            values = [row[name] for row in rows if name in row]
+            kinds = {type(value) for value in values if value is not None}
+            # An all-null column is carried as a nullable string.
+            kind = scalar_dtype(kinds) if kinds else "string"
+            if kind is None:
+                raise BlockError(
+                    "unsupported_type", "JSON columns require consistent scalar types."
+                )
+            columns.append(Column(name=name, dtype=kind, nullable=None in values))
+        return DataSchema(columns=tuple(columns))
+
+    def _read(
+        self, path: Path, config: JsonConfig
+    ) -> tuple[pl.DataFrame, DataSchema | None]:
+        rows = self._records(path, config)
         if not rows:
             if not config.columns:
                 raise BlockError(
@@ -458,23 +230,7 @@ class JsonSource(FileSource[JsonConfig]):
             raise BlockError(
                 "table_limit", "Input exceeds the configured table limits."
             )
-        columns = []
-        for name in names:
-            kind: DType
-            values = [row[name] for row in rows if name in row]
-            kinds = {type(value) for value in values if value is not None}
-            if kinds <= {int, float} and kinds:
-                kind = "number" if float in kinds else "integer"
-            elif kinds <= {str}:
-                kind = "string"
-            elif kinds == {bool}:
-                kind = "boolean"
-            else:
-                raise BlockError(
-                    "unsupported_type", "JSON columns require consistent scalar types."
-                )
-            columns.append(Column(name=name, dtype=kind, nullable=None in values))
-        table = Table(data_schema=DataSchema(columns=tuple(columns)), rows=tuple(rows))
+        table = Table(data_schema=self._inferred_schema(rows, names), rows=tuple(rows))
         return to_frame(table), table.data_schema
 
 
@@ -495,26 +251,15 @@ class ParquetSource(FileSource[SourceConfig]):
         context: BlockContext,
         limits: PreviewLimits,
     ) -> PortValues:
-        from app.blocks.file_preview import preview_parquet
-
         return preview_parquet(config, context, limits)
 
     def _read(
         self, path: Path, config: SourceConfig
     ) -> tuple[pl.DataFrame, DataSchema | None]:
-        arrow = pq.read_schema(path)
         columns = []
-        for item in arrow:
-            kind: DType
-            if pa.types.is_string(item.type) or pa.types.is_large_string(item.type):
-                kind = "string"
-            elif pa.types.is_integer(item.type):
-                kind = "integer"
-            elif pa.types.is_floating(item.type):
-                kind = "number"
-            elif pa.types.is_boolean(item.type):
-                kind = "boolean"
-            else:
+        for item in pq.read_schema(path):
+            kind = arrow_dtype(item.type)
+            if kind is None:
                 raise BlockError(
                     "unsupported_type",
                     "Parquet contains an unsupported SDK column type.",
@@ -528,129 +273,3 @@ class ParquetSource(FileSource[SourceConfig]):
             path,
             n_rows=min(config.max_rows, config.max_cells // max(1, len(columns))) + 1,
         ), DataSchema(columns=tuple(columns))
-
-
-class SinkConfig(ResourceConfig):
-    overwrite: Literal["error", "replace"] = "error"
-    null_value: str = Field(default="NULL", min_length=1, max_length=64)
-
-
-ARTIFACT_SCHEMA = DataSchema(
-    columns=(
-        Column(name="location", dtype="string"),
-        Column(name="format", dtype="string"),
-        Column(name="row_count", dtype="integer"),
-        Column(name="schema_json", dtype="string"),
-    )
-)
-ARTIFACT_PORT = Port(name="artifact", data_schema=ARTIFACT_SCHEMA)
-
-
-class FileSink(Block[SinkConfig]):
-    config_model = SinkConfig
-    suffix = ""
-
-    def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        raise NotImplementedError
-
-    def _execute(
-        self, config: SinkConfig, inputs: PortValues, context: BlockContext
-    ) -> PortValues:
-        target = resource_path(context, config.resource_ref, self.suffix)
-        table = inputs["table"][0]
-        assert isinstance(table, Table)
-        # Validate serializability and construct metadata before publication.
-        to_frame(table)
-        artifact = Table(
-            data_schema=ARTIFACT_SCHEMA,
-            rows=(
-                {
-                    "location": config.resource_ref,
-                    "format": self.suffix[1:],
-                    "row_count": len(table.rows),
-                    "schema_json": table.data_schema.model_dump_json(),
-                },
-            ),
-        )
-        temporary: Path | None = None
-        try:
-            if target.exists() and config.overwrite == "error":
-                raise BlockError(
-                    "output_exists", "Output already exists; choose replace explicitly."
-                )
-            # resource_path already proved target lies inside the project
-            # workspace; only inputs/ is pre-created, so make output folders
-            # such as outputs/ on demand instead of failing the publication.
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with NamedTemporaryFile(
-                dir=target.parent, prefix=".lps-", suffix=".tmp", delete=False
-            ) as stream:
-                temporary = Path(stream.name)
-            self._write(temporary, table, config)
-            with temporary.open("r+b") as stream:
-                os.fsync(stream.fileno())
-            if config.overwrite == "replace":
-                os.replace(temporary, target)
-                temporary = None
-            else:
-                # Atomic no-clobber publication, including a destination race.
-                os.link(temporary, target)
-            return {"artifact": (artifact,)}
-        except FileExistsError:
-            raise BlockError(
-                "output_exists", "Output already exists; choose replace explicitly."
-            ) from None
-        except BlockError:
-            raise
-        except Exception:
-            raise BlockError(
-                "write_failed", "Output could not be published atomically."
-            ) from None
-        finally:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
-
-
-class CsvSink(FileSink):
-    suffix = ".csv"
-    descriptor = BlockDescriptor(
-        **descriptor_values("sink.csv", "CSV Sink", "sink"),
-        inputs=(TABLE_PORT,),
-        outputs=(ARTIFACT_PORT,),
-    )
-
-    def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        if not table.data_schema.columns:
-            raise BlockError(
-                "schema_required", "CSV requires at least one declared column."
-            )
-        if any(
-            value == config.null_value
-            for row in table.rows
-            for value in row.values()
-            if isinstance(value, str)
-        ):
-            raise BlockError(
-                "ambiguous_null",
-                "A string equals the CSV null marker; choose a different marker.",
-                field="null_value",
-            )
-        to_frame(table).write_csv(path, null_value=config.null_value)
-
-
-class ParquetSink(FileSink):
-    suffix = ".parquet"
-    descriptor = BlockDescriptor(
-        **descriptor_values("sink.parquet", "Parquet Sink", "sink"),
-        inputs=(TABLE_PORT,),
-        outputs=(ARTIFACT_PORT,),
-    )
-
-    def _write(self, path: Path, table: Table, config: SinkConfig) -> None:
-        schema = pa.schema(
-            [
-                pa.field(c.name, ARROW_TYPES[c.dtype], nullable=c.nullable)
-                for c in table.data_schema.columns
-            ]
-        )
-        pq.write_table(pa.Table.from_pylist(list(table.rows), schema=schema), path)

@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.blocks.contracts import DataSchema
-from app.blocks.files import ARTIFACT_SCHEMA
+from app.blocks.sinks import ARTIFACT_SCHEMA
 from app.execution import ExecutionContext, Frame
 from app.metadata.models import OutputEndpoint
 
