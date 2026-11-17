@@ -1,5 +1,7 @@
 # Infrastructure and tools
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Infrastructure and Tools](../wiki/Infrastructure-and-Tools.md).
+
 | Tool | Why used / where | Version or observed state | Remaining decision |
 |---|---|---|---|
 | Python | Standard-library repository checks, GitHub reconciliation and unittest suite in `scripts/` | Minimum 3.11; local 3.13.0 observed | Product target is Python 3.12; repository tooling minimum remains 3.11 |

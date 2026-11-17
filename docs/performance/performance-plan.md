@@ -1,5 +1,7 @@
 # Performance plan
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Performance](../wiki/Performance.md).
+
 No benchmarks have been run. Targets require representative stakeholder workloads and approved hardware; do not treat suggested metrics as achieved results.
 
 | Metric | Measurement method | Target | Measured result |

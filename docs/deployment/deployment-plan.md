@@ -1,5 +1,7 @@
 # Deployment plan
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Deployment Plan and Infrastructure](../wiki/Deployment-Plan-and-Infrastructure.md).
+
 No product is runnable or packaged yet. Only repository checks run locally and in GitHub Actions. See [planned deployment diagram](../architecture/deployment-architecture.md).
 
 | Environment | Intended use | Requirements before use |

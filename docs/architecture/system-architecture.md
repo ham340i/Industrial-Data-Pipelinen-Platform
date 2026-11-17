@@ -1,5 +1,7 @@
 # System architecture
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Architecture](../wiki/Architecture.md).
+
 Status: **target workflow proposed; React/FastAPI shells implemented**. Issue #7 adds metadata persistence, pending independent review. Validate the remaining engine/connector boundaries with the team and stakeholder before treating them as commitments.
 
 ```mermaid
