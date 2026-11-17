@@ -343,7 +343,7 @@ declared per file: `50% or more` for `scripts/release_candidate.py`,
 to `.github/workflows/ci.yml`, `.gitignore` and the documentation indexes.
 Claude Code drafted the candidate command, the HTTP acceptance scenario, both
 test files, the CI job and the documentation, and ran them against the real
-API locally. Verified by 23 script unit tests, 8 backend integration tests
+API locally. Verified by 24 script unit tests, 8 backend integration tests
 (1110 backend tests passing overall), Ruff, strict mypy, the repository and
 documentation checks, and a local HTTP run of the scenario
 ([record](../docs/testing/issue-36-release-candidate.md)). The Compose

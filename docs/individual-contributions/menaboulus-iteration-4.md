@@ -168,7 +168,7 @@ candidate without editing source. Record of what was run:
   `scripts/release_acceptance.py`, so the demo a tester sees is the one CI
   checks. Backups carry a checksum and schema revision so restore refuses
   incompatible data before deleting anything.
-- **Tests.** 23 script unit tests with a fake Docker runner, 8 backend
+- **Tests.** 24 script unit tests with a fake Docker runner, 8 backend
   integration tests of the scenario against the real API and engine, and a
   new "Release candidate rehearsal" CI job: clean install, scenario,
   container recreation, backup, reset and restore.

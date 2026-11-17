@@ -86,7 +86,7 @@ pending.
 ## Issue #36 release candidate verification
 
 [Release candidate evidence](../../testing/issue-36-release-candidate.md)
-records the packaging commands, the 31 new tests (23 script unit tests, 8
+records the packaging commands, the 32 new tests (24 script unit tests, 8
 backend integration tests), the local HTTP run of the demonstration scenario
 and the Compose rehearsal added to CI. No tag, second-machine install or
 stakeholder acceptance is claimed.

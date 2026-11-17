@@ -119,23 +119,27 @@ class ManifestTests(unittest.TestCase):
         rc.check_manifest(self.manifest(), ARCHIVE, ["0001", "0004"])
 
     def test_tampered_archive_is_refused(self):
+        manifest = self.manifest()
         with self.assertRaisesRegex(rc.CandidateError, "checksum"):
-            rc.check_manifest(self.manifest(), ARCHIVE + b"!", ["0004"])
+            rc.check_manifest(manifest, ARCHIVE + b"!", ["0004"])
 
     def test_backup_from_a_newer_schema_points_to_its_release(self):
+        manifest = self.manifest(schema_revision="0009")
         with self.assertRaisesRegex(rc.CandidateError, "newer than or unknown.*abc123"):
-            rc.check_manifest(self.manifest(schema_revision="0009"), ARCHIVE, ["0004"])
+            rc.check_manifest(manifest, ARCHIVE, ["0004"])
 
     def test_unknown_manifest_format_is_refused(self):
+        manifest = self.manifest(format=2)
         with self.assertRaisesRegex(rc.CandidateError, "format"):
-            rc.check_manifest(self.manifest(format=2), ARCHIVE, ["0004"])
+            rc.check_manifest(manifest, ARCHIVE, ["0004"])
 
 
 class DataSafetyTests(unittest.TestCase):
     def test_reset_requires_confirmation_and_runs_nothing_without_it(self):
         docker = FakeDocker()
+        candidate = compose(docker)
         with self.assertRaisesRegex(rc.CandidateError, "--yes"):
-            rc.reset(compose(docker), confirmed=False)
+            rc.reset(candidate, confirmed=False)
         self.assertEqual(docker.calls, [])
 
     def test_confirmed_reset_removes_only_this_projects_volumes(self):
@@ -177,8 +181,9 @@ class DataSafetyTests(unittest.TestCase):
         docker = FakeDocker()
         with tempfile.TemporaryDirectory() as folder:
             path = self.write_backup(Path(folder), sha256="0" * 64)
+            candidate = compose(docker)
             with self.assertRaisesRegex(rc.CandidateError, "checksum"):
-                rc.restore(compose(docker), path, confirmed=True)
+                rc.restore(candidate, path, confirmed=True)
         self.assertFalse(docker.ran("stop"))
         self.assertFalse(docker.ran(rc.RESTORE))
 
@@ -186,8 +191,9 @@ class DataSafetyTests(unittest.TestCase):
         docker = FakeDocker()
         with tempfile.TemporaryDirectory() as folder:
             path = self.write_backup(Path(folder))
+            candidate = compose(docker)
             with self.assertRaisesRegex(rc.CandidateError, "--yes"):
-                rc.restore(compose(docker), path, confirmed=False)
+                rc.restore(candidate, path, confirmed=False)
         self.assertEqual(docker.calls, [])
 
     def test_restore_streams_the_verified_archive_into_the_stopped_volume(self):
@@ -223,6 +229,14 @@ class SmokeTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "failed: Run ended failed")
         self.assertTrue(result["project"].startswith("lps-rc-smoke-"))
         self.assertEqual(docker.calls[-2], ["down", "--volumes", "--remove-orphans", "--timeout", "10"])
+
+    def test_cli_report_flag_writes_only_to_the_fixed_evidence_path(self):
+        with patch.object(rc, "smoke") as smoke, patch("builtins.print"):
+            self.assertEqual(rc.main(["smoke", "--report"]), 0)
+            self.assertEqual(rc.main(["smoke"]), 0)
+        self.assertEqual([c.args[0] for c in smoke.call_args_list], [rc.REPORT_PATH, None])
+        with patch("sys.stderr"), self.assertRaises(SystemExit):
+            rc.parser().parse_args(["smoke", "--report", "/etc/passwd"])
 
     def test_smoke_fails_if_containers_survive_teardown(self):
         docker = FakeDocker()

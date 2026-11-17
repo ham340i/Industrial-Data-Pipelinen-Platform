@@ -92,8 +92,10 @@ python3 scripts/release_candidate.py reset --yes            # delete all candida
 ## Rehearsal used by CI
 
 ```bash
-python3 scripts/release_candidate.py smoke --report test-results/release-candidate.json
+python3 scripts/release_candidate.py smoke --report
 ```
+
+`--report` also writes the JSON result to `test-results/release-candidate.json`, the fixed location CI uploads.
 
 `smoke` rehearses the whole lifecycle in a throwaway project named `lps-rc-smoke-<random>`, on random loopback ports:
 

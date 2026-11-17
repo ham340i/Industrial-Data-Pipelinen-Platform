@@ -36,6 +36,8 @@ SETTING_KEYS = {*PORT_KEYS, "LPS_LOG_LEVEL"}
 DATA_ROOT = "/var/lib/lps"
 METADATA = DATA_ROOT + "/metadata.sqlite3"
 BACKUP_FORMAT = 1
+# Fixed evidence location: CI uploads it, and no CLI path reaches a file write.
+REPORT_PATH = ROOT / "test-results" / "release-candidate.json"
 
 # Small programs run inside the API image; arguments are passed separately.
 READ_SCHEMA = (
@@ -375,7 +377,11 @@ def parser() -> argparse.ArgumentParser:
     restore_cli.add_argument("manifest", type=Path)
     restore_cli.add_argument("--yes", action="store_true")
     commands.add_parser("reset").add_argument("--yes", action="store_true")
-    commands.add_parser("smoke").add_argument("--report", type=Path)
+    commands.add_parser("smoke").add_argument(
+        "--report",
+        action="store_true",
+        help="Also write the JSON report to test-results/release-candidate.json",
+    )
     return cli
 
 
@@ -401,7 +407,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         if args.command == "smoke":
-            smoke(args.report)
+            smoke(REPORT_PATH if args.report else None)
             print("Smoke stack and its synthetic volume were removed.")
             return 0
         result = dispatch(args, Compose(load_config(args.project, args.env_file)))

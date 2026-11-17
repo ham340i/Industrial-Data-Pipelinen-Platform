@@ -194,7 +194,7 @@
         },
         {
           "name": "Rehearse Release 1 candidate install, backup, reset and restore",
-          "run": "python3 scripts/release_candidate.py smoke --report test-results/release-candidate.json"
+          "run": "python3 scripts/release_candidate.py smoke --report"
         },
         {
           "name": "Upload release candidate rehearsal evidence",

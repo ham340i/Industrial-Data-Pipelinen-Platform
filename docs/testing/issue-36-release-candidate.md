@@ -44,7 +44,7 @@ Local machine: macOS 26.6.2, Python 3.12.15. Docker is not installed on this mac
 | Command | Result |
 |---|---|
 | `python -m pytest -q` | 1110 passed, 4 skipped (8 new) |
-| `python3 -m unittest discover -s scripts/tests` | 39 passed (23 new) |
+| `python3 -m unittest discover -s scripts/tests` | 40 passed (24 new) |
 | `python -m ruff check`, `python -m ruff format --check`, `python -m mypy` | Clean; mypy strict on 115 files |
 | `python -m mypy --strict` on both new scripts | Clean |
 | `python3 scripts/check_repository.py`, `check_docs.py`, `check_release_plan.py` | Passed |
