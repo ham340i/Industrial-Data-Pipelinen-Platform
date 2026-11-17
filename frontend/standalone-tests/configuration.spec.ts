@@ -49,7 +49,9 @@ test("real SDK config survives selection, failed copy, export and API save/reope
     ]),
   );
   await expect(minimum).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByText(/Use a value of at least 0/)).toBeVisible();
+  await expect(minimum).toHaveAccessibleDescription(
+    /Use a value of at least 0/,
+  );
   await minimum.fill("42");
   // Validation changes the controls' layout. Wait for the corrected state
   // (which may be cached) so a late result cannot move the Save button.
@@ -57,7 +59,9 @@ test("real SDK config survives selection, failed copy, export and API save/reope
     page.getByRole("region", { name: "Pipeline check" }).getByRole("status"),
   ).not.toContainText("Checking pipeline");
   await expect(minimum).toHaveAttribute("aria-invalid", "false");
-  await expect(page.getByText(/Use a value of at least 0/)).toHaveCount(0);
+  await expect(minimum).not.toHaveAccessibleDescription(
+    /Use a value of at least 0/,
+  );
   const save = page.waitForResponse(
     (r) => r.request().method() === "POST" && r.url().endsWith("/pipelines"),
   );

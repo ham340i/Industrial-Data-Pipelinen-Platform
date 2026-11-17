@@ -2,6 +2,7 @@
 """Project-scoped authoring persistence with atomic, optimistic revisions (#14)."""
 
 import json
+from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -13,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.blocks.catalog import executor, registry
 from app.blocks.triggers import TimerTriggerConfig
-from app.workspace import effective_workspace_root
+from app.workspace import WorkspaceError, effective_workspace_root, project_data_folder
 from app.metadata.database import Database
 from app.metadata.models import Pipeline, PipelineRevision, Project
 from app.pipelines.models import GraphDraft, Node, PipelineDefinition
@@ -28,7 +29,7 @@ from app.runs.scheduler import (
     TimerStopTimedOut,
     scheduler,
 )
-from app.schemas.execute import ExecuteResponse, TimerStatusResponse
+from app.schemas.execute import ExecuteRequest, ExecuteResponse, TimerStatusResponse
 from app.schemas.projects import ProjectCreate
 
 router = APIRouter(prefix="/api/v1/projects/{project_id}/pipelines", tags=["pipelines"])
@@ -283,11 +284,21 @@ def rename_pipeline(
 
 
 def load_latest_definition(
-    db: Database, project_id: UUID, pipeline_id: UUID
+    db: Database,
+    project_id: UUID,
+    pipeline_id: UUID,
+    expected_revision: int | None = None,
 ) -> tuple[str, PipelineDefinition]:
     """The latest revision's id and parsed definition, for execute/timer (#29)."""
     with db.transaction() as session:
         revision = latest_revision(session, project_id, pipeline_id)
+        if expected_revision is not None and revision.revision != expected_revision:
+            raise PipelineError(
+                "revision_conflict",
+                "This pipeline changed since it was opened. "
+                "Open the latest version before running it.",
+            )
+        # Capture the immutable ID with the guard; never resolve latest again.
         revision_id, stored = revision.id, revision.definition
     return revision_id, PipelineDefinition.from_json(json.dumps(stored))
 
@@ -302,11 +313,33 @@ def find_trigger(definition: PipelineDefinition, block_id: str) -> Node | None:
     return next((node for node in definition.nodes if node.block_id == block_id), None)
 
 
+def execution_folder(db: Database, project_id: str) -> Path | None:
+    """Where a run reads inputs and publishes sinks: the checked project folder.
+
+    No configured workspace stays None so the run itself records
+    ``workspace_required``; a missing or aliased project folder is refused up
+    front, because a sink writing through a link could publish into another
+    project (#37 review).
+    """
+    root = effective_workspace_root(db)
+    if root is None:
+        return None
+    try:
+        return project_data_folder(root, project_id)
+    except ValueError:
+        raise WorkspaceError(
+            "workspace_project_folder",
+            "This project's data folder is missing or aliases another folder. "
+            "Check the workspace folders before executing.",
+        ) from None
+
+
 @router.post("/{pipeline_id}/execute", response_model=ExecuteResponse, status_code=201)
 def execute_pipeline(
     project_id: UUID,
     pipeline_id: UUID,
     db: Annotated[Database, Depends(database)],
+    payload: ExecuteRequest | None = None,
 ) -> ExecuteResponse:
     """Run the latest saved revision now and return its run ID (#29).
 
@@ -314,14 +347,15 @@ def execute_pipeline(
     refused with a structured ``invalid_pipeline`` error and create no run,
     exactly like a direct ``execute_revision`` call.
     """
-    revision_id, _ = load_latest_definition(db, project_id, pipeline_id)
-    root = effective_workspace_root(db)
+    revision_id, _ = load_latest_definition(
+        db, project_id, pipeline_id, payload.expected_revision if payload else None
+    )
     try:
         outcome = execute_revision(
             db,
             executor,
             revision_id,
-            workspace_root=root / str(project_id) if root is not None else None,
+            workspace_root=execution_folder(db, str(project_id)),
         )
     except RevisionNotFound:
         raise PipelineError(

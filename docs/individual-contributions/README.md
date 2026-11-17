@@ -24,6 +24,10 @@ The record also links Al-Yousef's allocated review of merged executor PR #70
 and the November 2 current-main verification. UI/stakeholder acceptance remains
 unverified.
 
+Issue #33 validation-slice evidence: [Al-Yousef, Iteration 4 error recovery](Al-Yousef-iteration-4.md).
+Draft PR #81 includes implementation, recovery tests and current integration
+limits. Preview/run integration, independent review and acceptance remain pending.
+
 Issue #23 local preparation: [aboudka2003, Iteration 3 SQL source](aboudka2003-iteration-3.md).
 This records AI-assisted implementation and local verification; PR, CI and
 independent review remain pending. Related #31 integration is incomplete.
@@ -32,4 +36,8 @@ Issue #34 local task evidence: [execution failure hardening](../testing/issue-34
 The user requested and approved the plan; Codex implemented and verified the local
 changes. This task record does not assign personal implementation credit to a
 named teammate. A contributor may link it from their personal record after
-verifying their actual role. Independent review, PR, CI and merge remain pending.
+verifying their actual role.
+Issue #37 implementation evidence: [menaboulus, Iteration 4 integration matrix](menaboulus-iteration-4.md).
+This records the API-level compatibility matrix, the two cross-feature fixes
+it surfaced and local verification; [PR #85](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/85) is open with review requested
+from Al-Yousef.

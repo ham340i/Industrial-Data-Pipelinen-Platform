@@ -1,3 +1,4 @@
+import { normalizeApiError } from "../api/client";
 import { useEffect, useRef, useState } from "react";
 import {
   previewNode,
@@ -39,12 +40,13 @@ export function usePreview(projectId: string, request: PreviewRequest) {
       if (!active.signal.aborted && controller.current === active)
         setState({
           status: "error",
-          error: error instanceof Error ? error : new Error("Preview failed."),
+          error: normalizeApiError(error),
         });
     }
   }
   function cancel() {
     controller.current?.abort();
+    controller.current = null;
     setState({ status: "idle" });
   }
   return { state, refresh, cancel };

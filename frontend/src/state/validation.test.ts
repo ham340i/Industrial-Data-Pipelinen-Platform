@@ -84,6 +84,20 @@ describe("diagnostic placement", () => {
     expect(fieldMessages(report, "b")).toEqual({});
   });
 
+  it("handles field names inherited by normal objects without crashing", () => {
+    const messages = fieldMessages(
+      [
+        diagnostic({ node_id: "a", field: "__proto__" }),
+        diagnostic({ node_id: "a", field: "constructor" }),
+      ],
+      "a",
+    );
+    expect(Object.entries(messages)).toEqual([
+      ["__proto__", ["Fix it."]],
+      ["constructor", ["Fix it."]],
+    ]);
+  });
+
   it("marks problem connections on display copies only", () => {
     const stored = [
       { id: "ab", source: "a", target: "b" },

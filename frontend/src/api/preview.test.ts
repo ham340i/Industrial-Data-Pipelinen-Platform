@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
-import { parsePreview, type PreviewRequest } from "./preview";
+import { http, HttpResponse } from "msw";
+import { server } from "../test/server";
+import { parsePreview, previewNode, type PreviewRequest } from "./preview";
 import { previewResult } from "../test/preview";
 
 const request: PreviewRequest = {
@@ -44,4 +46,82 @@ it("accepts a JSON schema explicitly scoped to its sample", () => {
     parsePreview({ ...previewResult(request), schema_scope: "sample" }, request)
       .schema_scope,
   ).toBe("sample");
+});
+
+it.each(["csv", "missing"])(
+  "binds error recovery to the request snapshot for %s",
+  async (nodeId) => {
+    const snapshot: PreviewRequest = {
+      ...request,
+      definition: {
+        ...request.definition,
+        nodes: [
+          {
+            id: "csv",
+            block_id: "source.csv",
+            block_version: "1.0.0",
+            config: {},
+          },
+        ],
+      },
+    };
+    server.use(
+      http.post(
+        "http://127.0.0.1:8000/api/v1/projects/project/pipelines/preview",
+        () =>
+          HttpResponse.json(
+            {
+              error: {
+                code: "file_unavailable",
+                message: "Private exception at /private/file.csv",
+                node_context: nodeId,
+                field: "resource_ref",
+                port: "table",
+                correlation_id: "trace-1",
+              },
+            },
+            { status: 422 },
+          ),
+      ),
+    );
+    await expect(
+      previewNode("project", snapshot, new AbortController().signal),
+    ).rejects.toMatchObject({
+      message: "Input file is missing or unreadable.",
+      nodeId: nodeId === "csv" ? "csv" : null,
+      field: nodeId === "csv" ? "resource_ref" : null,
+    });
+  },
+);
+
+it("does not display arbitrary message, field, port or reference details", async () => {
+  server.use(
+    http.post(
+      "http://127.0.0.1:8000/api/v1/projects/project/pipelines/preview",
+      () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "future_failure",
+              message: "Private exception at /private/file.csv",
+              node_context: "csv",
+              field: "/private/field",
+              port: "/private/port",
+              correlation_id: "/private/trace",
+            },
+          },
+          { status: 500 },
+        ),
+    ),
+  );
+  await expect(
+    previewNode("project", request, new AbortController().signal),
+  ).rejects.toMatchObject({
+    message:
+      "Preview could not complete. Check the input path and configuration, then retry. Your draft is unchanged.",
+    nodeId: null,
+    field: null,
+    port: null,
+    correlationId: "unavailable",
+  });
 });

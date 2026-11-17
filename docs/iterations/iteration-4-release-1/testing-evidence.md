@@ -1,6 +1,29 @@
 # Testing Evidence
 
-Status: Planned; iteration testing results not yet recorded.
+Status: Scoped results recorded below; whole-iteration acceptance is pending.
+
+## November 9: issue #33 validation slice
+
+[Draft PR #81](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/81)
+contains validation retry, graph preservation, diagnostic focus and privacy
+regressions. The follow-up passed 99 frontend tests and 708 backend tests with
+one existing host-dependent skip, plus lint, formatting, types and build.
+The Chrome/FastAPI validation scenario passed with real services.
+
+[Detailed evidence](../../testing/issue-33-validation-recovery.md) records the
+baseline revision, commands, environment, reproduced bugs, failed attempts and
+dependency contracts. These are scoped checks, not full release acceptance.
+Preview/run integration, independent review and stakeholder signoff are pending.
+The remaining template sections below cover whole-iteration evidence.
+
+## November 11: issue #33 preview/run recovery
+
+The same [PR #81](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/pull/81)
+now extends merged preview #83 with snapshot-bound configuration recovery and
+saved-run revision guards. Backend verification passed 858 tests with one existing
+Windows symlink skip, plus Ruff and mypy. The [current verification record](../../testing/issue-33-validation-recovery.md#november-11-previewrun-extension-utc)
+tracks final frontend/browser checks, failure cases and remaining human acceptance.
+No independent student approval or whole-iteration acceptance is claimed.
 
 ## Automated Tests
 
@@ -49,3 +72,11 @@ browser failure/correction/rerun scenario on November 17, 2026. It also records
 the local runtime versions, runner teardown limitation and uncommitted base
 revision. This does not establish hosted CI, independent approval or release
 acceptance.
+## Issue #37 feature verification
+
+[Integration matrix evidence](../../testing/issue-37-integration-matrix.md)
+records the API/engine/SQLite compatibility matrix (39 backend tests, 4
+frontend parser contract tests), the two cross-feature mismatches it found
+and fixed, the exact commands, environment and counts, and the CI result
+capture. Whole-release acceptance, independent review and stakeholder
+signoff remain pending.

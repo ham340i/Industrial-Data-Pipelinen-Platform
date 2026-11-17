@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -179,14 +179,25 @@ function Session({
   disabled: boolean;
 }) {
   const { state, refresh, cancel } = usePreview(projectId, request);
+  const startRef = useRef<HTMLButtonElement>(null);
+  const restoreStartFocus = useCallback((button: HTMLButtonElement | null) => {
+    if (!button) return;
+    return () => {
+      if (document.activeElement === button) startRef.current?.focus();
+    };
+  }, []);
   const error = state.status === "error" ? state.error : null;
   return (
     <Stack spacing={2}>
       <Stack direction="row" spacing={1}>
         <Button
+          ref={startRef}
           variant="contained"
-          disabled={disabled || state.status === "loading"}
-          onClick={() => void refresh()}
+          disabled={disabled}
+          aria-disabled={state.status === "loading" || undefined}
+          onClick={() => {
+            if (state.status !== "loading") void refresh();
+          }}
         >
           {state.status === "success"
             ? "Refresh preview"
@@ -195,7 +206,15 @@ function Session({
               : "Preview selected node"}
         </Button>
         {state.status === "loading" && (
-          <Button onClick={cancel}>Cancel preview</Button>
+          <Button
+            ref={restoreStartFocus}
+            onClick={() => {
+              cancel();
+              startRef.current?.focus();
+            }}
+          >
+            Cancel preview
+          </Button>
         )}
       </Stack>
       {state.status === "idle" && (

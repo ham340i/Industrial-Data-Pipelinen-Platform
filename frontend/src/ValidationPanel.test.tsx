@@ -88,7 +88,7 @@ it("shows each problem on its node and in the list, keeps edits and disables run
   expect(run()).toBeDisabled();
 
   const list = screen.getByRole("list", { name: "Pipeline problems" });
-  const items = within(list).getAllByRole("button");
+  const items = within(list).getAllByRole("listitem");
   expect(items.map((i) => i.textContent)).toEqual([
     "Add at least one block.Pipeline",
     "Fix 'amount': Input should be less than or equal to 1000.Synthetic Add Constant",
@@ -103,7 +103,16 @@ it("shows each problem on its node and in the list, keeps edits and disables run
     "Connect an upstream output to the required input 'table'.",
   ]);
 
-  await userEvent.click(items[2]);
+  const configurationProblem = within(items[1]).getByRole("button");
+  configurationProblem.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(screen.getByRole("spinbutton", { name: /amount/i })).toHaveFocus();
+  expect(useEditorStore.getState().selectedNodeId).toBe(a);
+
+  const inputProblem = within(items[2]).getByRole("button");
+  inputProblem.focus();
+  await userEvent.keyboard(" ");
+  expect(screen.getByRole("spinbutton", { name: /amount/i })).toHaveFocus();
   expect(useEditorStore.getState().selectedNodeId).toBe(b);
   const after = useEditorStore.getState().nodes;
   expect(
@@ -116,11 +125,14 @@ it("re-checks after a fix and enables running only for the current valid graph",
   const requests = backend((d) =>
     d.edges.length
       ? []
-      : [{ code: "missing_input", node_id: b, port: "table" }],
+      : [{ code: "invalid_config", node_id: b, field: "amount" }],
   );
   renderBuilder();
   await screen.findByText("1 problem must be fixed before running.");
   expect(run()).toBeDisabled();
+  act(() => useEditorStore.getState().selectNode(b));
+  const field = await screen.findByRole("spinbutton", { name: "Amount" });
+  expect(field).toHaveAttribute("aria-invalid", "true");
 
   act(() =>
     useEditorStore
@@ -130,18 +142,43 @@ it("re-checks after a fix and enables running only for the current valid graph",
         [sampleBlock],
       ),
   );
-  // Until the new graph has been checked, the old answer cannot enable Run.
-  expect(screen.getByText("Checking pipeline…")).toBeVisible();
+  const previous = screen.getByRole("list", {
+    name: "Previous pipeline problems",
+  });
+  expect(within(previous).getByText("Fix it.")).toBeVisible();
+  expect(within(previous).queryByRole("button")).not.toBeInTheDocument();
+  expect(
+    screen.getByLabelText("Previous problems in Synthetic Add Constant"),
+  ).toHaveTextContent("Fix it.");
+  expect(screen.getByText("Previous check: Fix it.")).toBeVisible();
+  expect(field).toHaveAttribute("aria-invalid", "false");
   expect(run()).toBeDisabled();
   expect(
     await screen.findByText("Ready to run. No problems found."),
   ).toBeVisible();
   expect(run()).toBeEnabled();
+  expect(
+    screen.queryByRole("list", { name: "Previous pipeline problems" }),
+  ).not.toBeInTheDocument();
   expect(requests.at(-1)?.edges).toHaveLength(1);
   expect(useEditorStore.getState().nodes.map((n) => n.id)).toEqual([a, b]);
 
   await userEvent.click(run());
   expect(await screen.findByText(/The pipeline is valid/)).toBeVisible();
+});
+
+it("drops old markers immediately when the draft identity changes", async () => {
+  const [a] = twoNodes();
+  backend((definition) =>
+    definition.nodes.length ? [{ code: "missing_input", node_id: a }] : [],
+  );
+  renderBuilder();
+  await screen.findByRole("list", { name: "Pipeline problems" });
+  act(() => useEditorStore.getState().clearDraft());
+  expect(
+    screen.queryByRole("list", { name: /pipeline problems/i }),
+  ).not.toBeInTheDocument();
+  await screen.findByText("Ready to run. No problems found.");
 });
 
 it("moving nodes does not trigger a new check", async () => {
@@ -160,15 +197,111 @@ it("moving nodes does not trigger a new check", async () => {
   expect(run()).toBeEnabled();
 });
 
-it("keeps running disabled when the check fails and keeps the draft", async () => {
-  twoNodes();
-  server.use(http.post(url, () => HttpResponse.error()));
+it("retries the same draft from the keyboard without exposing transport details", async () => {
+  const [a, b] = twoNodes();
+  const state = useEditorStore.getState();
+  state.connect(
+    { source: a, target: b, sourceHandle: "table", targetHandle: "table" },
+    [sampleBlock],
+  );
+  state.setNodeConfiguration(b, { amount: 5 });
+  const { nodes, edges } = useEditorStore.getState();
+  const requests: unknown[] = [];
+  server.use(
+    http.post(url, async ({ request }) => {
+      requests.push(await request.json());
+      if (requests.length === 1) {
+        return HttpResponse.json(
+          {
+            error: {
+              message:
+                "Connection failed: C:\\test\\private.db; token=synthetic-only",
+            },
+          },
+          { status: 500 },
+        );
+      }
+      return HttpResponse.json({ valid: true, diagnostics: [] });
+    }),
+  );
   renderBuilder();
   expect(
     await screen.findByText(/Running stays disabled until the check succeeds/),
   ).toBeVisible();
+  expect(
+    screen.queryByText(/private\.db|synthetic-only/),
+  ).not.toBeInTheDocument();
   expect(run()).toBeDisabled();
-  expect(useEditorStore.getState().nodes).toHaveLength(2);
+  const retry = screen.getByRole("button", {
+    name: "Retry pipeline check",
+  });
+  retry.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(
+    await screen.findByText("Ready to run. No problems found."),
+  ).toHaveFocus();
+  expect(run()).toBeEnabled();
+  expect(requests).toHaveLength(2);
+  expect(requests[1]).toEqual(requests[0]);
+  expect(useEditorStore.getState().nodes).toBe(nodes);
+  expect(useEditorStore.getState().edges).toBe(edges);
+});
+
+it("keeps previous diagnostics visible through a pending validation request", async () => {
+  const [a] = twoNodes();
+  let finishCheck!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    finishCheck = resolve;
+  });
+  let checkingEdit = false;
+  server.use(
+    http.post(url, async ({ request }) => {
+      const { definition } = (await request.json()) as {
+        definition: SemanticDefinition;
+      };
+      if (definition.nodes[0].config.amount === 5) {
+        checkingEdit = true;
+        await pending;
+        return HttpResponse.json({ valid: true, diagnostics: [] });
+      }
+      return HttpResponse.json({
+        valid: false,
+        diagnostics: [
+          {
+            code: "invalid_config",
+            message: "Fix it.",
+            node_id: a,
+            edge_id: null,
+            port: null,
+            field: "amount",
+          },
+        ],
+      });
+    }),
+  );
+  renderBuilder();
+  expect(
+    await screen.findByRole("list", { name: "Pipeline problems" }),
+  ).toBeVisible();
+  act(() => useEditorStore.getState().setNodeConfiguration(a, { amount: 5 }));
+  await waitFor(() => expect(checkingEdit).toBe(true));
+  expect(
+    screen.getByText(/Showing problems from the last check/),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("list", { name: "Previous pipeline problems" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("list", { name: "Pipeline problems" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText("Problems in Synthetic Add Constant"),
+  ).not.toBeInTheDocument();
+  expect(run()).toBeDisabled();
+  finishCheck();
+  expect(
+    await screen.findByText("Ready to run. No problems found."),
+  ).toBeVisible();
 });
 
 it("a slow stale answer never enables running for a newer graph", async () => {
