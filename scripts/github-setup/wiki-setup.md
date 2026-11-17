@@ -1,6 +1,6 @@
 # GitHub Wiki setup and maintenance
 
-The Wiki is initialized and published. Commit `6984b4d` contains eight content pages plus the sidebar and footer from `docs/wiki/`. Documentation links use published planning revision `0caf6f9` while the compliance documentation awaits merge into `main`.
+The Wiki source is `docs/wiki/`: one page per section required by the course (meeting minutes, risks, legal, economics, personas, architecture, tools, naming, testing, security, performance, deployment, learning, code quality, release notes) plus the sidebar and footer. Links into the repository use `blob/main`, so they follow the default branch.
 
 ## Initialize once (completed)
 
@@ -17,7 +17,7 @@ python3 scripts/publish_wiki.py
 python3 scripts/publish_wiki.py --apply
 ```
 
-The publisher clones the Wiki into a temporary directory, copies the ten maintained Markdown files from `docs/wiki/`, and lists changes. Only `--apply` commits and pushes. Identical content produces no new commit. Unrelated Wiki pages are preserved; concurrent remote changes cause a normal push rejection rather than a force push. The temporary clone is removed afterward. Existing configured Git identity is used without printing credentials or contact information.
+The publisher clones the Wiki into a temporary directory, copies the maintained Markdown files from `docs/wiki/`, removes the five retired navigation pages, and lists changes. Only `--apply` commits and pushes. Identical content produces no new commit. Unrelated Wiki pages are preserved; concurrent remote changes cause a normal push rejection rather than a force push. The temporary clone is removed afterward. Existing configured Git identity is used without printing credentials or contact information.
 
 ## Ownership
 

@@ -29,37 +29,60 @@ def suspicious(path, data):
     return secret_name or private_file or private_dir or any(p.search(data) for p in PATTERNS)
 
 
+def _check_workflow(data):
+    assert {'pull_request', 'push'} <= data['on'].keys()
+    assert data['on']['push']['branches'] == ['main']
+    assert data['permissions'] == {'contents': 'read'}
+    for job in data['jobs'].values():
+        assert job['timeout-minutes'] <= 15
+        for step in job['steps']:
+            if 'uses' in step:
+                assert re.fullmatch(r'[\w./-]+@[a-f0-9]{40}', step['uses'])
+
+
+def _check_issue_template(data):
+    assert data['name'] and data['description'] and data['labels']
+    inputs = [item for item in data['body'] if item['type'] != 'markdown']
+    ids = [item['id'] for item in inputs]
+    assert len(ids) == len(set(ids)) and 'ai' in ids
+    assert all(item['attributes']['label'] for item in inputs)
+
+
+def _check_milestones(data):
+    assert len(data) == 13
+    assert len({item['title'] for item in data}) == 13
+    dates = [datetime.fromisoformat(item['due_on'].replace('Z', '+00:00')) for item in data]
+    assert dates == sorted(dates)
+
+
+def _check_labels(data):
+    assert len({item['name'].casefold() for item in data}) == len(data)
+    assert all(re.fullmatch(r'[a-fA-F0-9]{6}', item['color']) for item in data)
+
+
+def _check_dependabot(data):
+    assert data['version'] == 2
+    ecosystems = [item['package-ecosystem'] for item in data['updates']]
+    # Actions, the Python lock and the frontend npm lock are all maintained.
+    assert set(ecosystems) == {'github-actions', 'pip', 'npm'}
+    assert len(ecosystems) == len(set(ecosystems))
+
+
+_BY_NAME = {
+    'milestones.json': _check_milestones,
+    'labels.json': _check_labels,
+    'dependabot.yml': _check_dependabot,
+}
+
+
 def validate_configuration(path, data):
     """Deliberately limited schema checks; GitHub remains the final schema validator."""
     if path.parent.name == 'workflows':
-        assert {'pull_request', 'push'} <= data['on'].keys()
-        assert data['on']['push']['branches'] == ['main']
-        assert data['permissions'] == {'contents': 'read'}
-        for job in data['jobs'].values():
-            assert job['timeout-minutes'] <= 15
-            for step in job['steps']:
-                if 'uses' in step:
-                    assert re.fullmatch(r'[\w./-]+@[a-f0-9]{40}', step['uses'])
+        _check_workflow(data)
     elif path.parent.name == 'ISSUE_TEMPLATE' and path.name != 'config.yml':
-        assert data['name'] and data['description'] and data['labels']
-        inputs = [item for item in data['body'] if item['type'] != 'markdown']
-        ids = [item['id'] for item in inputs]
-        assert len(ids) == len(set(ids)) and 'ai' in ids
-        assert all(item['attributes']['label'] for item in inputs)
-    elif path.name == 'milestones.json':
-        assert len(data) == 13
-        assert len({item['title'] for item in data}) == 13
-        dates = [datetime.fromisoformat(item['due_on'].replace('Z', '+00:00')) for item in data]
-        assert dates == sorted(dates)
-    elif path.name == 'labels.json':
-        assert len({item['name'].casefold() for item in data}) == len(data)
-        assert all(re.fullmatch(r'[a-fA-F0-9]{6}', item['color']) for item in data)
-    elif path.name == 'dependabot.yml':
-        assert data['version'] == 2
-        ecosystems = [item['package-ecosystem'] for item in data['updates']]
-        # Actions, the Python lock and the frontend npm lock are all maintained.
-        assert set(ecosystems) == {'github-actions', 'pip', 'npm'}
-        assert len(ecosystems) == len(set(ecosystems))
+        _check_issue_template(data)
+    elif path.name in _BY_NAME:
+        _BY_NAME[path.name](data)
 
 
 def main():
