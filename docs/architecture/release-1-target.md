@@ -1,5 +1,7 @@
 # Release 1 target architecture
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Architecture](../wiki/Architecture.md).
+
 Status: **Release 1 target; frontend foundation implemented under issue #5**. Backend, graph editor and execution layers remain planned. See [ADR-0001](decisions/ADR-0001-workbench-shell.md) and the [frontend guide](../frontend/workbench.md). Industry partner: Pratt & Whitney Canada; authorized data contracts and access still need confirmation. The existing product alias is Local Pipeline Studio.
 
 ## Boundaries

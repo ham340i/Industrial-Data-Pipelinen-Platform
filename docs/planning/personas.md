@@ -1,5 +1,7 @@
 # Starter personas
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Personas](../wiki/Personas.md).
+
 Hypotheses from the project brief, **pending stakeholder validation**. No interviews or demographic claims are implied.
 
 | Persona | Needs and goals | Candidate pain points | Technical comfort to validate |

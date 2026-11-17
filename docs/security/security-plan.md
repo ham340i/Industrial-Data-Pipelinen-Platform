@@ -1,5 +1,7 @@
 # Security plan
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Security](../wiki/Security.md).
+
 Status: proposed application controls; repository ignore rules and limited checks implemented. No product controls have been tested.
 
 ## Threat model to validate

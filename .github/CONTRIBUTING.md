@@ -46,7 +46,7 @@ Use that footer only when true. Never manufacture commits or attribution. When s
 
 Main should require PRs, one reviewer, resolved conversations and passing checks. Follow [protection setup](../scripts/github-setup/branch-protection.md) after the checks have run. Current gates validate repository tooling and documentation; application install/lint/type/test/build gates must be added with the selected stack.
 
-Run the [README checks](../README.md#running-tests) locally. Do not commit secrets or stakeholder datasets. Report suspected exposure privately to the repository owner; rotate exposed credentials before removing them. Do not include secret values in issues.
+Run the [README checks](../README.md#developer-getting-started-guide) locally. Do not commit secrets or stakeholder datasets. Report suspected exposure privately to the repository owner; rotate exposed credentials before removing them. Do not include secret values in issues.
 
 ## Personal evidence and milestone planning
 

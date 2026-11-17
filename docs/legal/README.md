@@ -1,5 +1,7 @@
 # Legal and ethical decisions
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Legal and Ethical Issues](../wiki/Legal-and-Ethical-Issues.md).
+
 No LICENSE or signed agreement exists in the inspected repository. License selection requires team/stakeholder approval. The supplied course brief recommends considering MIT for its permissive terms and warranty/liability disclaimer; this is a candidate for review, not an approved license choice or legal advice. Confirm rights to source code, third-party components and stakeholder materials before adding a license.
 
 | Decision / record | Status | Authorized reference |

@@ -1,5 +1,7 @@
 # Risk register
 
+> **Superseded at Release 1.** This is an early planning document kept as history. The current version is [Risks](../wiki/Risks.md).
+
 For the later assigned Release 1 scope, use the [Release 1 risk register](../release-1-plan.md#release-1-risk-register), which links actual mitigation work and owners. The observations below preserve the earlier compliance-audit baseline; the supplied target/backlog resolves planning gaps but does not implement the product.
 
 The observed risks below are grounded in this repository/API audit. Earlier project hypotheses follow separately and remain unvalidated.
