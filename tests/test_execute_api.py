@@ -12,6 +12,8 @@ from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.main import app
+from app.metadata.database import Database
+from app.pipelines import api as pipelines_api
 from app.runs.scheduler import (
     TimerSchedulerDraining,
     TimerShutdownTimedOut,
