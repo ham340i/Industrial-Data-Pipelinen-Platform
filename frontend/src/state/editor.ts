@@ -14,6 +14,8 @@ import { connectionError, serializeGraph, type BlockNode } from "./graph";
 import { assertPublic } from "../configuration/schema";
 
 interface EditorState {
+  workspaceKey: string | null;
+  switchWorkspace: (root: string | null, retainDraft?: boolean) => void;
   pipelineId: string | null;
   revision: number | null;
   savedFingerprint: string | null;
@@ -49,6 +51,7 @@ export function fingerprint(
   return JSON.stringify({ name, definition: serializeGraph(nodes, edges) });
 }
 const initialState = {
+  workspaceKey: null as string | null,
   pipelineId: null,
   revision: null,
   savedFingerprint: null,
@@ -63,8 +66,31 @@ const initialState = {
   error: null,
 };
 
+const workspaceDrafts = new Map<
+  string | null,
+  Pick<EditorState, keyof typeof initialState>
+>();
+
 export const useEditorStore = create<EditorState>((set) => ({
   ...initialState,
+  switchWorkspace: (workspaceKey, retainDraft = false) =>
+    set((state) => {
+      if (state.workspaceKey === workspaceKey) return state;
+      workspaceDrafts.set(state.workspaceKey, {
+        ...initialState,
+        ...state,
+        busy: false,
+      });
+      const restored = retainDraft
+        ? state
+        : (workspaceDrafts.get(workspaceKey) ?? initialState);
+      return {
+        ...restored,
+        workspaceKey,
+        busy: false,
+        generation: state.generation + 1,
+      };
+    }),
   setBusy: (busy) => set({ busy }),
   loadSaved: (pipeline) =>
     set((state) => {
@@ -105,7 +131,12 @@ export const useEditorStore = create<EditorState>((set) => ({
     set((state) =>
       state.projectId === projectId
         ? state
-        : { ...initialState, projectId, generation: state.generation + 1 },
+        : {
+            ...initialState,
+            workspaceKey: state.workspaceKey,
+            projectId,
+            generation: state.generation + 1,
+          },
     ),
   setDraftName: (draftName) =>
     set((state) => (state.busy ? state : { draftName })),
@@ -237,10 +268,14 @@ export const useEditorStore = create<EditorState>((set) => ({
         ? state
         : {
             ...initialState,
+            workspaceKey: state.workspaceKey,
             projectId: state.projectId,
             generation: state.generation + 1,
           },
     ),
   reset: () =>
-    set((state) => ({ ...initialState, generation: state.generation + 1 })),
+    set((state) => {
+      workspaceDrafts.clear();
+      return { ...initialState, generation: state.generation + 1 };
+    }),
 }));

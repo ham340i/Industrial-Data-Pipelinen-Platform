@@ -1,6 +1,6 @@
 // AI contribution: 50% or more AI-generated
 import { useRef, useState } from "react";
-import { OutputInspection } from "./OutputInspection";
+import { RunResult } from "./RunResult";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Stack, Typography } from "@mui/material";
 import {
@@ -213,42 +213,16 @@ export function RunControls({ canRun }: { canRun: boolean }) {
               current edits are unchanged; configuration links are disabled.
             </Alert>
           )}
-          <Typography>
-            Duration: {result.duration_ms ?? "unknown"} ms · Output rows:{" "}
-            {result.row_count ?? "unknown"}
-          </Typography>
-          {result.error && (
-            <Alert severity="error">
-              {result.error.code}: {result.error.reason}
-            </Alert>
-          )}
-          {result.blocks.map((b) => (
-            <Stack key={b.node_id} spacing={1}>
-              <Typography>
-                {b.node_id}: {b.state} · {b.duration_ms ?? "unknown"} ms · rows{" "}
-                {b.rows_in ?? "unknown"} → {b.rows_out ?? "unknown"}
-                {b.error ? ` · ${b.error.code}: ${b.error.reason}` : ""}
-              </Typography>
-              {(b.state === "failed" || b.error) &&
-                matches &&
-                state.nodes.some((n) => n.id === b.node_id) && (
-                  <Button
-                    sx={{ alignSelf: "flex-start" }}
-                    disabled={state.busy}
-                    onClick={() => configure(b.node_id, result.revision)}
-                  >
-                    Configure failed block {b.node_id}
-                  </Button>
-                )}
-            </Stack>
-          ))}
-          <Typography component="h2" variant="h2">
-            Run log
-          </Typography>
-          {result.events.map((e) => (
-            <Typography key={e.sequence}>{e.message}</Typography>
-          ))}
-          <OutputInspection run={result} />
+          <RunResult
+            run={result}
+            showStatus={false}
+            showDownload={false}
+            onInspect={
+              matches && !state.busy
+                ? (id) => configure(id, result.revision)
+                : undefined
+            }
+          />
         </Stack>
       )}
     </Stack>

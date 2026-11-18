@@ -13,15 +13,17 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { createProject, getProjects } from "./api/projects";
 import { selectedProject } from "./state/projectSelection";
+import { useEditorStore } from "./state/editor";
 
 export function Projects() {
+  const workspaceKey = useEditorStore((s) => s.workspaceKey);
   const [name, setName] = useState("");
   const [offset, setOffset] = useState(0);
   const [attempted, setAttempted] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const projects = useQuery({
-    queryKey: ["projects", offset],
+    queryKey: ["projects", workspaceKey, offset],
     queryFn: ({ signal }) => getProjects(offset, signal),
     retry: false,
     refetchOnWindowFocus: false,

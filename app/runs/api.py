@@ -4,11 +4,13 @@
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import Select, func, select
 
 from app.metadata.database import Database
-from app.metadata.models import Pipeline, PipelineRevision, Run
+from app.metadata.models import Pipeline, PipelineRevision, Project, Run
+from app.workspace_storage import projects_filter, visible_project
+from app.runs.redaction import redact
 from app.projects import database
 from app.schemas.runs import (
     RunBlockDetail,
@@ -107,13 +109,18 @@ def list_runs(
     with db.transaction() as session:
         total = session.scalar(
             filtered(select(func.count(Run.id)), project_id, pipeline_id, state)
+            .join(Project)
+            .where(projects_filter(db))
         )
         runs = session.scalars(
             filtered(select(Run), project_id, pipeline_id, state)
+            .join(Project)
+            .where(projects_filter(db))
             .order_by(Run.created_at.desc(), Run.id)
             .offset(offset)
             .limit(limit)
         )
+        # Workspace identity is private metadata, never part of portable graphs.
         return RunPage(
             items=[summarize(run) for run in runs],
             total=total or 0,
@@ -127,6 +134,61 @@ def get_run(run_id: UUID, db: Annotated[Database, Depends(database)]) -> RunDeta
     """Full evidence for one run: block states, redacted log and artifacts."""
     with db.transaction() as session:
         run = session.get(Run, str(run_id))
-        if run is None:
+        if run is None or not visible_project(
+            run.pipeline_revision.pipeline.project, db
+        ):
             raise RunNotFound()
         return describe(run)
+
+
+@router.get("/{run_id}/log")
+def download_run_log(
+    run_id: UUID, db: Annotated[Database, Depends(database)]
+) -> Response:
+    """Download every persisted event and block result, with redaction retained."""
+    with db.transaction() as session:
+        run = session.get(Run, str(run_id))
+        if run is None or not visible_project(
+            run.pipeline_revision.pipeline.project, db
+        ):
+            raise RunNotFound()
+        lines = [
+            f"Run {run.id}",
+            f"Result: {run.state}",
+            f"Revision: {run.pipeline_revision.revision}",
+            f"Duration: {run.duration_ms} ms"
+            if run.duration_ms is not None
+            else "Duration: Unknown",
+            f"Rows: {run.row_count if run.row_count is not None else 'Unknown'}",
+            "",
+            "Blocks",
+        ]
+        for block in run.blocks:
+            lines.append(
+                redact(
+                    f"{block.node_id} | {block.block_id} | {block.state} | "
+                    f"duration={block.duration_ms} | rows_in={block.rows_in} | "
+                    f"rows_out={block.rows_out}"
+                )
+            )
+            if block.error_code:
+                lines.append(redact(f"{block.error_code}: {block.error_reason}"))
+        if run.error_code:
+            lines.append(redact(f"Run error: {run.error_code}: {run.error_reason}"))
+        lines.extend(["", "Events (credentials and machine paths redacted)"])
+        for event in run.events:
+            lines.append(
+                f"{event.sequence} | {event.created_at.isoformat()} | {event.level} | "
+                f"{redact(event.node_id or '-')} | "
+                f"{redact(event.code or event.kind)} | "
+                f"{redact(event.message)}"
+            )
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f'attachment; filename="run-{run_id}.log"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )

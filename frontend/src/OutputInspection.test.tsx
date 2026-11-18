@@ -99,3 +99,51 @@ it("clears the old table when switching run identity", async () => {
     screen.getByRole("button", { name: "Inspect output result.parquet" }),
   ).toHaveAttribute("aria-expanded", "false");
 });
+
+it("explains CSV inspection support without offering an unsupported query", () => {
+  const { rerender, view } = setup();
+  rerender(
+    view({
+      ...run,
+      outputs: [
+        { ...run.outputs[0], name: "artifact", artifact_ref: "results.csv" },
+      ],
+    }),
+  );
+  expect(
+    screen.getByText(/In-app row inspection supports Parquet/),
+  ).toBeVisible();
+  expect(screen.getByText(/results.csv/)).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: /Inspect output/ }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+it("explains rejected inspection without blaming replacement or suggesting retry", async () => {
+  server.use(http.post(url, () => HttpResponse.json({}, { status: 422 })));
+  setup();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Inspect output result.parquet" }),
+  );
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Inspection requires a Parquet file");
+  expect(alert).not.toHaveTextContent("later run");
+  expect(
+    screen.queryByRole("button", { name: "Retry output rows" }),
+  ).not.toBeInTheDocument();
+});
+
+it("keeps connection errors separate from file availability", async () => {
+  server.use(http.post(url, () => HttpResponse.error()));
+  setup();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Inspect output result.parquet" }),
+  );
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Cannot reach the local API");
+  expect(alert).not.toHaveTextContent("later run");
+  expect(
+    screen.getByRole("button", { name: "Retry output rows" }),
+  ).toBeVisible();
+});

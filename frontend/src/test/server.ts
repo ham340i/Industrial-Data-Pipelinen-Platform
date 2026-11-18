@@ -3,6 +3,15 @@ import { setupServer } from "msw/node";
 
 export const healthUrl = "http://127.0.0.1:8000/api/v1/health";
 export const server = setupServer(
+  http.get("http://127.0.0.1:8000/api/v1/settings/workspace", () =>
+    HttpResponse.json({
+      root_path: null,
+      source: "unconfigured",
+      ready: false,
+      message: "Choose a workspace",
+      allowed_roots: [],
+    }),
+  ),
   http.get("http://127.0.0.1:8000/api/v1/runs", () =>
     HttpResponse.json({ items: [], total: 0, offset: 0, limit: 20 }),
   ),

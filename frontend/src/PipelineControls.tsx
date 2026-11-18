@@ -12,7 +12,7 @@ export function PipelineControls({ projectId }: { projectId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const list = useQuery({
-    queryKey: ["pipelines", projectId, offset],
+    queryKey: ["pipelines", state.workspaceKey, projectId, offset],
     queryFn: ({ signal }) => listPipelines(projectId, offset, signal),
     retry: false,
   });
@@ -61,7 +61,7 @@ export function PipelineControls({ projectId }: { projectId: string }) {
         setMessage(kind === "open" ? "Pipeline opened." : "Pipeline saved.");
       }
       await queryClient.invalidateQueries({
-        queryKey: ["pipelines", projectId],
+        queryKey: ["pipelines", state.workspaceKey, projectId],
       });
     } catch (error) {
       if (isCurrent())

@@ -2,6 +2,7 @@
 """Project-scoped authoring persistence with atomic, optimistic revisions (#14)."""
 
 import json
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
@@ -14,9 +15,16 @@ from sqlalchemy.orm import Session
 
 from app.blocks.catalog import executor, registry
 from app.blocks.triggers import TimerTriggerConfig
-from app.workspace import WorkspaceError, effective_workspace_root, project_data_folder
+from app.workspace import WorkspaceError, effective_workspace_root, workspace_lock
+from app.workspace_storage import (
+    allocate_directory,
+    pipeline_data_folder,
+    pipeline_storage,
+    prepare_named_pipeline,
+    visible_project,
+)
 from app.metadata.database import Database
-from app.metadata.models import Pipeline, PipelineRevision, Project
+from app.metadata.models import Pipeline, PipelineRevision, Project, Run
 from app.pipelines.models import GraphDraft, Node, PipelineDefinition
 from app.pipelines.validation import ValidationReport, validate
 from app.projects import ProjectNotFound, database
@@ -101,18 +109,19 @@ class PipelinePage(BaseModel):
     limit: int
 
 
-def require_project(session: Session, project_id: UUID) -> None:
-    if session.get(Project, str(project_id)) is None:
+def require_project(session: Session, project_id: UUID, db: Database) -> None:
+    project = session.get(Project, str(project_id))
+    if project is None or not visible_project(project, db):
         raise ProjectNotFound()
 
 
 def latest_revision(
-    session: Session, project_id: UUID, pipeline_id: UUID
+    session: Session, project_id: UUID, pipeline_id: UUID, db: Database
 ) -> PipelineRevision:
     """The latest saved revision row, for execute/timer (#29): needs the
     revision's own id, which ``load``'s ``PipelineResponse`` does not carry.
     """
-    require_project(session, project_id)
+    require_project(session, project_id, db)
     revision = session.scalar(
         select(PipelineRevision)
         .join(Pipeline)
@@ -125,8 +134,10 @@ def latest_revision(
     return revision
 
 
-def load(session: Session, project_id: UUID, pipeline_id: UUID) -> PipelineResponse:
-    require_project(session, project_id)
+def load(
+    session: Session, project_id: UUID, pipeline_id: UUID, db: Database
+) -> PipelineResponse:
+    require_project(session, project_id, db)
     row = session.execute(
         select(Pipeline, PipelineRevision)
         .join(PipelineRevision)
@@ -154,7 +165,7 @@ def list_pipelines(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> PipelinePage:
     with db.transaction() as session:
-        require_project(session, project_id)
+        require_project(session, project_id, db)
         total = (
             session.scalar(
                 select(func.count())
@@ -192,7 +203,7 @@ def get_pipeline(
     db: Annotated[Database, Depends(database)],
 ) -> PipelineResponse:
     with db.transaction() as session:
-        return load(session, project_id, pipeline_id)
+        return load(session, project_id, pipeline_id, db)
 
 
 @router.post("", response_model=PipelineResponse, status_code=201)
@@ -202,8 +213,8 @@ def create_pipeline(
     db: Annotated[Database, Depends(database)],
 ) -> PipelineResponse:
     try:
-        with db.transaction(write=True) as session:
-            require_project(session, project_id)
+        with workspace_lock, db.transaction(write=True) as session:
+            require_project(session, project_id, db)
             pipeline = Pipeline(project_id=str(project_id), name=payload.name)
             session.add(pipeline)
             session.flush()
@@ -213,7 +224,8 @@ def create_pipeline(
                 )
             )
             session.flush()
-            result = load(session, project_id, UUID(pipeline.id))
+            prepare_named_pipeline(session, pipeline, effective_workspace_root(db))
+            result = load(session, project_id, UUID(pipeline.id), db)
         return result
     except IntegrityError:
         raise PipelineError(
@@ -227,11 +239,16 @@ def update(
     project_id: UUID,
     pipeline_id: UUID,
     payload: PipelineUpdate | PipelineRename,
+    timer_running: bool = False,
 ) -> PipelineResponse:
+    moved: tuple[Path, Path] | None = None
     try:
-        # BEGIN IMMEDIATE acquires the writer lock before reading the revision.
-        with db.transaction(write=True) as session:
-            previous = load(session, project_id, pipeline_id)
+        with (
+            ExitStack() as storage_guard,
+            workspace_lock,
+            db.transaction(write=True) as session,
+        ):
+            previous = load(session, project_id, pipeline_id, db)
             if previous.revision != payload.expected_revision:
                 raise PipelineError(
                     "revision_conflict",
@@ -240,7 +257,49 @@ def update(
                 )
             pipeline = session.get(Pipeline, str(pipeline_id))
             assert pipeline is not None
-            pipeline.name = payload.name
+            if pipeline.name != payload.name:
+                storage_guard.enter_context(pipeline_storage(str(pipeline_id)))
+                active = session.scalar(
+                    select(Run.id)
+                    .join(PipelineRevision)
+                    .where(
+                        PipelineRevision.pipeline_id == pipeline.id,
+                        Run.state.in_(["queued", "running"]),
+                    )
+                    .limit(1)
+                )
+                if timer_running or active:
+                    raise PipelineError(
+                        "pipeline_busy",
+                        "Stop this pipeline's timer and wait for active runs "
+                        "before renaming it.",
+                    )
+                root = effective_workspace_root(db)
+                if root is not None:
+                    source = prepare_named_pipeline(session, pipeline, root)
+                    assert source is not None
+                    reserved = list(
+                        session.scalars(
+                            select(Pipeline.directory_name).where(
+                                Pipeline.project_id == pipeline.project_id,
+                                Pipeline.id != pipeline.id,
+                            )
+                        )
+                    )
+                    new_name = allocate_directory(
+                        payload.name,
+                        source.parent,
+                        reserved,
+                        exclude=source.name,
+                    )
+                    destination = source.with_name(new_name)
+                    if str(source) != str(destination):
+                        source.rename(destination)
+                        moved = source, destination
+                    pipeline.directory_name = new_name
+                else:
+                    pipeline.directory_name = None
+                pipeline.name = payload.name
             definition = (
                 payload.definition
                 if isinstance(payload, PipelineUpdate)
@@ -254,13 +313,17 @@ def update(
                 )
             )
             session.flush()
-            result = load(session, project_id, pipeline_id)
+            result = load(session, project_id, pipeline_id, db)
         return result
-    except IntegrityError:
-        raise PipelineError(
-            "pipeline_name_conflict",
-            "A pipeline with this name already exists. Choose another name.",
-        ) from None
+    except BaseException as exc:
+        if moved is not None:
+            moved[1].rename(moved[0])
+        if isinstance(exc, IntegrityError):
+            raise PipelineError(
+                "pipeline_name_conflict",
+                "A pipeline with this name already exists. Choose another name.",
+            ) from None
+        raise
 
 
 @router.put("/{pipeline_id}", response_model=PipelineResponse)
@@ -269,8 +332,15 @@ def update_pipeline(
     pipeline_id: UUID,
     payload: PipelineUpdate,
     db: Annotated[Database, Depends(database)],
+    sched: Annotated[TimerScheduler, Depends(scheduler)],
 ) -> PipelineResponse:
-    return update(db, project_id, pipeline_id, payload)
+    return update(
+        db,
+        project_id,
+        pipeline_id,
+        payload,
+        timer_running=sched.status(str(pipeline_id)) is not None,
+    )
 
 
 @router.patch("/{pipeline_id}", response_model=PipelineResponse)
@@ -279,8 +349,15 @@ def rename_pipeline(
     pipeline_id: UUID,
     payload: PipelineRename,
     db: Annotated[Database, Depends(database)],
+    sched: Annotated[TimerScheduler, Depends(scheduler)],
 ) -> PipelineResponse:
-    return update(db, project_id, pipeline_id, payload)
+    return update(
+        db,
+        project_id,
+        pipeline_id,
+        payload,
+        timer_running=sched.status(str(pipeline_id)) is not None,
+    )
 
 
 def load_latest_definition(
@@ -291,7 +368,7 @@ def load_latest_definition(
 ) -> tuple[str, PipelineDefinition]:
     """The latest revision's id and parsed definition, for execute/timer (#29)."""
     with db.transaction() as session:
-        revision = latest_revision(session, project_id, pipeline_id)
+        revision = latest_revision(session, project_id, pipeline_id, db)
         if expected_revision is not None and revision.revision != expected_revision:
             raise PipelineError(
                 "revision_conflict",
@@ -313,7 +390,7 @@ def find_trigger(definition: PipelineDefinition, block_id: str) -> Node | None:
     return next((node for node in definition.nodes if node.block_id == block_id), None)
 
 
-def execution_folder(db: Database, project_id: str) -> Path | None:
+def execution_folder(db: Database, pipeline_id: str) -> Path | None:
     """Where a run reads inputs and publishes sinks: the checked project folder.
 
     No configured workspace stays None so the run itself records
@@ -321,11 +398,13 @@ def execution_folder(db: Database, project_id: str) -> Path | None:
     front, because a sink writing through a link could publish into another
     project (#37 review).
     """
-    root = effective_workspace_root(db)
-    if root is None:
+    with db.transaction() as session:
+        pipeline = session.get(Pipeline, pipeline_id)
+        stored_root = pipeline.project.workspace_root if pipeline else None
+    if not stored_root and effective_workspace_root(db) is None:
         return None
     try:
-        return project_data_folder(root, project_id)
+        return pipeline_data_folder(db, pipeline_id)
     except ValueError:
         raise WorkspaceError(
             "workspace_project_folder",
@@ -347,24 +426,25 @@ def execute_pipeline(
     refused with a structured ``invalid_pipeline`` error and create no run,
     exactly like a direct ``execute_revision`` call.
     """
-    revision_id, _ = load_latest_definition(
-        db, project_id, pipeline_id, payload.expected_revision if payload else None
-    )
-    try:
-        outcome = execute_revision(
-            db,
-            executor,
-            revision_id,
-            workspace_root=execution_folder(db, str(project_id)),
+    with pipeline_storage(str(pipeline_id)):
+        revision_id, _ = load_latest_definition(
+            db, project_id, pipeline_id, payload.expected_revision if payload else None
         )
-    except RevisionNotFound:
-        raise PipelineError(
-            "pipeline_not_found", "Pipeline was not found.", 404
-        ) from None
-    return ExecuteResponse(
-        run_id=outcome.run_id,
-        state=outcome.state,  # type: ignore[arg-type]  # recorder only sets terminal states
-    )
+        try:
+            outcome = execute_revision(
+                db,
+                executor,
+                revision_id,
+                workspace_root=execution_folder(db, str(pipeline_id)),
+            )
+        except RevisionNotFound:
+            raise PipelineError(
+                "pipeline_not_found", "Pipeline was not found.", 404
+            ) from None
+        return ExecuteResponse(
+            run_id=outcome.run_id,
+            state=outcome.state,  # type: ignore[arg-type]  # recorder only sets terminal states
+        )
 
 
 @router.post(
@@ -424,7 +504,7 @@ def stop_timer(
     sched: Annotated[TimerScheduler, Depends(scheduler)],
 ) -> TimerStatusResponse:
     with db.transaction() as session:
-        latest_revision(session, project_id, pipeline_id)
+        latest_revision(session, project_id, pipeline_id, db)
     try:
         sched.stop(str(pipeline_id))
     except TimerNotRunning:
@@ -449,7 +529,7 @@ def get_timer_status(
     sched: Annotated[TimerScheduler, Depends(scheduler)],
 ) -> TimerStatusResponse:
     with db.transaction() as session:
-        latest_revision(session, project_id, pipeline_id)
+        latest_revision(session, project_id, pipeline_id, db)
     status = sched.status(str(pipeline_id))
     if status is None:
         return TimerStatusResponse(running=False)

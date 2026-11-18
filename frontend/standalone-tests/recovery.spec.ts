@@ -8,13 +8,10 @@ const api =
 
 async function seed(page: Page, missing = true) {
   const response = await page.request.post(`${api}/projects`, {
-    data: { name: `Recovery ${test.info().title} ${Date.now()}` },
+    data: { name: `Recovery ${Date.now()}` },
   });
   expect(response.status()).toBe(201);
   const project = await response.json();
-  const root = join(process.env.LPS_WORKSPACE_ROOT!, project.id);
-  await mkdir(root, { recursive: true });
-  await writeFile(join(root, "input.csv"), "id,value\n1,10\n2,20\n");
   const definition = {
     schema_version: 1,
     nodes: [
@@ -65,6 +62,14 @@ async function seed(page: Page, missing = true) {
   );
   expect(saved.status()).toBe(201);
   const pipeline = await saved.json();
+  const root = join(
+    process.env.LPS_WORKSPACE_ROOT!,
+    project.name,
+    "Recovery path",
+  );
+  await mkdir(root, { recursive: true });
+  await writeFile(join(root, "input.csv"), "id,value\n1,10\n2,20\n");
+
   const url = `${api}/projects/${project.id}/pipelines/${pipeline.id}`;
   await page.goto(`/#/projects/${project.id}/builder`);
   await page
@@ -149,7 +154,7 @@ test("missing CSV preview recovers by keyboard without losing unsaved config or 
 test("failed saved run focuses its block, retains edits and runs a corrected revision", async ({
   page,
 }) => {
-  const { project, url, root } = await seed(page);
+  const { project, url } = await seed(page);
   const run = page.getByRole("button", { name: "Run saved pipeline" });
   await expect(run).toBeEnabled();
   const execution = page.waitForResponse((r) => r.url().endsWith("/execute"));
@@ -160,10 +165,12 @@ test("failed saved run focuses its block, retains edits and runs a corrected rev
   ).toContainText("Run failed");
   const name = page.getByRole("textbox", { name: "Draft pipeline name" });
   await name.fill("Recovered unsaved name");
-  const configure = page.getByRole("button", {
-    name: "Configure failed block source",
-    exact: true,
-  });
+  const configure = page
+    .getByLabel("Pipeline execution", { exact: true })
+    .getByRole("button", {
+      name: "Configure failed block source",
+      exact: true,
+    });
   await configure.focus();
   await page.keyboard.press("Enter");
   const form = page.getByRole("region", { name: "Configure CSV Source" });
@@ -213,7 +220,19 @@ test("failed saved run focuses its block, retains edits and runs a corrected rev
   ).toContainText("revision 2");
   expect(await runCount(page, project.id)).toBe(2);
   expect(
-    (await readFile(join(root, "output.csv"), "utf8")).trim().split(/\r?\n/),
+    (
+      await readFile(
+        join(
+          process.env.LPS_WORKSPACE_ROOT!,
+          project.name,
+          saved.name,
+          "output.csv",
+        ),
+        "utf8",
+      )
+    )
+      .trim()
+      .split(/\r?\n/),
   ).toEqual(["id", "1", "2"]);
 });
 
