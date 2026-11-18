@@ -199,7 +199,7 @@ it("keeps run status and evidence during a poll and after a failed refresh", asy
   setup();
   await userEvent.click(run());
   const status = screen.getByRole("status", { name: "Execution status" });
-  await screen.findByText("Execution started.");
+  await waitFor(() => expect(status).toHaveTextContent("Run running"));
   await waitFor(() => expect(reads).toBe(2), { timeout: 2000 });
   expect(status).toHaveTextContent("Run running");
   finishPoll();
@@ -207,7 +207,10 @@ it("keeps run status and evidence during a poll and after a failed refresh", asy
     name: "Retry run results",
   });
   expect(status).toHaveTextContent("Run running");
-  expect(screen.getByText("Execution started.")).toBeVisible();
+  expect(screen.queryByText("Execution started.")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Download log" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByText(/last loaded run results/)).toBeVisible();
   await userEvent.click(retry);
   await screen.findByText(/Run failed.*revision 1/);

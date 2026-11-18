@@ -42,8 +42,9 @@ from pathlib import Path
 from fastapi import Request
 from sqlalchemy import select
 
-from app.workspace import effective_workspace_root, project_data_folder
-from app.metadata.models import Pipeline, PipelineRevision
+from app.workspace import effective_workspace_root
+from app.workspace_storage import pipeline_data_folder, pipeline_storage
+from app.metadata.models import Pipeline, PipelineRevision, Project
 
 from app.execution import Cancellation, Executor
 from app.metadata.database import Database
@@ -163,33 +164,44 @@ class _Timer:
 
     def _run_once(self, token: Cancellation) -> None:
         try:
-            with self._db.transaction() as session:
-                project_id = session.execute(
-                    select(Pipeline.project_id)
-                    .join(PipelineRevision, PipelineRevision.pipeline_id == Pipeline.id)
-                    .where(PipelineRevision.id == self.status.revision_id)
-                ).scalar_one()
-            root = self._workspace_root or effective_workspace_root(self._db)
-            folder: Path | None = None
-            if root is not None:
-                try:
-                    folder = project_data_folder(root, project_id)
-                except ValueError:
-                    # Run without a workspace so the tick is still recorded as
-                    # a failed run (workspace_required) rather than writing
-                    # through an aliased folder (#37 review).
-                    logger.warning(
-                        "Timer for pipeline %s: project data folder is missing "
-                        "or aliased; running without a workspace",
-                        self.status.pipeline_id,
-                    )
-            execute_revision(
-                self._db,
-                self._executor,
-                self.status.revision_id,
-                cancellation=token,
-                workspace_root=folder,
-            )
+            with pipeline_storage(self.status.pipeline_id, wait=True):
+                with self._db.transaction() as session:
+                    project_root = session.execute(
+                        select(Project.workspace_root)
+                        .join(Pipeline, Project.id == Pipeline.project_id)
+                        .join(
+                            PipelineRevision,
+                            PipelineRevision.pipeline_id == Pipeline.id,
+                        )
+                        .where(PipelineRevision.id == self.status.revision_id)
+                    ).scalar_one()
+                root = self._workspace_root or (
+                    Path(project_root)
+                    if project_root
+                    else effective_workspace_root(self._db)
+                )
+                folder: Path | None = None
+                if root is not None:
+                    try:
+                        folder = pipeline_data_folder(
+                            self._db, self.status.pipeline_id, root=root
+                        )
+                    except ValueError:
+                        # Run without a workspace so the tick is still recorded as
+                        # a failed run (workspace_required) rather than writing
+                        # through an aliased folder (#37 review).
+                        logger.warning(
+                            "Timer for pipeline %s: project data folder is missing "
+                            "or aliased; running without a workspace",
+                            self.status.pipeline_id,
+                        )
+                execute_revision(
+                    self._db,
+                    self._executor,
+                    self.status.revision_id,
+                    cancellation=token,
+                    workspace_root=folder,
+                )
         except Exception as exc:
             # The run service attempts failed-run reconciliation; unavailable
             # storage can defer it until startup recovery. Keep the next tick

@@ -79,7 +79,7 @@ def test_malformed_definitions_are_refused_at_save_without_persistence(
     assert error["code"] == "validation_error"
     assert "Traceback" not in response.text
     assert str(bench.root) not in response.text
-    assert bench.client.get(bench.pipelines).json()["total"] == 0
+    assert bench.client.get(bench.pipelines).json()["total"] == 1
 
 
 def test_validate_reports_block_config_and_port_problems_without_running(
@@ -252,9 +252,18 @@ def test_execute_without_a_workspace_records_a_failed_run_not_a_crash(
     from app.config import settings
 
     definition = linear(csv(bench), CSV_SINK)
-    pipeline_id = bench.save(definition)
     monkeypatch.setattr(settings, "workspace_root", None)
-    response = bench.execute(pipeline_id)
+    project = bench.client.post(
+        "/api/v1/projects", json={"name": "Unconfigured"}
+    ).json()["id"]
+    saved = bench.client.post(
+        f"/api/v1/projects/{project}/pipelines",
+        json={"name": "No workspace", "definition": definition},
+    )
+    assert saved.status_code == 201, saved.text
+    response = bench.client.post(
+        f"/api/v1/projects/{project}/pipelines/{saved.json()['id']}/execute"
+    )
     assert response.status_code == 201, response.text
     detail = bench.run(response.json()["run_id"])
     assert detail["state"] == "failed"
@@ -327,8 +336,8 @@ def test_artifact_query_refuses_a_project_folder_that_aliases_another(
     assert bench.query(artifact_id, limit=5).status_code == 200
     published = (bench.root / "result.parquet").read_bytes()
 
-    other = bench.client.post("/api/v1/projects", json={"name": "Other"}).json()
-    other_root = bench.root.parent / other["id"]
+    bench.client.post("/api/v1/projects", json={"name": "Other"}).raise_for_status()
+    other_root = bench.root.parent.parent / "Other"
     (other_root / "result.parquet").write_bytes(published)
     alias_project_folder(bench, other_root)
     aliased = bench.query(artifact_id, limit=5)

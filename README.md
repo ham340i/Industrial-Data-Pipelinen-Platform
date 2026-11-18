@@ -11,7 +11,7 @@ CI runs on every pull request and push to `main`: repository and documentation c
 
 | Release | Demo video | Release notes | Tag |
 |---|---|---|---|
-| Release 1 | Not recorded yet | [Release 1 notes](docs/releases/iteration-4-release-1.md) | Not tagged yet |
+| Release 1 | [Release 1 presentation (OneDrive)](https://liveconcordia-my.sharepoint.com/:v:/g/personal/ah_alhab_live_concordia_ca/IQBr05p96mNFTJszcch4UFvEAfdezWmaoXkWx_Nkq1gInDw?e=2NFHQA) | [Release 1 notes](docs/releases/iteration-4-release-1.md) | Not tagged yet |
 | Release 2 | Planned for February 2027 | | |
 | Release 3 | Planned for April 2027 | | |
 

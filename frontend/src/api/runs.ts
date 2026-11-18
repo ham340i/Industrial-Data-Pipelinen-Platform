@@ -145,13 +145,14 @@ export async function listRuns(
   projectId: string,
   pipelineId: string,
   signal?: AbortSignal,
+  offset = 0,
 ): Promise<RunSummary[]> {
   const { data } = await api.get<unknown>("/runs", {
     params: {
       project_id: projectId,
       pipeline_id: pipelineId,
       limit: 20,
-      offset: 0,
+      offset,
     },
     signal,
   });
@@ -160,13 +161,29 @@ export async function listRuns(
     !Array.isArray(data.items) ||
     data.items.length > 20 ||
     data.limit !== 20 ||
-    data.offset !== 0 ||
+    data.offset !== offset ||
     !count(data.total)
   )
     return invalid();
   const items = data.items.map((v) => summary(v, projectId, pipelineId));
   if (new Set(items.map((v) => v.id)).size !== items.length) return invalid();
   return items;
+}
+
+export async function downloadRunLog(runId: string): Promise<void> {
+  if (!isProjectId(runId)) return invalid();
+  const { data } = await api.get<Blob>(`/runs/${runId}/log`, {
+    responseType: "blob",
+  });
+  const url = URL.createObjectURL(data);
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `run-${runId}.log`;
+    anchor.click();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
 }
 export function parseRun(
   data: unknown,

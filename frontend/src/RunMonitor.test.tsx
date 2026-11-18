@@ -4,14 +4,16 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { RunMonitor } from "./RunMonitor";
+import { RunControls } from "./RunControls";
 import { getRun, listRuns } from "./api/runs";
 import { useEditorStore } from "./state/editor";
 import { server } from "./test/server";
+import { api } from "./api/client";
 
 const base = "http://127.0.0.1:8000/api/v1";
 const project = "11111111-1111-4111-8111-111111111111";
@@ -63,12 +65,13 @@ function setup(items = [evidence()]) {
     ),
   );
 }
-function mount() {
+function mount(withControls = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const result = render(
     <QueryClientProvider client={client}>
+      {withControls && <RunControls canRun />}
       <RunMonitor key={pipeline} projectId={project} pipelineId={pipeline} />
     </QueryClientProvider>,
   );
@@ -79,6 +82,94 @@ it("shows empty and loading feedback", async () => {
   mount();
   expect(screen.getByText("Loading runs…")).toBeVisible();
   expect(await screen.findByText(/No runs yet/)).toBeVisible();
+});
+it("refreshes history and the selected run with one button", async () => {
+  let lists = 0;
+  let selectedReads = 0;
+  setup([evidence(), evidence(second)]);
+  server.use(
+    http.get(`${base}/runs`, () => {
+      lists += 1;
+      return HttpResponse.json({
+        items: [evidence(), evidence(second)],
+        total: 2,
+        offset: 0,
+        limit: 20,
+      });
+    }),
+    http.get(`${base}/runs/${second}`, () => {
+      selectedReads += 1;
+      return HttpResponse.json({
+        ...evidence(second),
+        row_count: selectedReads,
+      });
+    }),
+  );
+  mount();
+  await screen.findByText(`Completed · Run ${first}`);
+  await userEvent.selectOptions(screen.getByLabelText("Selected run"), second);
+  await screen.findByText(`Completed · Run ${second}`);
+  const refresh = screen.getAllByRole("button", { name: /^Refresh run/ });
+  expect(refresh).toHaveLength(1);
+  const initialLists = lists;
+  const initialReads = selectedReads;
+  await userEvent.click(refresh[0]);
+  await waitFor(() => expect(lists).toBeGreaterThan(initialLists));
+  await waitFor(() => expect(selectedReads).toBeGreaterThan(initialReads));
+  expect(screen.getByLabelText("Selected run")).toHaveValue(second);
+  expect(screen.getByText(/Saved revision 1/)).toHaveTextContent(
+    `Rows: ${selectedReads}`,
+  );
+});
+it("keeps one download button for the selected historical run after execution", async () => {
+  useEditorStore.getState().setProject(project);
+  useEditorStore.getState().loadSaved({
+    id: pipeline,
+    project_id: project,
+    name: "Saved pipeline",
+    revision: 1,
+    definition: {
+      schema_version: 1,
+      nodes: [],
+      edges: [],
+      layout: { positions: {} },
+    },
+  });
+  setup([evidence(), evidence(second)]);
+  server.use(
+    http.post(`${base}/projects/${project}/pipelines/${pipeline}/execute`, () =>
+      HttpResponse.json({ run_id: first, state: "succeeded" }),
+    ),
+  );
+  mount(true);
+  await screen.findByText(`Completed · Run ${first}`);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Run saved pipeline" }),
+  );
+  await screen.findByText("Run succeeded · revision 1");
+  await userEvent.selectOptions(screen.getByLabelText("Selected run"), second);
+  await screen.findByText(`Completed · Run ${second}`);
+  expect(screen.getAllByRole("button", { name: "Download log" })).toHaveLength(
+    1,
+  );
+  const createUrl = vi.fn(() => "blob:log");
+  const revokeUrl = vi.fn();
+  vi.stubGlobal(
+    "URL",
+    Object.assign(URL, {
+      createObjectURL: createUrl,
+      revokeObjectURL: revokeUrl,
+    }),
+  );
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  const request = vi.spyOn(api, "get").mockResolvedValueOnce({
+    data: new Blob(["Selected run log"]),
+  } as Awaited<ReturnType<typeof api.get>>);
+  await userEvent.click(screen.getByRole("button", { name: "Download log" }));
+  expect(request).toHaveBeenCalledWith(`/runs/${second}/log`, {
+    responseType: "blob",
+  });
+  await waitFor(() => expect(revokeUrl).toHaveBeenCalledOnce());
 });
 it.each(["queued", "running", "succeeded", "failed", "cancelled"])(
   "renders %s with real zeros distinct from unknown",
@@ -100,10 +191,9 @@ it.each(["queued", "running", "succeeded", "failed", "cancelled"])(
       "Duration: Unknown · Rows: 0",
     );
     expect(
-      within(screen.getByRole("region", { name: "Block source" })).getByText(
-        /Duration:/,
-      ),
-    ).toHaveTextContent("Duration: 0 ms · Rows in: Unknown · Rows out: 0");
+      screen.queryByRole("region", { name: "Block source" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download log" })).toBeEnabled();
   },
 );
 it("isolates a late response after selecting another run and collects old queries", async () => {
@@ -152,17 +242,17 @@ it("marks retained data stale and recovers by refreshing", async () => {
   server.use(
     http.get(`${base}/runs/:id`, () => new HttpResponse(null, { status: 503 })),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Refresh run" }));
+  await userEvent.click(screen.getByRole("button", { name: "Refresh runs" }));
   expect(await screen.findByText(/Displayed evidence is stale/)).toBeVisible();
   setup();
-  await userEvent.click(screen.getByRole("button", { name: "Refresh run" }));
+  await userEvent.click(screen.getByRole("button", { name: "Refresh runs" }));
   await waitFor(() =>
     expect(
       screen.queryByText(/Displayed evidence is stale/),
     ).not.toBeInTheDocument(),
   );
 });
-it("bounds long logs, renders markup as text, and navigates errors without changing authored data", async () => {
+it("downloads logs without displaying events and navigates failed blocks safely", async () => {
   setup();
   useEditorStore.setState({
     projectId: project,
@@ -185,6 +275,11 @@ it("bounds long logs, renders markup as text, and navigates errors without chang
   const run = {
     ...evidence(first, "failed"),
     error: { code: "block_failed", reason: "Check input resource." },
+    blocks: evidence().blocks.map((block) => ({
+      ...block,
+      state: "failed",
+      error: { code: "resource_missing", reason: "Check input resource." },
+    })),
     events: Array.from({ length: 150 }, (_, sequence) => ({
       sequence,
       created_at: stamp,
@@ -198,11 +293,46 @@ it("bounds long logs, renders markup as text, and navigates errors without chang
   server.use(http.get(`${base}/runs/:id`, () => HttpResponse.json(run)));
   mount();
   await screen.findByText(`Failed · Run ${first}`);
-  const log = screen.getByRole("list", { name: "Run log events" });
-  expect(within(log).getAllByRole("listitem")).toHaveLength(100);
-  expect(log).toHaveAttribute("tabindex", "0");
-  expect(log.querySelector("script")).toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Inspect source" }));
+  expect(
+    screen.queryByRole("list", { name: "Run log events" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/event-149/)).not.toBeInTheDocument();
+  const createUrl = vi.fn(() => "blob:log");
+  const revokeUrl = vi.fn();
+  vi.stubGlobal(
+    "URL",
+    Object.assign(URL, {
+      createObjectURL: createUrl,
+      revokeObjectURL: revokeUrl,
+    }),
+  );
+  const click = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => {});
+  vi.spyOn(api, "get").mockResolvedValueOnce({
+    data: new Blob(["Complete run log"]),
+  } as Awaited<ReturnType<typeof api.get>>);
+  server.use(
+    http.get(
+      `${base}/runs/${first}/log`,
+      () =>
+        new HttpResponse("Complete run log", {
+          headers: { "Content-Type": "text/plain" },
+        }),
+    ),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Download log" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Download log" })).toBeEnabled(),
+  );
+  expect(
+    screen.queryAllByRole("alert").map((element) => element.textContent),
+  ).toEqual(["block_failed: Check input resource."]);
+  expect(createUrl).toHaveBeenCalledOnce();
+  expect(click).toHaveBeenCalledOnce();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Configure failed block source" }),
+  );
   expect(useEditorStore.getState().configFocus).toEqual({
     nodeId: "source",
     field: null,
@@ -217,8 +347,8 @@ it("bounds long logs, renders markup as text, and navigates errors without chang
   ).toEqual(before);
   act(() => useEditorStore.setState({ nodes: [] }));
   expect(
-    screen.getByText("Node source is absent from this draft."),
-  ).toBeVisible();
+    screen.queryByRole("button", { name: "Configure failed block source" }),
+  ).not.toBeInTheDocument();
 });
 it("polls active details to completion", async () => {
   setup();

@@ -4,6 +4,7 @@ import type { Column } from "./blocks";
 import type { SemanticDefinition } from "./validation";
 
 export interface PreviewRequest {
+  pipeline_id?: string | null;
   definition: SemanticDefinition;
   node_id: string;
   output_port: string;
@@ -75,6 +76,7 @@ const recoveryMessages: Record<string, string> = {
     "The project's resource binding does not provide a file.",
   workspace_required:
     "Configure Workspace in Settings and prepare this project's data folder before previewing.",
+  pipeline_required: "Save a named pipeline before previewing its input files.",
   workspace_settings_unavailable:
     "Workspace settings are unavailable. Check Settings and retry.",
   workspace_project_folder:

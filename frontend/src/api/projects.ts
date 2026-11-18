@@ -2,6 +2,7 @@
 import { invalidResponse } from "./guards";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "./client";
+import { useEditorStore } from "../state/editor";
 
 export interface Project {
   id: string;
@@ -77,8 +78,9 @@ export async function getProject(
   return project;
 }
 export function useProject(id: string) {
+  const workspaceKey = useEditorStore((s) => s.workspaceKey);
   return useQuery({
-    queryKey: ["project", id],
+    queryKey: ["project", workspaceKey, id],
     queryFn: ({ signal }) => getProject(id, signal),
     enabled: isProjectId(id),
     retry: false,

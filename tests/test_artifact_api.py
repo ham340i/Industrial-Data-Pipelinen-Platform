@@ -157,18 +157,21 @@ def test_artifact_query_uses_saved_root_and_handles_unconfigured_workspace(
     assert original is not None
     selected = tmp_path / "selected"
     selected.mkdir()
-    project = artifact_folder(client, artifact_id)
-    project.rename(selected / project.name)
     monkeypatch.setattr(settings, "allowed_workspace_roots", [selected])
     client.put(
         "/api/v1/settings/workspace", json={"root_path": str(selected)}
     ).raise_for_status()
     url = f"/api/v1/artifacts/{artifact_id}/query"
+    assert client.post(url, json={}).status_code == 404
+    # Returning to the original workspace restores its artifacts without moving data.
+    client.put(
+        "/api/v1/settings/workspace", json={"root_path": str(original)}
+    ).raise_for_status()
     assert client.post(url, json={}).status_code == 200
     monkeypatch.setattr(settings, "workspace_root", None)
     client.put(
         "/api/v1/settings/workspace", json={"root_path": None}
     ).raise_for_status()
     response = client.post(url, json={})
-    assert response.status_code == 409
-    assert response.json()["error"]["code"] == "artifact_unavailable"
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "artifact_not_found"

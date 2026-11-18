@@ -14,7 +14,10 @@ from app.artifacts.query import (
     query_artifact,
 )
 from app.artifacts import ArtifactUnavailable
-from app.workspace import effective_workspace_root, project_data_folder
+from app.workspace import effective_workspace_root
+from app.workspace_storage import pipeline_data_folder, visible_project
+from app.metadata.models import Project
+from app.artifacts.query import ArtifactNotFound
 from app.metadata.database import Database
 from app.projects import database
 from app.schemas.artifacts import ArtifactMetadataResponse, ArtifactQueryResponse
@@ -51,7 +54,16 @@ def artifact_metadata(
     artifact_id: UUID,
     db: Annotated[Database, Depends(database)],
 ) -> ArtifactMetadataResponse:
-    return metadata(get_artifact(db, str(artifact_id)))
+    artifact = get_artifact(db, str(artifact_id))
+    require_visible_artifact(db, artifact)
+    return metadata(artifact)
+
+
+def require_visible_artifact(db: Database, artifact: RegisteredArtifact) -> None:
+    with db.transaction() as session:
+        project = session.get(Project, artifact.project_id)
+        if project is None or not visible_project(project, db):
+            raise ArtifactNotFound("Registered artifact is unavailable.")
 
 
 @router.post("/{artifact_id}/query", response_model=ArtifactQueryResponse)
@@ -67,8 +79,9 @@ def artifact_query(
     # root is read from saved settings here, as the execute API does, rather
     # than injected as a handler parameter.
     artifact = get_artifact(db, str(artifact_id))
+    require_visible_artifact(db, artifact)
     try:
-        folder = project_data_folder(workspace_root(db), artifact.project_id)
+        folder = pipeline_data_folder(db, artifact.pipeline_id)
     except ValueError:
         raise ArtifactUnavailable("Registered artifact is unavailable.") from None
     result = query_artifact(db, str(artifact_id), folder, payload)

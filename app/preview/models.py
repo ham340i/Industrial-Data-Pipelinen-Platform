@@ -23,6 +23,13 @@ class PreviewGraph(GraphDraft):
 
 
 class PreviewRequest(Contract):
+    pipeline_id: str | None = Field(
+        default=None,
+        pattern=(
+            r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+            r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        ),
+    )
     definition: PreviewGraph
     node_id: Identifier
     output_port: str = Field(default="table", min_length=1, max_length=128)

@@ -20,6 +20,8 @@ from app.pipelines.models import Edge, GraphDraft, Node
 from app.pipelines.validation import diagnose
 from app.preview.errors import PreviewError
 from app.workspace import project_data_folder
+from app.workspace_storage import pipeline_data_folder, visible_project
+from app.metadata.models import Pipeline
 from app.preview.models import (
     MAX_ANCESTORS,
     MAX_SECONDS,
@@ -214,7 +216,8 @@ def _plan_and_bindings(
     payload: PreviewRequest, project_id: str, db: Database, registry: BlockRegistry
 ) -> tuple[list[tuple[Node, RegisteredBlock]], dict[str, str | None]]:
     with db.transaction() as session:
-        if session.get(Project, project_id) is None:
+        project = session.get(Project, project_id)
+        if project is None or not visible_project(project, db):
             raise PreviewError(
                 "project_not_found", "Project was not found.", status=404
             )
@@ -236,7 +239,9 @@ def _plan_and_bindings(
     return plan, bindings
 
 
-def _project_root(workspace_root: Path | None, project_id: str) -> Path:
+def _project_root(
+    workspace_root: Path | None, project_id: str, db: Database, pipeline_id: str | None
+) -> Path:
     if workspace_root is None:
         raise PreviewError(
             "workspace_required",
@@ -244,6 +249,21 @@ def _project_root(workspace_root: Path | None, project_id: str) -> Path:
             "data folder before previewing.",
         )
     try:
+        if pipeline_id:
+            with db.transaction() as session:
+                pipeline = session.get(Pipeline, pipeline_id)
+                if pipeline is None or pipeline.project_id != project_id:
+                    raise PreviewError(
+                        "pipeline_not_found", "Pipeline was not found.", status=404
+                    )
+            return pipeline_data_folder(db, pipeline_id, root=workspace_root)
+        with db.transaction() as session:
+            project = session.get(Project, project_id)
+            if project is not None and project.directory_name is not None:
+                raise PreviewError(
+                    "pipeline_required",
+                    "Save a named pipeline before previewing its input files.",
+                )
         return project_data_folder(workspace_root, project_id)
     except ValueError:
         raise PreviewError(
@@ -319,7 +339,12 @@ def preview(
         return cancelled.is_set() or monotonic() >= deadline
 
     plan, bindings = _plan_and_bindings(payload, project_id, db, registry)
-    root = _project_root(workspace_root, project_id)
+    root = _project_root(
+        workspace_root,
+        project_id,
+        db,
+        str(payload.pipeline_id) if payload.pipeline_id else None,
+    )
 
     observations: list[PreviewObservation] = []
     values: PortValues = {}

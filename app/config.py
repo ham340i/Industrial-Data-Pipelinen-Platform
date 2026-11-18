@@ -16,7 +16,7 @@ class Settings(BaseModel):
             os.environ.get("LPS_METADATA_PATH", "local-data/metadata.sqlite3")
         )
     )
-    # Private data folders are <workspace_root>/<project UUID>/, never portable JSON.
+    # Private data folders use project/pipeline names; never portable JSON.
     workspace_root: Path | None = Field(
         default_factory=lambda: (
             Path(os.environ["LPS_WORKSPACE_ROOT"])

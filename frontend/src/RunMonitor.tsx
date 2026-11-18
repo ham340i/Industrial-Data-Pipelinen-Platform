@@ -1,10 +1,14 @@
 // AI contribution: 50% or more AI-generated
-import { OutputInspection } from "./OutputInspection";
+import { RunResult } from "./RunResult";
 import { useState, useSyncExternalStore } from "react";
-import { onlineManager, useQuery } from "@tanstack/react-query";
+import {
+  onlineManager,
+  useIsFetching,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Alert,
-  Box,
   Button,
   Paper,
   Stack,
@@ -16,105 +20,28 @@ import { useEditorStore } from "./state/editor";
 
 const label = (state: string) =>
   state === "succeeded" ? "Completed" : state[0].toUpperCase() + state.slice(1);
-const measured = (value: number | null, unit = "") =>
-  value === null ? "Unknown" : `${value.toLocaleString()}${unit}`;
-
-function InspectNode({ id }: { id: string }) {
-  const exists = useEditorStore((s) => s.nodes.some((n) => n.id === id));
-  const busy = useEditorStore((s) => s.busy);
-  return exists ? (
-    <Button
-      disabled={busy}
-      onClick={() => useEditorStore.getState().focusConfiguration(id, null)}
-    >
-      Inspect {id}
-    </Button>
-  ) : (
-    <Typography variant="caption">
-      Node {id} is absent from this draft.
-    </Typography>
-  );
-}
 function Evidence({ run }: { run: RunDetail }) {
-  const revision = useEditorStore((s) => s.revision);
+  const state = useEditorStore();
+  const sameRevision = state.revision === run.revision;
   return (
-    <Stack spacing={2} sx={{ overflowWrap: "anywhere", minWidth: 0 }}>
-      <Typography role="status">
-        {label(run.state)} · Run {run.id}
-      </Typography>
-      <Typography>
-        Saved revision {run.revision} · Duration:{" "}
-        {measured(run.duration_ms, " ms")} · Rows: {measured(run.row_count)}
-      </Typography>
-      {revision !== run.revision && (
+    <Stack spacing={2}>
+      {!sameRevision && (
         <Alert severity="info">
-          This run used a different saved revision. Inspect opens the current
-          draft configuration.
+          This run used a different saved revision. Configuration links are
+          disabled.
         </Alert>
       )}
-      {run.error && (
-        <Alert severity="error">
-          {run.error.code}: {run.error.reason} Inspect the failed block below,
-          correct its configuration or resource, then save and rerun.
-        </Alert>
-      )}
-      <Typography component="h3" variant="h2">
-        Block evidence
-      </Typography>
-      {!run.blocks.length && (
-        <Typography>No block evidence recorded yet.</Typography>
-      )}
-      {run.blocks.map((block) => (
-        <Paper
-          component="section"
-          aria-label={`Block ${block.node_id}`}
-          variant="outlined"
-          sx={{ p: 2 }}
-          key={block.node_id}
-        >
-          <Typography component="h4">
-            {block.block_id} · {block.node_id} · {label(block.state)}
-          </Typography>
-          <Typography>
-            Duration: {measured(block.duration_ms, " ms")} · Rows in:{" "}
-            {measured(block.rows_in)} · Rows out: {measured(block.rows_out)}
-          </Typography>
-          {block.error && (
-            <Alert severity="error">
-              {block.error.code}: {block.error.reason}
-            </Alert>
-          )}
-          <InspectNode id={block.node_id} />
-        </Paper>
-      ))}
-      <OutputInspection run={run} />
-      <Typography component="h3" variant="h2">
-        Redacted logs
-      </Typography>
-      <Typography variant="body2">
-        Latest 100 events at most. Credentials and machine paths are redacted by
-        the API.
-      </Typography>
-      {!run.events.length ? (
-        <Typography>No log events recorded yet.</Typography>
-      ) : (
-        <Box
-          component="ol"
-          aria-label="Run log events"
-          tabIndex={0}
-          sx={{ maxHeight: 320, overflow: "auto", pl: 4, pr: 1, m: 0 }}
-        >
-          {run.events.map((event) => (
-            <Box component="li" key={event.sequence} sx={{ mb: 1 }}>
-              <Typography variant="body2">
-                {event.created_at} · {event.level} · {event.code ?? event.kind}:{" "}
-                {event.message}
-              </Typography>
-              {event.node_id && <InspectNode id={event.node_id} />}
-            </Box>
-          ))}
-        </Box>
-      )}
+      <RunResult
+        run={run}
+        onInspect={
+          sameRevision && !state.busy
+            ? (id) => {
+                if (state.nodes.some((node) => node.id === id))
+                  state.focusConfiguration(id, null);
+              }
+            : undefined
+        }
+      />
     </Stack>
   );
 }
@@ -137,12 +64,6 @@ function SelectedRun({
   });
   return (
     <Stack spacing={2}>
-      <Button
-        onClick={() => void detail.refetch()}
-        disabled={detail.isFetching}
-      >
-        Refresh run
-      </Button>
       {detail.isPending && (
         <Typography role="status">Loading run evidence…</Typography>
       )}
@@ -169,15 +90,35 @@ export function RunMonitor({
     (notify) => onlineManager.subscribe(notify),
     () => onlineManager.isOnline(),
   );
+  const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const runs = useQuery({
-    queryKey: ["runs", projectId, pipelineId],
-    queryFn: ({ signal }) => listRuns(projectId, pipelineId, signal),
+    queryKey: ["runs", projectId, pipelineId, offset],
+    queryFn: ({ signal }) => listRuns(projectId, pipelineId, signal, offset),
     gcTime: 0,
     retry: false,
     refetchInterval: 2000,
   });
   const runId = selected ?? runs.data?.[0]?.id;
+  const detailFetching = useIsFetching({
+    queryKey: ["run", projectId, pipelineId, runId],
+    exact: true,
+  });
+  async function refresh() {
+    await Promise.all([
+      runs.refetch(),
+      ...(runId
+        ? [
+            queryClient.refetchQueries({
+              queryKey: ["run", projectId, pipelineId, runId],
+              exact: true,
+              type: "active",
+            }),
+          ]
+        : []),
+    ]);
+  }
   return (
     <Paper
       component="section"
@@ -190,10 +131,13 @@ export function RunMonitor({
           Run monitoring
         </Typography>
         <Typography variant="body2">
-          Latest 20 runs for this saved pipeline. Runs execute saved revisions;
-          unsaved edits are preserved.
+          Runs for this saved pipeline, 20 per page. Runs execute saved
+          revisions; unsaved edits are preserved.
         </Typography>
-        <Button onClick={() => void runs.refetch()} disabled={runs.isFetching}>
+        <Button
+          onClick={() => void refresh()}
+          disabled={runs.isFetching || detailFetching > 0}
+        >
           Refresh runs
         </Button>
         {!online && (
@@ -215,6 +159,26 @@ export function RunMonitor({
             evidence here.
           </Typography>
         )}
+        <Stack direction="row" spacing={1}>
+          <Button
+            disabled={(runs.data?.length ?? 0) < 20 || runs.isFetching}
+            onClick={() => {
+              setSelected(null);
+              setOffset(offset + 20);
+            }}
+          >
+            Previous 20 runs
+          </Button>
+          <Button
+            disabled={offset === 0 || runs.isFetching}
+            onClick={() => {
+              setSelected(null);
+              setOffset(Math.max(0, offset - 20));
+            }}
+          >
+            Next 20 runs
+          </Button>
+        </Stack>
         {runId && (
           <>
             <TextField

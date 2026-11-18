@@ -4,23 +4,27 @@
 import json
 import logging
 import os
+import subprocess
+import sys
+from sys import platform
+from ipaddress import ip_address
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import RLock
+from threading import Lock, RLock
 from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
 
 from app.config import settings
 from app.metadata.database import Database
-from app.metadata.models import Project
+from app.native_folder_picker import open_folder_dialog
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/settings/workspace", tags=["settings"])
 workspace_lock = RLock()
+folder_picker_lock = Lock()
 
 
 class WorkspaceError(Exception):
@@ -39,6 +43,15 @@ class WorkspaceStatus(BaseModel):
     ready: bool
     message: str
     allowed_roots: list[str]
+
+
+class WorkspacePickRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    initial_path: str | None = Field(default=None, max_length=4096)
+
+
+class WorkspacePickResult(BaseModel):
+    path: str | None
 
 
 def database(request: Request) -> Database:
@@ -91,17 +104,131 @@ def allowed_roots(db: Database) -> list[Path]:
     return list(dict.fromkeys(Path(os.path.abspath(root)) for root in roots))
 
 
-def selected_root(value: str, db: Database) -> Path:
-    # Compare lexically, BEFORE resolve/stat/open: even checking whether an
-    # arbitrary path exists leaks filesystem information (and UNC can do I/O).
-    for candidate in allowed_roots(db):
-        if value == str(candidate):
-            return checked_root(candidate)
-    raise WorkspaceError(
-        "workspace_invalid_path",
-        "Choose an existing folder from the permitted workspace roots. "
-        "Configure LPS_ALLOWED_WORKSPACE_ROOTS on the API computer for other folders.",
-    )
+def local_workspace_request(request: Request) -> bool:
+    """Full browsing requires a loopback peer/Host and a trusted browser origin.
+
+    CORS alone does not prevent requests from hostile pages. Do not use
+    forwarded host headers to grant local access (including DNS rebinding).
+    Requests without Origin remain usable by local command-line clients.
+    """
+    origin = request.headers.get("origin")
+    if (
+        origin is not None
+        and origin not in settings.allowed_origins
+        and origin != str(request.base_url).rstrip("/")
+    ) or (origin is None and request.headers.get("sec-fetch-site") == "cross-site"):
+        raise WorkspaceError(
+            "workspace_origin_denied",
+            "Open workspace settings from the workbench to browse or save folders.",
+            403,
+        )
+    if request.url.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        return False
+    try:
+        return (
+            request.client is not None and ip_address(request.client.host).is_loopback
+        )
+    except ValueError:
+        return False
+
+
+def local_drives() -> list[Path]:
+    # Mypy recognizes sys.platform guards for Windows-only stdlib APIs.
+    if sys.platform == "win32":
+        return [Path(drive) for drive in os.listdrives()]
+    return [Path("/")]
+
+
+def workspace_folder(
+    value: str, db: Database, *, local: bool = False
+) -> tuple[Path, Path]:
+    """Validate containment before touching paths; reject links below trusted roots."""
+    path = Path(value)
+    if "\x00" in value or not path.is_absolute() or ".." in path.parts:
+        raise WorkspaceError(
+            "workspace_invalid_path", "Choose an existing absolute folder path."
+        )
+    roots = allowed_roots(db)
+    if local:
+        roots = [*local_drives(), *roots]
+    # Only startup configuration may authorize network roots; arbitrary UNC/device paths
+    # cannot cause network probes even for a local caller.
+    boundary = next((root for root in roots if path.is_relative_to(root)), None)
+    if boundary is None:
+        raise WorkspaceError(
+            "workspace_invalid_path",
+            "Choose an existing folder inside one of the available locations.",
+        )
+    try:
+        base = boundary.resolve(strict=True)
+        folder = base
+        for part in path.relative_to(boundary).parts:
+            folder = folder / part
+            if folder.is_symlink() or folder.is_junction():
+                raise ValueError("Aliased folder")
+        if not folder.is_dir():
+            raise ValueError("Missing directory")
+        return folder, base
+    except (OSError, ValueError):
+        raise WorkspaceError(
+            "workspace_invalid_path",
+            "Choose an existing folder the API can access without links or junctions.",
+        ) from None
+
+
+def selected_root(value: str, db: Database, *, local: bool = False) -> Path:
+    folder, _ = workspace_folder(value, db, local=local)
+    return checked_root(folder)
+
+
+@router.post("/pick-folder", response_model=WorkspacePickResult)
+def pick_workspace_folder(
+    payload: WorkspacePickRequest,
+    request: Request,
+    response: Response,
+    db: Annotated[Database, Depends(database)],
+) -> WorkspacePickResult:
+    response.headers["Cache-Control"] = "no-store"
+    if not local_workspace_request(request) or platform != "win32":
+        raise WorkspaceError(
+            "workspace_picker_unavailable",
+            "File Explorer selection requires the API to run locally on Windows. "
+            "Enter a workspace folder path instead.",
+            409,
+        )
+    if not folder_picker_lock.acquire(blocking=False):
+        raise WorkspaceError(
+            "workspace_picker_busy",
+            "A folder picker is already open. Select a folder or cancel that window.",
+            409,
+        )
+    try:
+        initial_path = None
+        if payload.initial_path:
+            try:
+                initial_path = str(
+                    workspace_folder(payload.initial_path, db, local=True)[0]
+                )
+            except WorkspaceError:
+                # An invalid draft path must not prevent choosing a valid folder.
+                pass
+        try:
+            path = open_folder_dialog(initial_path)
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            logger.info("Native workspace picker failed: %s", type(exc).__name__)
+            raise WorkspaceError(
+                "workspace_picker_failed",
+                "The folder picker could not finish. "
+                "Try Browse again or enter a folder path.",
+                503,
+            ) from None
+        return WorkspacePickResult(
+            path=str(workspace_folder(path, db, local=True)[0])
+            if path is not None
+            else None
+        )
+    finally:
+        folder_picker_lock.release()
 
 
 def checked_root(path: Path) -> Path:
@@ -199,11 +326,11 @@ def _case_insensitive(folder: Path) -> bool:
         return False
 
 
-def prepare_project(root: Path, project_id: str) -> None:
+def prepare_project(root: Path, project_id: str, *, inputs_folder: bool = True) -> None:
     try:
         base = root.resolve(strict=True)
         project = base / project_id
-        inputs = project / "inputs"
+        inputs = project / "inputs" if inputs_folder else project
         # Reject links/junctions before creating anything through them.
         if project.resolve() != project or inputs.resolve() != inputs:
             raise ValueError("Aliased project folder")
@@ -292,14 +419,18 @@ def _store_setting(db: Database, root: Path | None) -> None:
 @router.put("", response_model=WorkspaceStatus)
 def save_workspace(
     payload: WorkspaceUpdate,
+    request: Request,
     response: Response,
     db: Annotated[Database, Depends(database)],
 ) -> WorkspaceStatus:
     response.headers["Cache-Control"] = "no-store"
+    local = local_workspace_request(request)
     with workspace_lock:
+        from app.workspace_storage import switch_workspace
+
         # Null removes the app override and restores the startup environment.
         root = (
-            selected_root(payload.root_path, db)
+            selected_root(payload.root_path, db, local=local)
             if payload.root_path is not None
             else (
                 checked_root(settings.workspace_root.absolute())
@@ -307,10 +438,5 @@ def save_workspace(
                 else None
             )
         )
-        if root is not None:
-            with db.transaction() as session:
-                projects = list(session.scalars(select(Project.id)))
-            for project in projects:
-                prepare_project(root, project)
-        _store_setting(db, None if payload.root_path is None else root)
+        switch_workspace(db, root, None if payload.root_path is None else root)
         return status(db)

@@ -19,7 +19,7 @@ from app.blocks.file_preview import BudgetFile, MAX_DECODE_BYTES, MAX_FOOTER_BYT
 from app.blocks.files import FileSource, JsonSource, ParquetSource
 from app.blocks.parquet_decode import decoded_bytes
 from app.blocks.transforms import SelectColumns
-from app.config import settings
+from app.workspace_storage import pipeline_data_folder
 from app.main import app
 from app.metadata.models import (
     OutputEndpoint,
@@ -64,9 +64,15 @@ def test_api_source_and_select_with_binding_no_execution_or_publication(
     project_columns: bool,
 ):
     project = client.post("/api/v1/projects", json={"name": "Files"}).json()["id"]
-    monkeypatch.setattr(settings, "workspace_root", tmp_path)
-    root = tmp_path / project
-    root.mkdir()
+    saved = client.post(
+        f"/api/v1/projects/{project}/pipelines",
+        json={
+            "name": "File preview",
+            "definition": {"schema_version": 1, "nodes": [], "edges": []},
+        },
+    )
+    assert saved.status_code == 201, saved.text
+    root = pipeline_data_folder(app.state.database, saved.json()["id"])
     rows = [{"id": 1, "value": 10}, {"id": 2, "value": None}, {"id": 3, "value": 30}]
     actual = root / f"bound.{suffix}"
     if suffix == "json":
@@ -131,6 +137,7 @@ def test_api_source_and_select_with_binding_no_execution_or_publication(
         }
     )
     request = {
+        "pipeline_id": saved.json()["id"],
         "definition": {"nodes": nodes, "edges": edges},
         "node_id": target,
         "limits": {"max_rows": 2, "max_cells": 20},
@@ -153,12 +160,15 @@ def test_api_source_and_select_with_binding_no_execution_or_publication(
     assert not (root / "output.csv").exists()
     with app.state.database.transaction() as session:
         for entity in (Run, RunEvent, PipelineRevision, OutputEndpoint):
-            assert session.scalar(select(func.count()).select_from(entity)) == 0
+            assert session.scalar(select(func.count()).select_from(entity)) == (
+                1 if entity is PipelineRevision else 0
+            )
     # Another project cannot use this project's private binding or data.
     other = client.post("/api/v1/projects", json={"name": "Other"}).json()["id"]
     (tmp_path / other).mkdir(exist_ok=True)
     missing = client.post(f"/api/v1/projects/{other}/pipelines/preview", json=request)
-    assert missing.json()["error"]["code"] == "file_unavailable"
+    assert missing.status_code == 404
+    assert missing.json()["error"]["code"] == "pipeline_not_found"
 
 
 @pytest.mark.parametrize(
@@ -209,7 +219,7 @@ def test_json_negative_inputs(tmp_path: Path, body: str, code: str):
 
 @pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig", "latin-1"])
 def test_json_encodings_escapes_and_observed_counts(tmp_path: Path, encoding: str):
-    rows = [{"text": 'café \\" } [,', "value": 1}, {"text": None, "value": 2.5}]
+    rows = [{"text": 'cafÃ© \\" } [,', "value": 1}, {"text": None, "value": 2.5}]
     (tmp_path / "input.json").write_bytes(
         json.dumps(rows, ensure_ascii=False).encode(encoding)
     )

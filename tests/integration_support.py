@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -20,6 +21,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from fastapi.testclient import TestClient
 from httpx import Response
+from app.main import app
+from app.workspace_storage import pipeline_data_folder
 
 VERSION = "1.0.0"
 Row = tuple[str, int | None, bool]
@@ -94,13 +97,14 @@ def csv_text(rows: tuple[Row, ...], null: str = "NULL") -> str:
     return f"{header}\n{body}"
 
 
-@dataclass(frozen=True)
+@dataclass
 class Workbench:
     """One project with a prepared workspace folder behind the real API."""
 
     client: TestClient
     project_id: str
     root: Path
+    current_pipeline_id: str
 
     @property
     def pipelines(self) -> str:
@@ -159,6 +163,14 @@ class Workbench:
         response = self.client.post(
             self.pipelines, json={"name": name, "definition": definition}
         )
+        if response.status_code == 201:
+            target = pipeline_data_folder(app.state.database, response.json()["id"])
+            if self.root != target:
+                if (self.root / "inputs").is_symlink():
+                    (target / "inputs").rmdir()
+                shutil.copytree(self.root, target, dirs_exist_ok=True, symlinks=True)
+            self.root = target
+            self.current_pipeline_id = response.json()["id"]
         return cast(Response, response)
 
     def save(self, definition: dict[str, Any], name: str | None = None) -> str:
@@ -167,6 +179,12 @@ class Workbench:
         return str(response.json()["id"])
 
     def execute(self, pipeline_id: str) -> Response:
+        if pipeline_id != self.current_pipeline_id:
+            try:
+                self.root = pipeline_data_folder(app.state.database, pipeline_id)
+            except ValueError:
+                pass
+        self.current_pipeline_id = pipeline_id
         return cast(
             Response, self.client.post(f"{self.pipelines}/{pipeline_id}/execute")
         )
@@ -191,7 +209,11 @@ class Workbench:
     def preview(
         self, definition: dict[str, Any], node_id: str, **limits: int
     ) -> Response:
-        payload: dict[str, Any] = {"definition": definition, "node_id": node_id}
+        payload: dict[str, Any] = {
+            "pipeline_id": self.current_pipeline_id,
+            "definition": definition,
+            "node_id": node_id,
+        }
         if limits:
             payload["limits"] = limits
         return cast(
@@ -217,6 +239,15 @@ def build_workbench(client: TestClient, workspace_root: Path) -> Workbench:
     response = client.post("/api/v1/projects", json={"name": "Integration"})
     assert response.status_code == 201, response.text
     project_id = str(response.json()["id"])
-    root = workspace_root.resolve() / project_id
-    assert (root / "inputs").is_dir(), "prepare_project did not create inputs/"
-    return Workbench(client, project_id, root)
+    saved = client.post(
+        f"/api/v1/projects/{project_id}/pipelines",
+        json={
+            "name": "Preview draft",
+            "definition": {"schema_version": 1, "nodes": [], "edges": []},
+        },
+    )
+    assert saved.status_code == 201, saved.text
+    pipeline_id = saved.json()["id"]
+    root = pipeline_data_folder(app.state.database, pipeline_id)
+    assert (root / "inputs").is_dir(), "Pipeline preparation did not create inputs/"
+    return Workbench(client, project_id, root, pipeline_id)
