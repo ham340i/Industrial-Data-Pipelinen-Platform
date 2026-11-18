@@ -2,8 +2,8 @@
 # Edit version ranges here or in requirements.txt, then regenerate requirements.lock:
 #   uv pip compile --universal --generate-hashes --python-version 3.12 requirements-dev.txt -o requirements.lock
 -r requirements.txt
-ruff>=0.9,<1
-mypy>=1.14,<3
+ruff>=0.17.5,<1
+mypy>=2.4.1,<3
 # Test runner and the HTTP client FastAPI's TestClient requires.
-pytest>=8,<9
-httpx>=0.27,<1
+pytest>=9.2.0,<10
+httpx>=0.28.1,<1
