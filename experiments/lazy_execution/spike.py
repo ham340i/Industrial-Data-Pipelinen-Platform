@@ -285,9 +285,17 @@ def _site_packages() -> str:
     return site.getsitepackages()[0]
 
 
+def _host_user() -> list[str]:
+    """Run the container as the invoking user so the private temp folder is writable."""
+    if hasattr(os, "getuid"):
+        return ["--user", f"{os.getuid()}:{os.getgid()}"]
+    return []  # Docker Desktop on Windows maps bind-mount ownership itself.
+
+
 def _docker(data: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
     command = [
-        "docker", "run", "--rm", "--memory=1g", "--memory-swap=1g", "--cpus=2",
+        "docker", "run", "--rm", *_host_user(),
+        "--memory=1g", "--memory-swap=1g", "--cpus=2",
         "--network=none", "-e", "POLARS_MAX_THREADS=2",
         "-e", "PYTHONPATH=/deps:/repo",
         "-v", f"{_site_packages()}:/deps:ro", "-v", f"{ROOT}:/repo:ro",
@@ -340,7 +348,6 @@ def _product_probe(rows: int) -> dict[str, object]:
     """One product run just above PRODUCT_ROWS, to record how it stops."""
     with tempfile.TemporaryDirectory(prefix="lll-109-") as temp:
         data = Path(temp)
-        os.chmod(data, 0o777)
         _docker(data, "generate", "/data", str(rows)).check_returncode()
         done = _docker(data, "worker", "product", "/data", "/data/out.parquet")
         tail = (done.stdout + done.stderr).strip().splitlines()[-1:]
@@ -357,7 +364,6 @@ def measure(sizes: list[int], repeats: int) -> dict[str, object]:
     for rows in sizes:
         with tempfile.TemporaryDirectory(prefix="lll-109-") as temp:
             data = Path(temp)
-            os.chmod(data, 0o777)
             _docker(data, "generate", "/data", str(rows)).check_returncode()
             modes = (
                 ["product", "eager", "lazy"]
