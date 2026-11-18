@@ -22,7 +22,7 @@ Updated November 17, 2026. These items need a person: a decision, a real event, 
 7. **Meeting minutes.** None are recorded. Add the real ones to `docs/wiki/Meeting-Minutes.md` using the template there.
 8. **Stakeholder signoff.** No review by the partner is recorded for any iteration. Demonstrate Release 1, record the feedback with the [signoff template](docs/stakeholder/signoff-template.md), and apply the `stakeholder:approved` or `stakeholder:changes-requested` label to the reviewed stories.
 9. **Project board.** Create the GitHub Project, share it with **moar82**, and put its URL in the README.
-10. **Demo video.** Record the Release 1 demo and link it in the README.
+10. **Demo video.** The Release 1 presentation is linked in the README. Make sure the OneDrive link is shared so the instructor can open it, and that the recording includes the live product demo and code walkthrough.
 11. **Contractor rate.** Agree the hourly rate and its source so the contractor estimate in the release notes has a dollar figure.
 12. **Budget.** Confirm the SonarCloud account and plan.
 
