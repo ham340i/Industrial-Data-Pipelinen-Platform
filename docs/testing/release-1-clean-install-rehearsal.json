@@ -1,0 +1,33 @@
+{
+  "project": "lps-rc-smoke-4b906515b2ae",
+  "revision": "5d05187c82ed62e30d2283c8a57e56990abd8ad1",
+  "steps": [
+    "clean install: API and frontend proxy healthy",
+    "acceptance: two runs succeeded and Parquet rows match the oracle",
+    "persistence: project, pipeline, runs and artifact survived recreation",
+    "backup: lps-backup-20261117T210656Z.json written while the stack was running",
+    "reset: the candidate started empty",
+    "restore: the backup brought back every run and output row",
+    "rollback: newer-schema data refused untouched; older backup restored"
+  ],
+  "evidence": {
+    "project_id": "d2e40faa-b3d0-4702-9923-ed37c14234e8",
+    "pipeline_id": "66aaa49a-8afb-45e0-ae1c-9c8a07537ac4",
+    "run_ids": [
+      "03e0341a-84bb-4449-8062-720c2db3ea14",
+      "afc7d7be-c68f-492b-88b8-92c933d70df9"
+    ],
+    "artifact_id": "1066fd75-6707-405a-a8bc-6f7502dc8c96",
+    "rows": [
+      [
+        "A",
+        30
+      ],
+      [
+        "B",
+        50
+      ]
+    ]
+  },
+  "outcome": "passed"
+}
