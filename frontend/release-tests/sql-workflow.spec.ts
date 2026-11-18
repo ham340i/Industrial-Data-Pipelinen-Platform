@@ -18,17 +18,6 @@ test("author SQL source, validate, save, execute, reload, rerun and inspect a fa
     .getByRole("button", { name: "Create project", exact: true })
     .click();
   const project = await (await created).json();
-  const workspace = join(
-    process.env.LPS_RELEASE_TEST_ROOT!,
-    "workspaces",
-    project.id,
-  );
-  mkdirSync(workspace, { recursive: true });
-  execFileSync(process.env.LPS_PYTHON ?? "python", [
-    "-c",
-    "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.executescript(\"CREATE TABLE assets(asset_id INTEGER, label TEXT); INSERT INTO assets VALUES (1,'A'),(2,NULL);\"); c.close()",
-    join(workspace, "data.sqlite3"),
-  ]);
   await page
     .getByRole("textbox", { name: "Draft pipeline name" })
     .fill("SQL assets");
@@ -63,13 +52,30 @@ test("author SQL source, validate, save, execute, reload, rerun and inspect a fa
   await expect(
     page.getByText("Pipeline saved.", { exact: true }),
   ).toBeVisible();
+  const workspace = join(
+    process.env.LPS_RELEASE_TEST_ROOT!,
+    "workspaces",
+    project.name,
+    "SQL assets",
+  );
+  mkdirSync(workspace, { recursive: true });
+  execFileSync(process.env.LPS_PYTHON ?? "python", [
+    "-c",
+    "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.executescript(\"CREATE TABLE assets(asset_id INTEGER, label TEXT); INSERT INTO assets VALUES (1,'A'),(2,NULL);\"); c.close()",
+    join(workspace, "data.sqlite3"),
+  ]);
   await expect(run).toBeEnabled();
   await runSaved();
   await expect(page.getByText("Run succeeded · revision 1")).toBeVisible();
   await expect(
-    page.getByText(/Duration: \d+ ms · Output rows: 2/),
+    page
+      .getByLabel("Pipeline execution", { exact: true })
+      .getByText(/Duration: \d+ ms · Rows: 2/),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Run log" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run log" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Download log", exact: true }),
+  ).toHaveCount(1);
   await page.reload();
   await page
     .getByRole("button", { name: "Open SQL assets (revision 1)" })
@@ -78,7 +84,9 @@ test("author SQL source, validate, save, execute, reload, rerun and inspect a fa
   await runSaved();
   await expect(page.getByText("Run succeeded · revision 1")).toBeVisible();
   await expect(
-    page.getByText(/Duration: \d+ ms · Output rows: 2/),
+    page
+      .getByLabel("Pipeline execution", { exact: true })
+      .getByText(/Duration: \d+ ms · Rows: 2/),
   ).toBeVisible();
   await page.locator(".react-flow__node").click();
   await form

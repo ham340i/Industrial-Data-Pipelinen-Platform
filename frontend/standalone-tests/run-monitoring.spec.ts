@@ -7,7 +7,8 @@ test("real execute/status/detail evidence stays isolated and preserves the draft
   page,
   request,
 }) => {
-  const base = "http://127.0.0.1:8000/api/v1";
+  const base =
+    process.env.LPS_STANDALONE_API_URL || "http://127.0.0.1:8000/api/v1";
   const projectResponse = await request.post(`${base}/projects`, {
     data: { name: `Run monitor ${Date.now()}` },
   });
@@ -49,17 +50,13 @@ test("real execute/status/detail evidence stays isolated and preserves the draft
   ).toBeVisible();
   await expect(
     monitor.getByRole("region", { name: "Block manual" }),
-  ).toContainText("Completed");
+  ).toHaveCount(0);
   await page
     .getByRole("textbox", { name: "Draft pipeline name" })
     .fill("Keep my unsaved edit");
-  await monitor
-    .getByRole("button", { name: "Inspect manual", exact: true })
-    .first()
-    .click();
   await expect(
-    page.getByRole("region", { name: "Configure Manual Trigger" }),
-  ).toBeVisible();
+    monitor.getByRole("button", { name: "Download log", exact: true }),
+  ).toHaveCount(1);
   await expect(
     page.getByRole("textbox", { name: "Draft pipeline name" }),
   ).toHaveValue("Keep my unsaved edit");
@@ -123,17 +120,17 @@ test("real execute/status/detail evidence stays isolated and preserves the draft
   ).toHaveCount(0);
   await expect(
     monitor.getByRole("region", { name: "Block select" }),
-  ).toContainText("Skipped");
-  await expect(
-    monitor.getByRole("region", { name: "Block sink" }),
-  ).toContainText("Skipped");
+  ).toHaveCount(0);
+  await expect(monitor.getByRole("region", { name: "Block sink" })).toHaveCount(
+    0,
+  );
   const failedDetail = await request.get(`${base}/runs/${failure.run_id}`);
   expect((await failedDetail.json()).outputs).toEqual([]);
   await page
     .getByRole("textbox", { name: "Draft pipeline name" })
     .fill("Recovered pipeline");
   await monitor
-    .getByRole("button", { name: "Inspect source", exact: true })
+    .getByRole("button", { name: "Configure failed block source", exact: true })
     .first()
     .click();
   await expect(
@@ -155,7 +152,12 @@ test("real execute/status/detail evidence stays isolated and preserves the draft
     path: "test-results/run-monitor-failure.png",
     fullPage: true,
   });
-  const inputs = join(process.env.LPS_WORKSPACE_ROOT!, project.id, "inputs");
+  const inputs = join(
+    process.env.LPS_WORKSPACE_ROOT!,
+    project.name,
+    "Monitor failure",
+    "inputs",
+  );
   mkdirSync(inputs, { recursive: true });
   writeFileSync(join(inputs, "recovered.csv"), "sensor,reading\nA,10\nB,20\n");
   await page
@@ -179,7 +181,9 @@ test("real execute/status/detail evidence stays isolated and preserves the draft
   expect(recovered.state).toBe("succeeded");
   expect(recovered.run_id).not.toBe(failure.run_id);
   await expect(
-    page.getByText("artifact · 2 rows · result.parquet", { exact: true }),
+    page
+      .getByLabel("Pipeline execution", { exact: true })
+      .getByText("artifact · 2 rows · result.parquet", { exact: true }),
   ).toBeVisible();
   const recoveredDetail = await request.get(`${base}/runs/${recovered.run_id}`);
   const evidence = await recoveredDetail.json();

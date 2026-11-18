@@ -14,10 +14,6 @@ test("workspace setup repairs preview and preserves the unsaved draft", async ({
   });
   expect(created.status()).toBe(201);
   const project = await created.json();
-  // Remove only the empty directories created for this synthetic project.
-  // Nonrecursive rmdir fails safely if anything has been placed in them.
-  await rmdir(join(root, project.id, "inputs"));
-  await rmdir(join(root, project.id));
   const saved = await page.request.post(
     `${api}/projects/${project.id}/pipelines`,
     {
@@ -39,6 +35,10 @@ test("workspace setup repairs preview and preserves the unsaved draft", async ({
     },
   );
   expect(saved.status()).toBe(201);
+  const folder = join(root, project.name, "Workspace setup");
+  // Remove only this synthetic pipeline's empty folders to exercise repair.
+  await rmdir(join(folder, "inputs"));
+  await rmdir(folder);
   await page.goto(`/#/projects/${project.id}/builder`);
   await page
     .getByRole("button", { name: "Open Workspace setup (revision 1)" })
@@ -54,25 +54,24 @@ test("workspace setup repairs preview and preserves the unsaved draft", async ({
   await page.getByRole("button", { name: "Preview selected node" }).click();
   await page.getByRole("link", { name: "Configure workspace" }).click();
   await expect(
-    page.getByRole("heading", { name: "Workspace settings" }),
+    page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
   const rootField = page.getByRole("textbox", {
     name: "Workspace root folder",
   });
   await expect(rootField).toHaveValue(root);
   await rootField.fill(join(root, "does-not-exist"));
-  await page.getByRole("button", { name: "Save workspace" }).click();
+  await rootField.press("Enter");
   await expect(page.getByRole("alert")).toContainText(
     "Choose an existing folder",
   );
   await rootField.fill(root);
-  await page.getByRole("button", { name: "Save workspace" }).click();
+  await rootField.press("Enter");
   await expect(page.getByRole("alert")).toContainText("Workspace saved");
-  await expect(page.getByText(/Using the saved app setting/)).toBeVisible();
-  await writeFile(
-    join(root, project.id, "inputs", "workspace.json"),
-    '[{"value":42}]',
-  );
+  expect(
+    (await (await page.request.get(`${api}/settings/workspace`)).json()).source,
+  ).toBe("application");
+  await writeFile(join(folder, "inputs", "workspace.json"), '[{"value":42}]');
   await page.screenshot({
     path: test.info().outputPath("workspace-desktop.png"),
     fullPage: true,
@@ -97,9 +96,14 @@ test("workspace setup repairs preview and preserves the unsaved draft", async ({
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.reload();
   await expect(rootField).toHaveValue(root);
-  await expect(page.getByText(/Using the saved app setting/)).toBeVisible();
+  expect(
+    (await (await page.request.get(`${api}/settings/workspace`)).json()).source,
+  ).toBe("application");
   await page.getByRole("button", { name: "Use environment setting" }).click();
   await expect(
-    page.getByText(/Using LPS_WORKSPACE_ROOT from the API environment/),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Use environment setting" }),
+  ).toHaveCount(0);
+  expect(
+    (await (await page.request.get(`${api}/settings/workspace`)).json()).source,
+  ).toBe("environment");
 });
