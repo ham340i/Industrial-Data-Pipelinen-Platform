@@ -7,6 +7,7 @@ import { delay, http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
 import { server, healthUrl } from "./test/server";
+import { useEditorStore } from "./state/editor";
 
 function renderApp(route = "/") {
   const client = new QueryClient({
@@ -111,6 +112,33 @@ describe("workbench", () => {
       screen.getByRole("textbox", { name: "Draft pipeline name" }),
     ).toHaveValue("");
     expect(screen.getByRole("button", { name: "Clear draft" })).toBeDisabled();
+  });
+
+  it("keeps text typed before the workspace setting loads", async () => {
+    let release = () => {};
+    const loaded = new Promise<void>((resolve) => (release = resolve));
+    server.use(
+      http.get("http://127.0.0.1:8000/api/v1/settings/workspace", async () => {
+        await loaded;
+        return HttpResponse.json({
+          root_path: "/data/workspaces",
+          source: "environment",
+          ready: true,
+          message: "Workspace ready",
+          allowed_roots: ["/data/workspaces"],
+        });
+      }),
+    );
+    renderApp("/projects");
+    const field = await screen.findByRole("textbox", { name: "Project name" });
+    await userEvent.type(field, "Line 4 readings");
+    release();
+    await waitFor(() =>
+      expect(useEditorStore.getState().workspaceKey).toBe("/data/workspaces"),
+    );
+    expect(screen.getByRole("textbox", { name: "Project name" })).toHaveValue(
+      "Line 4 readings",
+    );
   });
 
   it("provides a recovery route for unknown URLs", async () => {
