@@ -96,7 +96,7 @@ Not recorded. Add actions, owners and issues in the [retrospective](retrospectiv
 
 ## Tag
 
-Planned: `v1.0.0-release1`. Not created. Follow the [tag strategy](../README.md#completion-tags).
+Planned: `Release1`. Not created. Follow the [tag strategy](../README.md#completion-tags).
 
 ## Issue #30 implementation evidence
 

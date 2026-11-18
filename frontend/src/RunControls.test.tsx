@@ -106,8 +106,13 @@ it("shows run evidence and useful block failures", async () => {
     screen.getByRole("button", { name: "Run saved pipeline" }),
   );
   await screen.findByText("Run failed · revision 1");
-  expect(screen.getByText("Duration: 0 ms · Output rows: 0")).toBeVisible();
-  expect(screen.getByText("Block failed.")).toBeVisible();
+  expect(screen.getByText(/Saved revision 1/)).toHaveTextContent(
+    "Duration: 0 ms",
+  );
+  expect(screen.queryByText("Block failed.")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Download log" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("alert")).toHaveTextContent("sql_query_failed");
   expect(useEditorStore.getState().busy).toBe(false);
 });

@@ -36,6 +36,7 @@ from app.schemas.errors import ApiError, ErrorEnvelope
 from app.schemas.health import HealthResponse
 from app.schemas.requests import ExampleRequest, ExampleResponse
 from app.workspace import WorkspaceError, router as workspace_router
+from app.workspace_storage import initialize_workspace_storage
 
 
 configure_logging(settings.log_level)
@@ -111,6 +112,10 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         if settings.workspace_root is not None:
             settings.workspace_root.mkdir(parents=True, exist_ok=True)
         upgrade(database)
+        try:
+            initialize_workspace_storage(database)
+        except WorkspaceError:
+            logger.info("Workspace folders need attention; repair them in Settings")
         # Runs a previous process left queued/running can never finish (#27).
         recover_interrupted(database)
         application.state.database = database

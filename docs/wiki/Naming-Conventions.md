@@ -43,5 +43,5 @@ We follow the [typescript-eslint](https://typescript-eslint.io/rules/) recommend
 | Branches | `feature/<issue>-short-name`, `fix/<issue>-short-name`, `spike/<issue>-short-name`, `docs/<issue>-short-name` |
 | Commits | Imperative description of the change with the issue number, for example `Reject aliased project folders before reading project data (#37)` |
 | Feature labels | `feature:<name>`; iterations are milestones named `Iteration N` |
-| Tags | `v0.1.0-iteration1`, `v0.2.0-iteration2`, `v0.3.0-iteration3`, `v1.0.0-release1` on the reviewed commit |
+| Tags | `v0.1.0-iteration1`, `v0.2.0-iteration2`, `v0.3.0-iteration3`, `Release1` on the reviewed commit |
 | Architecture decisions | `docs/architecture/decisions/ADR-000N-short-title.md` |

@@ -19,6 +19,8 @@ from app.blocks.errors import BlockError
 from app.blocks.files import CsvSource
 from app.blocks.transforms import SelectColumns
 from app.config import settings
+from app.workspace_storage import pipeline_data_folder
+from app.metadata.models import Pipeline
 from app.main import app
 from app.metadata.models import (
     OutputEndpoint,
@@ -70,11 +72,35 @@ def workspace(
     client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[str, Path]:
     project = client.post("/api/v1/projects", json={"name": "Preview"}).json()["id"]
-    monkeypatch.setattr(settings, "workspace_root", tmp_path / "workspaces")
-    root = tmp_path / "workspaces" / project
-    root.mkdir(parents=True)
+    saved = client.post(
+        f"/api/v1/projects/{project}/pipelines",
+        json={
+            "name": "Preview pipeline",
+            "definition": {"schema_version": 1, "nodes": [], "edges": []},
+        },
+    )
+    assert saved.status_code == 201, saved.text
+    root = pipeline_data_folder(app.state.database, saved.json()["id"])
     (root / "input.csv").write_text("id,value\n1,10\n2,NULL\n3,30\n", encoding="utf-8")
     return f"/api/v1/projects/{project}/pipelines/preview", root
+
+
+def preview_post(client: TestClient, url: str, **kwargs: Any):
+    """Supply the selected saved pipeline for these preview API fixtures."""
+    request = kwargs.get("json")
+    if (
+        isinstance(request, dict)
+        and "/pipelines/preview" in url
+        and app.state.database is not None
+    ):
+        project_id = url.split("/")[4]
+        with app.state.database.transaction() as session:
+            pipeline = session.scalar(
+                select(Pipeline).where(Pipeline.project_id == project_id)
+            )
+            if pipeline:
+                kwargs["json"] = {"pipeline_id": pipeline.id, **request}
+    return client.post(url, **kwargs)
 
 
 def test_source_and_select_counts_schema_nulls_and_no_side_effects(
@@ -92,8 +118,8 @@ def test_source_and_select_counts_schema_nulls_and_no_side_effects(
         node("sink", "sink.csv", {"resource_ref": "output.csv"})
     )
     request["definition"]["edges"].append(edge("select", "sink"))
-    response = client.post(
-        url, json=request, headers={"X-Correlation-ID": "preview-test"}
+    response = preview_post(
+        client, url, json=request, headers={"X-Correlation-ID": "preview-test"}
     )
     assert response.status_code == 200, response.text
     result = response.json()
@@ -109,7 +135,9 @@ def test_source_and_select_counts_schema_nulls_and_no_side_effects(
     assert not (root / "output.csv").exists()
     with app.state.database.transaction() as session:
         for entity in (PipelineRevision, Run, RunEvent, OutputEndpoint):
-            assert session.scalar(select(func.count()).select_from(entity)) == 0
+            assert session.scalar(select(func.count()).select_from(entity)) == (
+                1 if entity is PipelineRevision else 0
+            )
 
 
 @pytest.mark.parametrize(
@@ -124,7 +152,7 @@ def test_exact_and_empty_counts_keep_declared_schema(
     request["definition"]["nodes"][0]["config"].update(
         columns=["id", "value"], types=["integer", "number"], nullable=[False, True]
     )
-    response = client.post(url, json=request)
+    response = preview_post(client, url, json=request)
     assert response.status_code == 200, response.text
     result = response.json()
     assert (
@@ -209,7 +237,7 @@ def test_csv_limits_and_safe_errors(
     (root / "input.csv").write_text(body, encoding="utf-8")
     request = payload()
     request["definition"]["nodes"][0]["config"].update(config)
-    response = client.post(url, json=request)
+    response = preview_post(client, url, json=request)
     assert response.status_code == 422, response.text
     assert response.json()["error"]["code"] == code
     assert response.json()["error"]["node_context"] == "csv"
@@ -223,14 +251,17 @@ def test_cell_and_source_limits_are_applied_before_transform(
     url, _ = workspace
     request = payload(select_columns=True)
     request["limits"] = {"max_rows": 100, "max_cells": 2}
-    response = client.post(url, json=request)
+    response = preview_post(client, url, json=request)
     assert response.json()["sample_row_count"] == 1
     assert response.json()["full_row_count"] is None
     request["limits"]["max_cells"] = 1
-    assert client.post(url, json=request).json()["error"]["code"] == "preview_limit"
+    assert (
+        preview_post(client, url, json=request).json()["error"]["code"]
+        == "preview_limit"
+    )
     request["limits"]["max_cells"] = 2000
     request["definition"]["nodes"][0]["config"]["max_rows"] = 1
-    assert client.post(url, json=request).json()["sample_row_count"] == 1
+    assert preview_post(client, url, json=request).json()["sample_row_count"] == 1
 
 
 @pytest.mark.parametrize(
@@ -258,7 +289,7 @@ def test_unsupported_blocks_never_read_or_execute(
     request["definition"]["nodes"].append(node("unsupported", block))
     request["definition"]["edges"].append(edge("csv", "unsupported"))
     request["node_id"] = "unsupported"
-    response = client.post(url, json=request)
+    response = preview_post(client, url, json=request)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "preview_unsupported"
 
@@ -269,15 +300,18 @@ def test_invalid_ancestors_block_but_unrelated_nodes_do_not(
     url, _ = workspace
     request = payload(select_columns=True)
     request["definition"]["nodes"].append(node("unrelated", "missing.block"))
-    assert client.post(url, json=request).status_code == 200
+    assert preview_post(client, url, json=request).status_code == 200
     request["definition"]["nodes"][1]["config"] = {}
-    error = client.post(url, json=request).json()["error"]
+    error = preview_post(client, url, json=request).json()["error"]
     assert error["code"] == "preview_invalid_graph" and error["field"] == "columns"
     request["definition"]["nodes"][1]["config"] = {"columns": ["absent"]}
-    assert client.post(url, json=request).json()["error"]["code"] == "missing_column"
+    assert (
+        preview_post(client, url, json=request).json()["error"]["code"]
+        == "missing_column"
+    )
     request["definition"]["edges"].append(edge("select", "csv"))
     assert (
-        client.post(url, json=request).json()["error"]["code"]
+        preview_post(client, url, json=request).json()["error"]["code"]
         == "preview_invalid_graph"
     )
 
@@ -289,20 +323,24 @@ def test_private_binding_is_project_scoped_and_contained(
     (root / "alternate.csv").write_text("value\nprivate-binding\n", encoding="utf-8")
     with app.state.database.transaction() as session:
         binding = WorkspaceBinding(
-            project_id=root.name, resource_id="input.csv", local_path="alternate.csv"
+            project_id=url.split("/")[4],
+            resource_id="input.csv",
+            local_path="alternate.csv",
         )
         session.add(binding)
-    response = client.post(url, json=payload())
+    response = preview_post(client, url, json=payload())
     assert response.json()["rows"] == [{"value": "private-binding"}]
     outside = tmp_path / "outside.csv"
     outside.write_text("secret\nnever-return-this\n", encoding="utf-8")
     with app.state.database.transaction() as session:
         saved = session.scalar(
-            select(WorkspaceBinding).where(WorkspaceBinding.project_id == root.name)
+            select(WorkspaceBinding).where(
+                WorkspaceBinding.project_id == url.split("/")[4]
+            )
         )
         assert saved is not None
         saved.local_path = str(outside)
-    response = client.post(url, json=payload())
+    response = preview_post(client, url, json=payload())
     assert (
         response.status_code == 422
         and response.json()["error"]["code"] == "unsafe_resource"
@@ -310,13 +348,21 @@ def test_private_binding_is_project_scoped_and_contained(
     assert (
         "never-return-this" not in response.text and str(outside) not in response.text
     )
-    other = client.post("/api/v1/projects", json={"name": "Other"}).json()["id"]
-    other_root = root.parent / other
-    other_root.mkdir(exist_ok=True)
+    other = preview_post(client, "/api/v1/projects", json={"name": "Other"}).json()[
+        "id"
+    ]
+    saved = client.post(
+        f"/api/v1/projects/{other}/pipelines",
+        json={
+            "name": "Other pipeline",
+            "definition": {"schema_version": 1, "nodes": [], "edges": []},
+        },
+    )
+    other_root = pipeline_data_folder(app.state.database, saved.json()["id"])
     (other_root / "input.csv").write_text("value\nother-project\n", encoding="utf-8")
-    assert client.post(url.replace(root.name, other), json=payload()).json()[
-        "rows"
-    ] == [{"value": "other-project"}]
+    assert preview_post(
+        client, url.replace(url.split("/")[4], other), json=payload()
+    ).json()["rows"] == [{"value": "other-project"}]
 
 
 def test_missing_project_workspace_and_output_are_actionable(
@@ -324,8 +370,9 @@ def test_missing_project_workspace_and_output_are_actionable(
 ):
     url, root = workspace
     assert (
-        client.post(
-            url.replace(root.name, "00000000-0000-0000-0000-000000000000"),
+        preview_post(
+            client,
+            url.replace(url.split("/")[4], "00000000-0000-0000-0000-000000000000"),
             json=payload(),
         ).status_code
         == 404
@@ -333,12 +380,13 @@ def test_missing_project_workspace_and_output_are_actionable(
     request = payload()
     request["output_port"] = "absent"
     assert (
-        client.post(url, json=request).json()["error"]["code"]
+        preview_post(client, url, json=request).json()["error"]["code"]
         == "preview_output_missing"
     )
     monkeypatch.setattr(settings, "workspace_root", None)
     assert (
-        client.post(url, json=payload()).json()["error"]["code"] == "workspace_required"
+        preview_post(client, url, json=payload()).json()["error"]["code"]
+        == "project_not_found"
     )
 
 
@@ -357,7 +405,7 @@ def test_invalid_limits_and_cache_headers(
 ):
     request = payload()
     request["limits"] = limits
-    response = client.post(workspace[0], json=request)
+    response = preview_post(client, workspace[0], json=request)
     assert response.status_code == 422
     assert response.headers["cache-control"] == "no-store"
 
@@ -366,7 +414,8 @@ def test_raw_request_graph_and_response_limits(
     client: TestClient, workspace: tuple[str, Path], monkeypatch: pytest.MonkeyPatch
 ):
     url, _ = workspace
-    response = client.post(
+    response = preview_post(
+        client,
         url,
         content=b"x" * (256 * 1024 + 1),
         headers={"content-type": "application/json"},
@@ -376,10 +425,10 @@ def test_raw_request_graph_and_response_limits(
     )
     request = payload()
     request["definition"]["nodes"] *= 101
-    assert client.post(url, json=request).status_code == 422
+    assert preview_post(client, url, json=request).status_code == 422
     monkeypatch.setattr(preview_api, "MAX_RESPONSE_BYTES", 10)
     assert (
-        client.post(url, json=payload()).json()["error"]["code"]
+        preview_post(client, url, json=payload()).json()["error"]["code"]
         == "preview_response_limit"
     )
 
@@ -388,7 +437,7 @@ def test_timeout_and_cancellation_stop_before_reading(
     client: TestClient, workspace: tuple[str, Path], monkeypatch: pytest.MonkeyPatch
 ):
     monkeypatch.setattr(service, "MAX_SECONDS", 0)
-    response = client.post(workspace[0], json=payload())
+    response = preview_post(client, workspace[0], json=payload())
     assert response.json()["error"]["code"] == "preview_timeout"
     with pytest.raises(BlockError) as caught:
         CsvSource().preview(
@@ -416,7 +465,7 @@ def test_disconnect_cancels_worker_and_frees_capacity(
     monkeypatch.setattr(preview_api, "preview", waiting_preview)
     monkeypatch.setattr(Request, "is_disconnected", disconnected)
     for _ in range(3):
-        response = client.post(workspace[0], json=payload())
+        response = preview_post(client, workspace[0], json=payload())
         assert response.json()["error"]["code"] == "preview_cancelled"
 
 
@@ -426,13 +475,13 @@ def test_large_integer_is_never_silently_rounded(
     url, root = workspace
     (root / "input.csv").write_text("value\n9007199254740993\n", encoding="utf-8")
     request = payload()
-    assert client.post(url, json=request).json()["rows"] == [
+    assert preview_post(client, url, json=request).json()["rows"] == [
         {"value": "9007199254740993"}
     ]
     request["definition"]["nodes"][0]["config"].update(
         columns=["value"], types=["integer"], nullable=[False]
     )
-    error = client.post(url, json=request).json()["error"]
+    error = preview_post(client, url, json=request).json()["error"]
     assert error["code"] == "preview_value_range" and error["field"] == "value"
 
 
@@ -454,11 +503,12 @@ def test_concurrency_admission_releases_capacity(
     monkeypatch.setattr(preview_api, "preview", slow)
     with ThreadPoolExecutor(max_workers=2) as pool:
         pending = [
-            pool.submit(client.post, workspace[0], json=payload()) for _ in range(2)
+            pool.submit(preview_post, client, workspace[0], json=payload())
+            for _ in range(2)
         ]
         try:
             assert all(event.wait(3) for event in entered)
-            response = client.post(workspace[0], json=payload())
+            response = preview_post(client, workspace[0], json=payload())
             assert (
                 response.status_code == 429
                 and response.json()["error"]["code"] == "preview_busy"
@@ -466,7 +516,7 @@ def test_concurrency_admission_releases_capacity(
         finally:
             release.set()
         assert all(result.result().status_code == 200 for result in pending)
-    assert client.post(workspace[0], json=payload()).status_code == 200
+    assert preview_post(client, workspace[0], json=payload()).status_code == 200
 
 
 def test_body_timeout_is_bounded_before_json_parsing(monkeypatch: pytest.MonkeyPatch):
@@ -495,7 +545,7 @@ def test_dependency_failures_are_also_uncacheable(
     client: TestClient, workspace: tuple[str, Path], monkeypatch: pytest.MonkeyPatch
 ):
     monkeypatch.setattr(app.state, "database", None)
-    response = client.post(workspace[0], json=payload())
+    response = preview_post(client, workspace[0], json=payload())
     assert response.status_code == 500
     assert response.json()["error"]["code"] == "internal_error"
     assert response.headers["cache-control"] == "no-store"
@@ -515,11 +565,11 @@ def test_ancestor_budget_and_malformed_requests(
         previous = key
     request["node_id"] = previous
     assert (
-        client.post(workspace[0], json=request).json()["error"]["code"]
+        preview_post(client, workspace[0], json=request).json()["error"]["code"]
         == "preview_graph_limit"
     )
-    response = client.post(
-        workspace[0], content=b"{", headers={"Content-Type": "application/json"}
+    response = preview_post(
+        client, workspace[0], content=b"{", headers={"Content-Type": "application/json"}
     )
     assert (
         response.status_code == 422 and response.headers["cache-control"] == "no-store"

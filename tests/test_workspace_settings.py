@@ -47,48 +47,64 @@ def test_save_persists_prepares_projects_and_changes_preview_without_restart(
     initial = client.get(URL)
     assert initial.json()["source"] == "unconfigured"
     assert initial.headers["cache-control"] == "no-store"
-    project = client.post("/api/v1/projects", json={"name": "Workspace"}).json()["id"]
-    request = {
-        "definition": {
-            "nodes": [
-                {
-                    "id": "source",
-                    "block_id": "source.json",
-                    "block_version": "1.0.0",
-                    "config": {"resource_ref": "inputs/data.json"},
-                }
-            ],
-            "edges": [],
-        },
-        "node_id": "source",
+    original = client.post("/api/v1/projects", json={"name": "Workspace"}).json()["id"]
+    definition = {
+        "schema_version": 1,
+        "nodes": [
+            {
+                "id": "source",
+                "block_id": "source.json",
+                "block_version": "1.0.0",
+                "config": {"resource_ref": "inputs/data.json"},
+            }
+        ],
+        "edges": [],
     }
-    preview_url = f"/api/v1/projects/{project}/pipelines/preview"
-    assert (
-        client.post(preview_url, json=request).json()["error"]["code"]
-        == "workspace_required"
+    saved = client.post(
+        f"/api/v1/projects/{original}/pipelines",
+        json={"name": "Readings", "definition": definition},
     )
+    assert saved.status_code == 201, saved.text
+    original_pipeline = saved.json()["id"]
     for value in (1, 2):
         root = tmp_path / f"root-{value}"
         root.mkdir()
         response = client.put(URL, json={"root_path": str(root)})
         assert response.status_code == 200, response.text
         assert response.headers["cache-control"] == "no-store"
-        assert response.json()["source"] == "application"
-        data = root / project / "inputs" / "data.json"
+        if value == 1:
+            project, pipeline = original, original_pipeline
+        else:
+            assert client.get("/api/v1/projects").json()["items"] == []
+            assert (
+                client.get(f"/api/v1/projects/{original}/pipelines").status_code == 404
+            )
+            project = client.post(
+                "/api/v1/projects", json={"name": "Workspace"}
+            ).json()["id"]
+            pipeline = client.post(
+                f"/api/v1/projects/{project}/pipelines",
+                json={"name": "Readings", "definition": definition},
+            ).json()["id"]
+        data = root / "Workspace" / "Readings" / "inputs" / "data.json"
         data.write_text('[{"value":' + str(value) + "}]", encoding="utf-8")
-        assert client.post(preview_url, json=request).json()["rows"] == [
-            {"value": value}
-        ]
-        # A new Database instance reads the persisted selection, not process state.
+        request = {
+            "pipeline_id": pipeline,
+            "definition": definition,
+            "node_id": "source",
+        }
+        assert client.post(
+            f"/api/v1/projects/{project}/pipelines/preview", json=request
+        ).json()["rows"] == [{"value": value}]
         restarted = Database(app.state.database.path)
         try:
             assert workspace.effective_workspace_root(restarted) == root
         finally:
             restarted.close()
-    assert (tmp_path / "root-1" / project / "inputs" / "data.json").exists()
+    assert (tmp_path / "root-1/Workspace/Readings/inputs/data.json").exists()
     created = client.post("/api/v1/projects", json={"name": "New"})
     assert created.status_code == 201
-    assert (tmp_path / "root-2" / created.json()["id"] / "inputs").is_dir()
+    assert (tmp_path / "root-2/New").is_dir()
     assert settings.workspace_root is None
     assert client.get("/api/v1/runs").json()["total"] == 0
 
@@ -160,16 +176,18 @@ def test_unwritable_root_and_failed_atomic_save_preserve_previous(
     assert not list(tmp_path.glob(".workspace-*.tmp"))
 
 
-def test_project_folder_collision_prevents_save(client: TestClient, tmp_path: Path):
-    project = client.post("/api/v1/projects", json={"name": "Collision"}).json()["id"]
+def test_existing_folder_name_gets_a_readable_suffix(
+    client: TestClient, tmp_path: Path
+):
+    client.post("/api/v1/projects", json={"name": "Collision"}).raise_for_status()
     root = tmp_path / "root"
     root.mkdir()
-    (root / project).write_text("existing data", encoding="utf-8")
+    (root / "Collision").write_text("existing data", encoding="utf-8")
     response = client.put(URL, json={"root_path": str(root)})
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "workspace_project_folder"
-    assert client.get(URL).json()["source"] == "unconfigured"
-    assert (root / project).read_text() == "existing data"
+    assert response.status_code == 200, response.text
+    assert (root / "Collision (2)").is_dir()
+    assert client.get(URL).json()["source"] == "application"
+    assert (root / "Collision").read_text() == "existing data"
 
 
 def test_corrupt_settings_can_be_repaired(client: TestClient, tmp_path: Path):

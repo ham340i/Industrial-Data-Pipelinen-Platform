@@ -42,3 +42,6 @@ frontend/test-results/
 frontend/playwright-report/
 
 /playwright-browsers/
+
+# Candidate backups contain project data and metadata (#36).
+/backups/

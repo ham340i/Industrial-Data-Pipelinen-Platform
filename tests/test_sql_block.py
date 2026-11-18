@@ -226,6 +226,10 @@ def test_real_saved_release_graph_executes_and_reruns(
     path = f"/api/v1/projects/{project['id']}/pipelines"
     saved = client.post(path, json={"name": "Release", "definition": graph})
     assert saved.status_code == 201, saved.text
+    from app.workspace_storage import pipeline_data_folder
+    from app.main import app
+
+    workspace = pipeline_data_folder(app.state.database, saved.json()["id"])
     pipeline = f"{path}/{saved.json()['id']}"
     assert client.get(pipeline).json()["definition"]["nodes"] == graph["nodes"]
     for _ in range(2):

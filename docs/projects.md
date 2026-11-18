@@ -14,8 +14,8 @@ workspace using [Compose](local-workspace.md) or the
 4. Use Builder or Resume last project to restore the most recently opened project.
    A direct link also survives reload. API availability is needed to confirm it.
 
-Project metadata survives API restarts and ordinary `docker compose down`.
-The selected project ID is remembered in browser localStorage; clearing it or
+Project metadata survives API restarts and ordinary `docker compose down`. Each project belongs to one canonical workspace folder. Changing the workspace reloads only that folder's projects and pipelines; returning to a folder restores its existing records.
+The selected project is remembered per API and workspace in browser localStorage; clearing it or
 changing browser origins/API URLs removes that association, not the project.
 If storage is blocked, direct URL navigation works but browser-session
 restoration is unavailable. Missing projects offer Choose a project; transient
@@ -37,8 +37,7 @@ Create body: `{"name":"Synthetic inspection"}`. Public project fields are
 `id` (UUID), `name` and `created_at` (UTC ISO-8601 timestamp). Page fields are
 `items`, `total`, `offset` and `limit`. Names are trimmed, 1–128 characters,
 without control characters. Unknown body fields are rejected; duplicate names
-are allowed with different IDs. Names are display labels and never filesystem
-paths. Invalid IDs/body/query parameters return the existing structured 422
+are allowed with different IDs. Names remain display labels; separately stored, sanitized directory mappings create readable `<workspace>/<project name>/<pipeline name>/inputs` paths. Colliding names receive numeric suffixes; internal IDs remain database/API identities. Invalid IDs/body/query parameters return the existing structured 422
 envelope; missing projects return `project_not_found` with a correlation ID.
 
 Limits are 1–100; offsets are nonnegative. Ordering is creation time descending,
@@ -65,3 +64,5 @@ See [ADR-0005](architecture/decisions/ADR-0005-local-projects.md),
 
 AI Assistance: Codex implemented and tested the feature at Karim's instruction;
 independent review and stakeholder acceptance remain pending.
+
+Unsaved drafts are retained per workspace in the current tab when switching folders. Names and folder mappings are private metadata, separate from exported pipeline definitions. See [Workspace settings](architecture/workspace-settings.md) for migration, naming, native folder selection and autosave behavior.

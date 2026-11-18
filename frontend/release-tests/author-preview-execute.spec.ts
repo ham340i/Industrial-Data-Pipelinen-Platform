@@ -21,21 +21,6 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     .getByRole("button", { name: "Create project", exact: true })
     .click();
   const project = await (await creating).json();
-  const workspace = join(
-    process.env.LPS_RELEASE_TEST_ROOT!,
-    "workspaces",
-    project.id,
-  );
-  mkdirSync(workspace, { recursive: true });
-  writeFileSync(
-    join(workspace, "readings.csv"),
-    "asset_id,reading\n1,5\n1,12\n1,18\n2,20\n2,30\n3,40\n",
-  );
-  execFileSync(process.env.LPS_PYTHON ?? "python", [
-    "-c",
-    "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.executescript(\"CREATE TABLE assets(asset_id INTEGER, label TEXT); INSERT INTO assets VALUES (1,'A'),(2,'B'),(3,NULL);\"); c.close()",
-    join(workspace, "data.sqlite3"),
-  ]);
   await page
     .getByRole("textbox", { name: "Draft pipeline name" })
     .fill("Release CSV SQL aggregate");
@@ -84,10 +69,36 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     40,
     40,
   );
+  // Save the source to allocate its data folder; preview still uses the current draft.
+  await page
+    .getByRole("button", { name: "Save pipeline", exact: true })
+    .click();
+  await expect(
+    page.getByText("Pipeline saved.", { exact: true }),
+  ).toBeVisible();
+  const workspace = join(
+    process.env.LPS_RELEASE_TEST_ROOT!,
+    "workspaces",
+    project.name,
+    "Release CSV SQL aggregate",
+  );
+  mkdirSync(workspace, { recursive: true });
+  writeFileSync(
+    join(workspace, "readings.csv"),
+    "asset_id,reading\n1,5\n1,12\n1,18\n2,20\n2,30\n3,40\n",
+  );
+  execFileSync(process.env.LPS_PYTHON ?? "python", [
+    "-c",
+    "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.executescript(\"CREATE TABLE assets(asset_id INTEGER, label TEXT); INSERT INTO assets VALUES (1,'A'),(2,'B'),(3,NULL);\"); c.close()",
+    join(workspace, "data.sqlite3"),
+  ]);
   const preview = page.getByRole("region", {
     name: "Selected-node preview",
     exact: true,
   });
+  await page
+    .locator(`.react-flow__node[data-id="${csv}"]`)
+    .click({ position: { x: 10, y: 10 } });
   await preview
     .getByRole("spinbutton", { name: "Preview rows", exact: true })
     .fill("3");
@@ -187,7 +198,8 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
   });
   await expect(runButton).toBeDisabled();
   const saving = page.waitForResponse(
-    (r) => r.request().method() === "POST" && r.url().endsWith("/pipelines"),
+    (r) =>
+      r.request().method() === "PUT" && /\/pipelines\/[^/]+$/.test(r.url()),
   );
   await page
     .getByRole("button", { name: "Save pipeline", exact: true })
@@ -209,33 +221,33 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     const execution = await (await runSaved()).json();
     const controls = page.getByLabel("Pipeline execution", { exact: true });
     await expect(
-      controls.getByText("Run succeeded · revision 1", { exact: true }),
+      controls.getByText("Run succeeded · revision 2", { exact: true }),
     ).toBeVisible();
-    await expect(
-      controls.getByText(/Duration: \d+ ms · Output rows:/),
-    ).toBeVisible();
-    for (const [nodeId, rowsIn, rowsOut] of [
-      [csv, 0, 6],
-      [validate, 6, 6],
-      [filter, 6, 5],
-      [sql, 0, 2],
-      [joinId, 7, 4],
-      [aggregate, 4, 2],
-      [sink, 2, 1],
-    ])
-      await expect(
-        controls.getByText(
-          new RegExp(
-            `${nodeId}: completed · \\d+ ms · rows ${rowsIn} → ${rowsOut}`,
-          ),
-        ),
-      ).toBeVisible();
-    await expect(
-      controls.getByText("Run succeeded", { exact: true }),
-    ).toBeVisible();
+    await expect(controls.getByText(/Duration: \d+ ms · Rows:/)).toBeVisible();
+    const api =
+      process.env.LPS_STANDALONE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const detail = await (
+      await page.request.get(`${api}/runs/${execution.run_id}`)
+    ).json();
+    const expected = new Map([
+      [csv, [0, 6]],
+      [validate, [6, 6]],
+      [filter, [6, 5]],
+      [sql, [0, 2]],
+      [joinId, [7, 4]],
+      [aggregate, [4, 2]],
+      [sink, [2, 1]],
+    ]);
+    for (const block of detail.blocks) {
+      expect(block.state).toBe("completed");
+      expect([block.rows_in, block.rows_out]).toEqual(
+        expected.get(block.node_id),
+      );
+    }
+    expect(detail.blocks).toHaveLength(expected.size);
     await expect(
       controls.getByRole("heading", { name: "Run log", exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     const outputs = controls.getByRole("region", {
       name: "Output inspection",
       exact: true,
@@ -264,7 +276,7 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     .click();
   await page
     .getByRole("button", {
-      name: "Open Release CSV SQL aggregate (revision 1)",
+      name: "Open Release CSV SQL aggregate (revision 2)",
       exact: true,
     })
     .click();
@@ -287,10 +299,15 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
     monitor.getByRole("table", { name: "Parquet output rows" }),
   ).toBeVisible();
 
-  await monitor
-    .getByRole("region", { name: `Block ${sql}`, exact: true })
-    .getByRole("button", { name: `Inspect ${sql}`, exact: true })
-    .click();
+  await expect(
+    monitor.getByRole("region", { name: `Block ${sql}`, exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Download log", exact: true }),
+  ).toHaveCount(1);
+  await page
+    .locator(`.react-flow__node[data-id="${sql}"]`)
+    .click({ position: { x: 10, y: 10 } });
   await page
     .getByRole("region", { name: "Configure SQL Source", exact: true })
     .getByRole("textbox", { name: "Query", exact: true })
@@ -303,7 +320,7 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
   await runSaved();
   const controls = page.getByLabel("Pipeline execution", { exact: true });
   await expect(
-    controls.getByText("Run failed · revision 2", { exact: true }),
+    controls.getByText("Run failed · revision 3", { exact: true }),
   ).toBeVisible();
   await expect(controls.getByText(/sql_query_failed/).first()).toBeVisible();
   await controls
@@ -326,7 +343,7 @@ test("author the release graph, preview, validate, inspect Parquet, reopen, reru
   await expect(runButton).toBeEnabled();
   await runSaved();
   await expect(
-    controls.getByText("Run succeeded · revision 3", { exact: true }),
+    controls.getByText("Run succeeded · revision 4", { exact: true }),
   ).toBeVisible();
   await controls.getByRole("button", { name: /Inspect output/ }).click();
   await expect(

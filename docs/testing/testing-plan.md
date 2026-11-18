@@ -43,6 +43,17 @@ Backend Ruff, mypy and pytest configuration, a hash-pinned lockfile, shared API 
 
 The first implemented feature adds Vitest/Testing Library/MSW tests and Playwright production-shell smoke tests. See [actual verification](issue-5-workbench.md) and [runnable commands](../frontend/workbench.md). Synthetic health mocks verify the UI boundary; they do not establish backend/engine integration or release acceptance.
 
+## Issue #36 packaged release candidate
+
+`scripts/release_candidate.py` packages the Compose candidate. Its unit tests in
+`scripts/tests/test_release_candidate.py` use a fake Docker runner to check
+configuration validation, backup manifests and the data-safety rules for reset
+and restore. `tests/test_release_acceptance.py` runs the shared HTTP scenario in
+`scripts/release_acceptance.py` against the real API and engine. The "Release
+candidate rehearsal" CI job runs `release_candidate.py smoke` on real Docker:
+clean install, the scenario, container recreation, backup, reset and restore.
+Record: [issue #36 verification](issue-36-release-candidate.md).
+
 ## Issue #37 API/engine integration matrix
 
 Cross-feature compatibility is checked through the real API rather than by

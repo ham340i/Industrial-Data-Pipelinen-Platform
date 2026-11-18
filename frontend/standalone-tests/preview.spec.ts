@@ -16,22 +16,6 @@ for (const format of ["json", "parquet"] as const) {
     });
     expect(created.status()).toBe(201);
     const project = await created.json();
-    const root = join(process.env.LPS_WORKSPACE_ROOT!, project.id);
-    await mkdir(root, { recursive: true });
-    const rows = [
-      { id: 1, value: 10 },
-      { id: 2, value: null },
-      { id: 3, value: 30 },
-    ];
-    await writeFile(join(root, "input.json"), JSON.stringify(rows));
-    if (format === "parquet") {
-      await promisify(execFile)(process.env.LPS_PYTHON || "python", [
-        "-c",
-        "import json,sys; from pathlib import Path; import pyarrow as pa; import pyarrow.parquet as pq; root=Path(sys.argv[1]); pq.write_table(pa.Table.from_pylist(json.loads((root/'input.json').read_text())),root/'input.parquet',row_group_size=1)",
-        root,
-      ]);
-    }
-    await writeFile(join(root, `invalid.${format}`), "invalid input");
     const definition = {
       schema_version: 1,
       nodes: [
@@ -80,6 +64,27 @@ for (const format of ["json", "parquet"] as const) {
     );
     expect(saved.status()).toBe(201);
     const pipeline = await saved.json();
+    const root = join(
+      process.env.LPS_WORKSPACE_ROOT!,
+      project.name,
+      `${format} preview`,
+    );
+    await mkdir(root, { recursive: true });
+    const rows = [
+      { id: 1, value: 10 },
+      { id: 2, value: null },
+      { id: 3, value: 30 },
+    ];
+    await writeFile(join(root, "input.json"), JSON.stringify(rows));
+    if (format === "parquet") {
+      await promisify(execFile)(process.env.LPS_PYTHON || "python", [
+        "-c",
+        "import json,sys; from pathlib import Path; import pyarrow as pa; import pyarrow.parquet as pq; root=Path(sys.argv[1]); pq.write_table(pa.Table.from_pylist(json.loads((root/'input.json').read_text())),root/'input.parquet',row_group_size=1)",
+        root,
+      ]);
+    }
+    await writeFile(join(root, `invalid.${format}`), "invalid input");
+
     await page.goto(`/#/projects/${project.id}/builder`);
     await page
       .getByRole("button", { name: `Open ${format} preview (revision 1)` })
@@ -169,10 +174,6 @@ test("real CSV and Select previews are bounded, editable and side-effect free", 
   expect(created.status()).toBe(201);
   const project = await created.json();
   expect(project.id).toMatch(/^[a-f0-9-]{36}$/);
-  const root = join(process.env.LPS_WORKSPACE_ROOT!, project.id);
-  await mkdir(root, { recursive: true });
-  await writeFile(join(root, "input.csv"), "id,value\n1,10\n2,NULL\n3,30\n");
-  await writeFile(join(root, "empty.csv"), "id,value\n");
   const definition = {
     schema_version: 1,
     nodes: [
@@ -221,6 +222,15 @@ test("real CSV and Select previews are bounded, editable and side-effect free", 
   );
   expect(saved.status()).toBe(201);
   const pipeline = await saved.json();
+  const root = join(
+    process.env.LPS_WORKSPACE_ROOT!,
+    project.name,
+    "Preview path",
+  );
+  await mkdir(root, { recursive: true });
+  await writeFile(join(root, "input.csv"), "id,value\n1,10\n2,NULL\n3,30\n");
+  await writeFile(join(root, "empty.csv"), "id,value\n");
+
   await page.goto(`/#/projects/${project.id}/builder`);
   await page
     .getByRole("button", { name: "Open Preview path (revision 1)" })
