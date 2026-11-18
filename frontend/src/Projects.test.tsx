@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { server } from "./test/server";
 import { selectedProject, rememberProject } from "./state/projectSelection";
+import { useEditorStore } from "./state/editor";
 
 const url = "http://127.0.0.1:8000/api/v1/projects";
 const project = {
@@ -34,6 +35,33 @@ function detail() {
   );
 }
 describe("local projects", () => {
+  it("restores the saved project once the workspace setting loads", async () => {
+    detail();
+    useEditorStore.setState({ workspaceKey: "/data/workspaces" });
+    rememberProject(project.id);
+    useEditorStore.getState().reset();
+    let release = () => {};
+    const loaded = new Promise<void>((resolve) => (release = resolve));
+    server.use(
+      http.get("http://127.0.0.1:8000/api/v1/settings/workspace", async () => {
+        await loaded;
+        return HttpResponse.json({
+          root_path: "/data/workspaces",
+          source: "environment",
+          ready: true,
+          message: "Workspace ready",
+          allowed_roots: ["/data/workspaces"],
+        });
+      }),
+    );
+    renderApp("/builder");
+    await screen.findByRole("heading", { name: "Pipeline builder" });
+    release();
+    expect(
+      await screen.findByText("Project: Synthetic inspection"),
+    ).toBeVisible();
+  });
+
   it("clears a missing saved project even when old metadata is cached", async () => {
     detail();
     const { queryClient } = renderApp(`/projects/${project.id}/builder`);

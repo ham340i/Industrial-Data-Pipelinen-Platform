@@ -161,7 +161,9 @@ function Overview() {
 }
 
 export function App() {
-  const workspaceKey = useEditorStore((s) => s.workspaceKey);
+  // Remount the workspace pages only on a real workspace switch, not when the
+  // first setting loads, so text typed right after page load is kept.
+  const workspaceEpoch = useEditorStore((s) => s.workspaceEpoch);
   const { pathname } = useLocation();
   const main = useRef<HTMLElement>(null);
   const previousPath = useRef(pathname);
@@ -321,15 +323,15 @@ export function App() {
               <Route path="/" element={<Overview />} />
               <Route
                 path="/projects"
-                element={<Projects key={workspaceKey} />}
+                element={<Projects key={workspaceEpoch} />}
               />
               <Route
                 path="/projects/:projectId/builder"
-                element={<ProjectWorkspace key={workspaceKey} />}
+                element={<ProjectWorkspace key={workspaceEpoch} />}
               />
               <Route
                 path="/builder"
-                element={<BuilderEntry key={workspaceKey} />}
+                element={<BuilderEntry key={workspaceEpoch} />}
               />
               <Route
                 path="/settings/workspace"

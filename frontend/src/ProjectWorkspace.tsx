@@ -16,8 +16,12 @@ import {
   rememberProject,
   selectedProject,
 } from "./state/projectSelection";
+import { useEditorStore } from "./state/editor";
 
 export function BuilderEntry() {
+  // The saved selection is stored per workspace; re-read it once the
+  // workspace setting arrives instead of relying on a remount.
+  useEditorStore((s) => s.workspaceKey);
   const projectId = selectedProject();
   return projectId ? (
     <Navigate to={`/projects/${projectId}/builder`} replace />
@@ -27,6 +31,7 @@ export function BuilderEntry() {
 }
 export function ProjectWorkspace() {
   const { projectId = "" } = useParams();
+  const workspaceKey = useEditorStore((s) => s.workspaceKey);
   const project = useProject(projectId);
   const missing =
     project.error instanceof ApiError && project.error.status === 404;
@@ -34,7 +39,14 @@ export function ProjectWorkspace() {
     if (missing) forgetProject(projectId);
     else if (project.isSuccess && !project.isFetching && project.data)
       rememberProject(project.data.id);
-  }, [project.data, project.isSuccess, project.isFetching, projectId, missing]);
+  }, [
+    project.data,
+    project.isSuccess,
+    project.isFetching,
+    projectId,
+    missing,
+    workspaceKey,
+  ]);
   if (!isProjectId(projectId) || missing)
     return (
       <Stack spacing={2}>

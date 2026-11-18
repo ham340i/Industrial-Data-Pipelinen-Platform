@@ -15,6 +15,10 @@ import { assertPublic } from "../configuration/schema";
 
 interface EditorState {
   workspaceKey: string | null;
+  /** False until the first workspace setting arrives from the API. */
+  workspaceLoaded: boolean;
+  /** Increases only when the user moves to a different workspace. */
+  workspaceEpoch: number;
   switchWorkspace: (root: string | null, retainDraft?: boolean) => void;
   pipelineId: string | null;
   revision: number | null;
@@ -73,8 +77,14 @@ const workspaceDrafts = new Map<
 
 export const useEditorStore = create<EditorState>((set) => ({
   ...initialState,
+  workspaceLoaded: false,
+  workspaceEpoch: 0,
   switchWorkspace: (workspaceKey, retainDraft = false) =>
     set((state) => {
+      // The first setting from the API names the workspace the user is already
+      // in, so adopt it without swapping drafts or remounting the pages.
+      if (!state.workspaceLoaded)
+        return { workspaceKey, workspaceLoaded: true };
       if (state.workspaceKey === workspaceKey) return state;
       workspaceDrafts.set(state.workspaceKey, {
         ...initialState,
@@ -89,6 +99,7 @@ export const useEditorStore = create<EditorState>((set) => ({
         workspaceKey,
         busy: false,
         generation: state.generation + 1,
+        workspaceEpoch: state.workspaceEpoch + 1,
       };
     }),
   setBusy: (busy) => set({ busy }),
@@ -276,6 +287,11 @@ export const useEditorStore = create<EditorState>((set) => ({
   reset: () =>
     set((state) => {
       workspaceDrafts.clear();
-      return { ...initialState, generation: state.generation + 1 };
+      return {
+        ...initialState,
+        workspaceLoaded: false,
+        workspaceEpoch: state.workspaceEpoch + 1,
+        generation: state.generation + 1,
+      };
     }),
 }));
