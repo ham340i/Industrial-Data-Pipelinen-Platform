@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 from sys import platform
 from ipaddress import ip_address
 from pathlib import Path
@@ -132,9 +133,10 @@ def local_workspace_request(request: Request) -> bool:
 
 
 def local_drives() -> list[Path]:
-    return (
-        [Path(drive) for drive in os.listdrives()] if os.name == "nt" else [Path("/")]
-    )
+    # Mypy recognizes sys.platform guards for Windows-only stdlib APIs.
+    if sys.platform == "win32":
+        return [Path(drive) for drive in os.listdrives()]
+    return [Path("/")]
 
 
 def workspace_folder(
