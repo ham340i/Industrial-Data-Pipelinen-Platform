@@ -14,11 +14,9 @@ from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
 
 from app.config import settings
 from app.metadata.database import Database
-from app.metadata.models import Project
 from app.native_folder_picker import open_folder_dialog
 
 logger = logging.getLogger(__name__)
@@ -326,11 +324,11 @@ def _case_insensitive(folder: Path) -> bool:
         return False
 
 
-def prepare_project(root: Path, project_id: str) -> None:
+def prepare_project(root: Path, project_id: str, *, inputs_folder: bool = True) -> None:
     try:
         base = root.resolve(strict=True)
         project = base / project_id
-        inputs = project / "inputs"
+        inputs = project / "inputs" if inputs_folder else project
         # Reject links/junctions before creating anything through them.
         if project.resolve() != project or inputs.resolve() != inputs:
             raise ValueError("Aliased project folder")
@@ -426,6 +424,8 @@ def save_workspace(
     response.headers["Cache-Control"] = "no-store"
     local = local_workspace_request(request)
     with workspace_lock:
+        from app.workspace_storage import switch_workspace
+
         # Null removes the app override and restores the startup environment.
         root = (
             selected_root(payload.root_path, db, local=local)
@@ -436,10 +436,5 @@ def save_workspace(
                 else None
             )
         )
-        if root is not None:
-            with db.transaction() as session:
-                projects = list(session.scalars(select(Project.id)))
-            for project in projects:
-                prepare_project(root, project)
-        _store_setting(db, None if payload.root_path is None else root)
+        switch_workspace(db, root, None if payload.root_path is None else root)
         return status(db)

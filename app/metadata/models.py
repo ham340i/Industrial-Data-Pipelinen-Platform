@@ -58,6 +58,8 @@ class Project(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(128))
+    workspace_root: Mapped[str | None] = mapped_column(String(4096), index=True)
+    directory_name: Mapped[str | None] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(default=utc_now)
     pipelines: Mapped[list[Pipeline]] = relationship(back_populates="project")
     bindings: Mapped[list[WorkspaceBinding]] = relationship(back_populates="project")
@@ -75,6 +77,7 @@ class Pipeline(Base):
         ForeignKey("projects.id", ondelete="RESTRICT"), index=True
     )
     name: Mapped[str] = mapped_column(String(128))
+    directory_name: Mapped[str | None] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(default=utc_now)
     project: Mapped[Project] = relationship(back_populates="pipelines")
     revisions: Mapped[list[PipelineRevision]] = relationship(back_populates="pipeline")

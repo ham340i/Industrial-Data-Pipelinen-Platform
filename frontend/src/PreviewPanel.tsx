@@ -289,6 +289,7 @@ function Controls({
     Number(cells) <= 10000 &&
     !!port;
   const request: PreviewRequest = {
+    pipeline_id: state.pipelineId,
     definition: semanticDefinition(state.nodes, state.edges),
     node_id: state.selectedNodeId!,
     output_port: port,

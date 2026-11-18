@@ -1,5 +1,5 @@
 // AI contribution: 50% or more AI-generated
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
@@ -16,11 +16,14 @@ import {
   saveWorkspace,
 } from "./api/workspace";
 import { useEditorStore } from "./state/editor";
+import { getProject, getProjects } from "./api/projects";
+import { listPipelines } from "./api/pipelines";
 
 export function WorkspaceSettings() {
   const client = useQueryClient();
   const projectId = useEditorStore((state) => state.projectId);
   const [draft, setDraft] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState(false);
   const query = useQuery({
     queryKey: ["workspace-settings"],
     queryFn: getWorkspace,
@@ -28,11 +31,60 @@ export function WorkspaceSettings() {
     gcTime: 0,
     refetchOnWindowFocus: false,
   });
+  useEffect(() => {
+    if (query.data)
+      useEditorStore.getState().switchWorkspace(query.data.root_path);
+  }, [query.data]);
   const mutation = useMutation({
     mutationFn: saveWorkspace,
-    onSuccess: (value) => {
+    onSuccess: async (value) => {
+      await client.cancelQueries({ queryKey: ["workspace-settings"] });
+      const scoped = new Set([
+        "projects",
+        "project",
+        "pipelines",
+        "runs",
+        "run",
+        "artifact",
+      ]);
+      await client.cancelQueries({
+        predicate: (q) => scoped.has(String(q.queryKey[0])),
+      });
+      client.removeQueries({
+        predicate: (q) => scoped.has(String(q.queryKey[0])),
+      });
+      const previousProject = useEditorStore.getState().projectId;
+      let retainDraft = false;
+      if (previousProject) {
+        try {
+          await client.fetchQuery({
+            queryKey: ["project", value.root_path, previousProject],
+            queryFn: ({ signal }) => getProject(previousProject, signal),
+            retry: false,
+          });
+          retainDraft = true;
+        } catch {
+          /* The previous draft remains stored with its workspace. */
+        }
+      }
+      useEditorStore.getState().switchWorkspace(value.root_path, retainDraft);
       client.setQueryData(["workspace-settings"], value);
       setDraft(null);
+      setRefreshError(false);
+      try {
+        await client.fetchQuery({
+          queryKey: ["projects", value.root_path, 0],
+          queryFn: ({ signal }) => getProjects(0, signal),
+        });
+        const restoredProject = useEditorStore.getState().projectId;
+        if (restoredProject)
+          await client.fetchQuery({
+            queryKey: ["pipelines", value.root_path, restoredProject, 0],
+            queryFn: ({ signal }) => listPipelines(restoredProject, 0, signal),
+          });
+      } catch {
+        setRefreshError(true);
+      }
     },
   });
   const picker = useMutation({
@@ -94,7 +146,7 @@ export function WorkspaceSettings() {
                 picker.reset();
               }}
               slotProps={{ htmlInput: { maxLength: 4096 } }}
-              helperText="Browse or enter a folder path. Save validates access and prepares project inputs folders."
+              helperText="Confirm a folder in File Explorer to save automatically, or enter a path and press Enter."
             />
             <Button
               variant="outlined"
@@ -104,7 +156,11 @@ export function WorkspaceSettings() {
               onClick={() => picker.mutate(path.trim() || null)}
               sx={{ flexShrink: 0, minHeight: 56 }}
             >
-              {picker.isPending ? "Choosing folder…" : (mutation.isPending ? "Saving…" : "Browse…")}             
+              {picker.isPending
+                ? "Choosing folder…"
+                : mutation.isPending
+                  ? "Saving…"
+                  : "Browse…"}
             </Button>
           </Stack>
           {picker.isError && (
@@ -115,18 +171,11 @@ export function WorkspaceSettings() {
             API, enter a permitted folder path available on that computer.
           </Typography>
           <Typography variant="body2">
-            Each project reads from &lt;workspace root&gt;/&lt;project
-            ID&gt;/inputs. Use a Resource Ref such as inputs/readings.json in
-            the source block.
+            Each pipeline reads from &lt;workspace root&gt;/&lt;project
+            name&gt;/&lt;pipeline name&gt;/inputs. Use a Resource Ref such as
+            inputs/readings.json in the source block.
           </Typography>
           <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={!path.trim() || mutation.isPending || query.isPending}
-            >
-              {mutation.isPending ? "Saving…" : "Save workspace"}
-            </Button>
             {source === "application" && (
               <Button
                 disabled={mutation.isPending || picker.isPending}
@@ -137,12 +186,43 @@ export function WorkspaceSettings() {
             )}
           </Stack>
           {mutation.isError && (
-            <Alert severity="error">{mutation.error.message}</Alert>
+            <Alert
+              severity="error"
+              action={
+                <Button
+                  disabled={mutation.isPending || picker.isPending}
+                  onClick={() => mutation.mutate(path)}
+                >
+                  Retry save
+                </Button>
+              }
+            >
+              {mutation.error.message} The previous workspace remains active.
+              This path has not been saved.
+            </Alert>
+          )}
+          {mutation.isPending && (
+            <Typography role="status">Saving workspace…</Typography>
+          )}
+          {refreshError && (
+            <Alert
+              severity="warning"
+              action={
+                <Button component={Link} to="/projects">
+                  Open projects
+                </Button>
+              }
+            >
+              Workspace saved. Project lists could not be refreshed; open
+              Projects to retry.
+            </Alert>
           )}
           {mutation.isSuccess && (
             <Alert severity="success">
               {mutation.data.root_path
-                ? "Workspace saved. Project data folders are ready; previews can use the new setting now."
+                ? refreshError
+                  ? "Workspace saved."
+                  : "Workspace saved. Available projects and pipelines have been reloaded."
                 : "App setting removed. No environment root is configured."}
             </Alert>
           )}

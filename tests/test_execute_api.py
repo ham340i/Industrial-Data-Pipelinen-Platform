@@ -20,7 +20,6 @@ from app.runs.scheduler import (
     TimerStopTimedOut,
 )
 from app.runs.scheduler import scheduler as scheduler_dependency
-from app.workspace import effective_workspace_root
 
 
 def manual_graph() -> dict[str, Any]:
@@ -149,7 +148,9 @@ def test_execute_uses_captured_revision_if_latest_changes(
     path = pipelines_path(client)
     pipeline_id = create(client, path, manual_graph())
 
-    def save_after_capture(db: Database) -> Path | None:
+    original_folder = pipelines_api.execution_folder
+
+    def save_after_capture(db: Database, selected_pipeline: str) -> Path | None:
         # This boundary is after the guarded read and before execute_revision.
         saved = client.put(
             f"{path}/{pipeline_id}",
@@ -157,9 +158,9 @@ def test_execute_uses_captured_revision_if_latest_changes(
         )
         assert saved.status_code == 200
         assert saved.json()["revision"] == 2
-        return effective_workspace_root(db)
+        return original_folder(db, selected_pipeline)
 
-    monkeypatch.setattr(pipelines_api, "effective_workspace_root", save_after_capture)
+    monkeypatch.setattr(pipelines_api, "execution_folder", save_after_capture)
     response = client.post(
         f"{path}/{pipeline_id}/execute", json={"expected_revision": 1}
     )

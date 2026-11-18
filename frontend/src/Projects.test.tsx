@@ -45,7 +45,9 @@ describe("local projects", () => {
       ),
     );
     await act(async () => {
-      await queryClient.refetchQueries({ queryKey: ["project", project.id] });
+      await queryClient.refetchQueries({
+        queryKey: ["project", null, project.id],
+      });
     });
     expect(
       await screen.findByRole("heading", { name: "Project unavailable" }),

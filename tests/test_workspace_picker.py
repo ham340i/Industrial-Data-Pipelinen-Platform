@@ -71,7 +71,7 @@ def test_native_selection_is_not_saved_until_explicit_save(
     local_client.put(
         URL, json={"root_path": response.json()["path"]}
     ).raise_for_status()
-    assert (chosen / project / "inputs").is_dir()
+    assert (chosen / "Native picker").is_dir()
     restarted = Database(app.state.database.path)
     try:
         assert workspace.effective_workspace_root(restarted) == chosen

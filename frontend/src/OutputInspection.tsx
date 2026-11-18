@@ -19,6 +19,19 @@ import {
   type ArtifactIdentity,
 } from "./api/artifacts";
 import type { RunDetail } from "./api/runs";
+import { ApiError } from "./api/client";
+
+function inspectionError(error: Error): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409)
+      return "The output file is unavailable or could not be read. It may have been replaced by a later run. Inspect that run's output or rerun this revision.";
+    if (error.status === 422)
+      return "This output cannot be inspected with the current query. Inspection requires a Parquet file with a registered schema and up to 100 selected columns.";
+    if (error.status === 404)
+      return "This output is no longer available in the selected workspace.";
+  }
+  return error.message;
+}
 
 function ArtifactRows({ identity }: { identity: ArtifactIdentity }) {
   const [offset, setOffset] = useState(0);
@@ -44,13 +57,16 @@ function ArtifactRows({ identity }: { identity: ArtifactIdentity }) {
         <Alert
           severity="warning"
           action={
-            <Button onClick={() => void query.refetch()}>
-              Retry output rows
-            </Button>
+            !(
+              query.error instanceof ApiError && query.error.status === 422
+            ) && (
+              <Button onClick={() => void query.refetch()}>
+                Retry output rows
+              </Button>
+            )
           }
         >
-          {query.error.message} The file may have been replaced by a later run.
-          Inspect that run's output or rerun this revision.
+          {inspectionError(query.error)}
         </Alert>
       )}
       {query.data && !query.isError && (
@@ -112,16 +128,25 @@ function Output({
   run: RunDetail;
 }) {
   const [open, setOpen] = useState(false);
+  const inspectable = output.artifact_ref.toLowerCase().endsWith(".parquet");
   return (
     <Stack spacing={1}>
       <Typography>
         {output.name} · {output.row_count ?? "unknown"} rows ·{" "}
         {output.artifact_ref}
       </Typography>
-      <Button aria-expanded={open} onClick={() => setOpen(!open)}>
-        {open ? "Hide" : "Inspect"} output {output.name}
-      </Button>
-      {open && (
+      {inspectable ? (
+        <Button aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Hide" : "Inspect"} output {output.name}
+        </Button>
+      ) : (
+        <Typography>
+          In-app row inspection supports Parquet outputs. Open this file in your
+          workspace to view its contents, or use a Parquet Sink to inspect rows
+          here.
+        </Typography>
+      )}
+      {inspectable && open && (
         <ArtifactRows
           identity={{
             artifactId: output.id,

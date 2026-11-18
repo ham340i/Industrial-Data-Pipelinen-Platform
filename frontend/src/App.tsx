@@ -19,6 +19,8 @@ import { useHealth } from "./api/health";
 import { Projects } from "./Projects";
 import { BuilderEntry, ProjectWorkspace } from "./ProjectWorkspace";
 import { WorkspaceSettings } from "./WorkspaceSettings";
+import { WorkspaceSession } from "./WorkspaceSession";
+import { useEditorStore } from "./state/editor";
 
 const theme = createTheme({
   palette: {
@@ -109,11 +111,7 @@ function Overview() {
         variant="outlined"
         sx={{ p: { xs: 3, md: 4 }, background: "#e9f2ee" }}
       >
-        <Chip
-          label="Pipeline authoring"
-          size="small"
-          sx={{ mb: 3 }}
-        />
+        <Chip label="Pipeline authoring" size="small" sx={{ mb: 3 }} />
         <Typography component="h2" variant="h2">
           Your workspace starts here
         </Typography>
@@ -163,6 +161,7 @@ function Overview() {
 }
 
 export function App() {
+  const workspaceKey = useEditorStore((s) => s.workspaceKey);
   const { pathname } = useLocation();
   const main = useRef<HTMLElement>(null);
   const previousPath = useRef(pathname);
@@ -185,6 +184,7 @@ export function App() {
   }, [pathname]);
   return (
     <ThemeProvider theme={theme}>
+      <WorkspaceSession />
       <CssBaseline />
       <Box
         component="a"
@@ -319,12 +319,18 @@ export function App() {
           >
             <Routes>
               <Route path="/" element={<Overview />} />
-              <Route path="/projects" element={<Projects />} />
+              <Route
+                path="/projects"
+                element={<Projects key={workspaceKey} />}
+              />
               <Route
                 path="/projects/:projectId/builder"
-                element={<ProjectWorkspace />}
+                element={<ProjectWorkspace key={workspaceKey} />}
               />
-              <Route path="/builder" element={<BuilderEntry />} />
+              <Route
+                path="/builder"
+                element={<BuilderEntry key={workspaceKey} />}
+              />
               <Route
                 path="/settings/workspace"
                 element={<WorkspaceSettings />}
