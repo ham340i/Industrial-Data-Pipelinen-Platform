@@ -111,6 +111,27 @@ Follow-up verification on Python 3.12.16:
 These checks validate both platforms' type information; they do not substitute
 for running the application or full backend suite on Linux.
 
+## Follow-up: nonempty workspace fixture
+
+The standalone workspace-repair scenario failed during setup with `ENOTEMPTY`.
+CI's development and production-preview invocations reuse metadata and workspace
+data. The fixed project name could collide with previous attempts, and its
+hard-coded folder path could reference an older populated folder.
+
+The scenario now creates a unique, short project name for every attempt. It
+resolves the new pipeline folder and workspace to their real paths, verifies
+that the folder is a descendant of the workspace, and removes only that
+pipeline folder with `rm(..., { recursive: true, force: true })`. A synthetic
+file is deliberately placed in its inputs folder before removal, so the
+nonempty cleanup case is exercised on every run.
+
+Verification used the same isolated metadata database and workspace across two
+development attempts followed by two production-preview attempts, in pinned
+Chromium with Node 24/Python 3.12. All four passed. A populated folder using the
+old fixed name was retained and its marker file remained unchanged. TypeScript,
+ESLint, Prettier, and the production build passed. No full-suite rerun is claimed
+for this test-only follow-up.
+
 ## AI assistance
 
 AI contribution: 50% or more AI-generated.

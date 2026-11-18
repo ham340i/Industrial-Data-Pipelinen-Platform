@@ -1,7 +1,8 @@
 // AI contribution: 50% or more AI-generated
 import { expect, test } from "@playwright/test";
-import { rmdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { randomUUID } from "node:crypto";
+import { realpath, rm, writeFile } from "node:fs/promises";
+import { isAbsolute, join, relative, sep } from "node:path";
 
 test("workspace setup repairs preview and preserves the unsaved draft", async ({
   page,
@@ -10,7 +11,7 @@ test("workspace setup repairs preview and preserves the unsaved draft", async ({
     process.env.LPS_STANDALONE_API_URL || "http://127.0.0.1:8000/api/v1";
   const root = process.env.LPS_WORKSPACE_ROOT!;
   const created = await page.request.post(`${api}/projects`, {
-    data: { name: "Workspace setup" },
+    data: { name: `Workspace setup ${randomUUID().slice(0, 12)}` },
   });
   expect(created.status()).toBe(201);
   const project = await created.json();
@@ -35,10 +36,17 @@ test("workspace setup repairs preview and preserves the unsaved draft", async ({
     },
   );
   expect(saved.status()).toBe(201);
-  const folder = join(root, project.name, "Workspace setup");
-  // Remove only this synthetic pipeline's empty folders to exercise repair.
-  await rmdir(join(folder, "inputs"));
-  await rmdir(folder);
+  const folder = await realpath(join(root, project.name, "Workspace setup"));
+  const relativeFolder = relative(await realpath(root), folder);
+  expect(relativeFolder).not.toBe("");
+  expect(isAbsolute(relativeFolder)).toBe(false);
+  expect(relativeFolder.split(sep)).not.toContain("..");
+  // Exercise repair of a nonempty folder belonging only to this test run.
+  await writeFile(
+    join(folder, "inputs", "stale-fixture.json"),
+    '[{"value":0}]',
+  );
+  await rm(folder, { recursive: true, force: true });
   await page.goto(`/#/projects/${project.id}/builder`);
   await page
     .getByRole("button", { name: "Open Workspace setup (revision 1)" })
