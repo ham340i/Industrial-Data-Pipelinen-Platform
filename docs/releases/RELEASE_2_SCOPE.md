@@ -1,6 +1,6 @@
 # Release 2 scope (proposal)
 
-**Status: proposed, not approved.** The original Project Overview is not in the repository, so this scope is built from the sources below. It becomes the Release 2 scope when the team agrees and the stakeholder representative (ham340i, for Taconics) approves it at the Iteration 5 scope review recorded in the [Release 1 signoff](../stakeholder/release-1-signoff.md).
+**Status: stories created and assigned on November 24, 2026 (#121 to #154); scope approval by the stakeholder representative is still to be recorded.** The original Project Overview is not in the repository, so this scope is built from the sources below. It becomes the Release 2 scope when the team agrees and the stakeholder representative (ham340i, for Taconics) approves it at the Iteration 5 scope review recorded in the [Release 1 signoff](../stakeholder/release-1-signoff.md).
 
 Release 2 runs over Iterations 5 to 8 (due December 1, December 15, January 19 and February 5).
 
