@@ -24,4 +24,7 @@ Backend line coverage was 96% at Release 1 (CI report). It is re-measured in the
 
 ## Release 2 features
 
-None implemented yet.
+| Date | Commit | Feature | Suite | Result |
+|---|---|---|---|---|
+| 2026-11-24 | `90f1b97` (PR #132) | F1 step 1, frame-native Select/Rename/Filter (#121) | Backend `python -m pytest`; ruff; mypy strict | 1,174 passed, 1 skipped (1,141 existing plus 33 new); lint and types clean |
+| 2026-11-24 | `90f1b97` vs `b51bd93` | F1 step 1 | 4-node chain benchmark, Linux, Python 3.12 | 150,000 rows: 11.0 s / 333 MiB on `main`, 1.37 s / 266 MiB on the branch |
