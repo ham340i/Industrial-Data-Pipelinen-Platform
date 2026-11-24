@@ -6,7 +6,7 @@ from __future__ import annotations
 import copy
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar, NoReturn
 
 from pydantic import ValidationError
 
@@ -26,6 +26,7 @@ from app.blocks.contracts import (
     require_public_json,
 )
 from app.blocks.errors import BlockError
+from app.blocks.frames import FrameValues, checked_frame, to_frames, to_tables
 
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,10 @@ logger = logging.getLogger(__name__)
 class Block[ConfigT: BlockConfig](ABC):
     descriptor: BlockDescriptor
     config_model: type[ConfigT]
+    #: Frame-native blocks implement ``_execute_frames`` and skip the row-by-row
+    #: Table conversion between nodes (#121). Lifecycle hooks still take Tables,
+    #: so a block that overrides them keeps using the Table path.
+    frame_native: ClassVar[bool] = False
 
     def public_metadata(self) -> dict[str, Any]:
         """Publish descriptors/schema only, never instance state or context."""
@@ -200,16 +205,92 @@ class Block[ConfigT: BlockConfig](ABC):
             outputs = self._check_ports(descriptor.outputs, outputs, "invalid_outputs")
             self._event(context, "succeeded", descriptor)
             return outputs
-        except BlockError as exc:
+        except Exception as exc:
+            self._fail_execution(context, descriptor, exc)
+
+    def _fail_execution(
+        self,
+        context: BlockContext,
+        descriptor: BlockDescriptor | None,
+        exc: Exception,
+    ) -> NoReturn:
+        """Record the failure event and raise a public, node-scoped error."""
+        if isinstance(exc, BlockError):
             self._event(context, "failed", descriptor, exc.failure.code)
             raise exc.at_node(context.node_id) from None
-        except Exception:
-            self._event(context, "failed", descriptor, "execution_failed")
-            raise BlockError(
-                "execution_failed",
-                "Block execution failed.",
-                node_id=context.node_id,
-            ) from None
+        self._event(context, "failed", descriptor, "execution_failed")
+        raise BlockError(
+            "execution_failed", "Block execution failed.", node_id=context.node_id
+        ) from None
+
+    def _uses_frames(self) -> bool:
+        cls = type(self)
+        return (
+            cls.frame_native
+            and cls.before_execute is Block.before_execute
+            and cls.after_execute is Block.after_execute
+        )
+
+    def run_frames(
+        self, config: dict[str, Any], inputs: FrameValues, context: BlockContext
+    ) -> FrameValues:
+        """Run on runtime frames; blocks that are not frame-native use ``run``."""
+        if not self._uses_frames():
+            return to_frames(self.run(config, to_tables(inputs), context))
+        self._check_context(context)
+        descriptor = None
+        try:
+            descriptor = self._checked_descriptor()
+            parsed = self.validate_config(config)
+            checked = self._check_frame_ports(
+                descriptor.inputs, inputs, "invalid_inputs"
+            )
+            self._event(context, "started", descriptor)
+            outputs = self._check_frame_ports(
+                descriptor.outputs,
+                self._execute_frames(parsed, checked, context),
+                "invalid_outputs",
+            )
+            self._event(context, "succeeded", descriptor)
+            return outputs
+        except Exception as exc:
+            self._fail_execution(context, descriptor, exc)
+
+    def _check_frame_ports(
+        self, ports: tuple[Port, ...], values: FrameValues, code: str
+    ) -> FrameValues:
+        """Frame counterpart of ``_check_ports``: same cardinality and schemas."""
+        if not isinstance(values, dict):
+            raise BlockError(code, "Port values must be a mapping of declared names.")
+        expected = {port.name: port for port in ports}
+        if values.keys() - expected.keys():
+            raise BlockError(code, "An undeclared port was supplied.")
+        checked: FrameValues = {}
+        for name, port in expected.items():
+            items = values.get(name, ())
+            if not isinstance(items, tuple):
+                raise BlockError(code, "Port values must be tuples.", field=name)
+            if (port.required and not items) or (not port.many and len(items) > 1):
+                raise BlockError(code, "Port cardinality is invalid.", field=name)
+            if port.kind == "control":
+                signals = []
+                for item in items:
+                    signal = self._checked_payload(port, item, code)
+                    assert isinstance(signal, ControlSignal)
+                    signals.append(signal)
+                checked[name] = tuple(signals)
+                continue
+            assert port.data_schema is not None
+            checked[name] = tuple(
+                checked_frame(item, port.data_schema, code, name) for item in items
+            )
+        return checked
+
+    def _execute_frames(
+        self, config: ConfigT, inputs: FrameValues, context: BlockContext
+    ) -> FrameValues:
+        """Frame-native blocks override this with the same behavior as ``_execute``."""
+        raise BlockError("execution_failed", "Block is not frame-native.")
 
     @staticmethod
     def _preview_budget(limits: PreviewLimits | None) -> PreviewLimits:

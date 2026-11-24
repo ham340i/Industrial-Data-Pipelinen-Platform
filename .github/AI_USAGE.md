@@ -407,3 +407,9 @@ revision first and recreates the containers, with unit tests and a rollback
 step in the CI rehearsal. `LPS_LOG_LEVEL` was validated but not forwarded;
 main's #105 now forwards it, and a test checks every accepted setting reaches
 `compose.yml`.
+
+## Frame-native blocks (#121)
+
+Tool: Claude Code, used by ham340i. AI contribution: 50% or more AI-generated for `app/blocks/frames.py` (boundary checks), the frame path in `app/blocks/base.py`, the shared Select/Rename/Filter implementations in `app/blocks/transforms.py`, the executor change and `tests/test_frame_native_blocks.py`.
+
+Verification: the 1,141 existing backend tests pass unchanged; 33 new tests run every frame-native block through both paths on typed data with nulls, empty input and non-ASCII text and compare outputs, error codes and events; boundary tests reject wrong dtypes, nulls in non-nullable columns, NaN, infinity and column reordering; an executor test proves no Table conversion happens between frame-native nodes. Problems found while writing it: the first draft needed a `type: ignore` for control ports, replaced by an explicit check; a test built the pipeline with lists where the model requires tuples.

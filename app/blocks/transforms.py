@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from typing import Any, Literal, cast
 
 import polars as pl
@@ -26,6 +27,7 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
+from app.blocks.frames import Frame, FrameValues
 from app.blocks.tabular import (
     POLARS_TYPES,
     TABLE_PORT,
@@ -44,8 +46,24 @@ def input_table(inputs: PortValues) -> Table:
 
 
 def require_columns(table: Table, names: list[str]) -> None:
-    if set(names) - {column.name for column in table.data_schema.columns}:
+    require_schema_columns(table.data_schema, names)
+
+
+def require_schema_columns(schema: DataSchema, names: list[str]) -> None:
+    if set(names) - {column.name for column in schema.columns}:
         raise BlockError("missing_column", "A configured column is unavailable.")
+
+
+def input_frame(inputs: FrameValues) -> Frame:
+    frame = inputs["table"][0]
+    assert isinstance(frame, Frame)
+    return frame
+
+
+def run_on_table(table: Table, transform: Callable[[Frame], Frame]) -> PortValues:
+    """Run a frame transform for the Table path, with the Table path's checks."""
+    result = transform(Frame(to_frame(table), table.data_schema))
+    return {"table": (from_frame(result.data, result.data_schema),)}
 
 
 class SelectConfig(BlockConfig):
@@ -98,14 +116,24 @@ class SelectColumns(Block[SelectConfig]):
             )
         }
 
+    frame_native = True
+
+    @staticmethod
+    def _apply(config: SelectConfig, frame: Frame) -> Frame:
+        require_schema_columns(frame.data_schema, config.columns)
+        columns = {column.name: column for column in frame.data_schema.columns}
+        schema = DataSchema(columns=tuple(columns[name] for name in config.columns))
+        return Frame(frame.data.select(config.columns), schema)
+
     def _execute(
         self, config: SelectConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
-        table = input_table(inputs)
-        require_columns(table, config.columns)
-        columns = {column.name: column for column in table.data_schema.columns}
-        schema = DataSchema(columns=tuple(columns[name] for name in config.columns))
-        return {"table": (from_frame(to_frame(table).select(config.columns), schema),)}
+        return run_on_table(input_table(inputs), lambda f: self._apply(config, f))
+
+    def _execute_frames(
+        self, config: SelectConfig, inputs: FrameValues, context: BlockContext
+    ) -> FrameValues:
+        return {"table": (self._apply(config, input_frame(inputs)),)}
 
 
 class RenameConfig(BlockConfig):
@@ -129,33 +157,36 @@ class RenameColumns(Block[RenameConfig]):
         outputs=(TABLE_PORT,),
     )
 
-    def _execute(
-        self, config: RenameConfig, inputs: PortValues, context: BlockContext
-    ) -> PortValues:
-        table = input_table(inputs)
-        require_columns(table, config.columns)
-        mapping = dict(zip(config.columns, config.names, strict=True))
-        names = [mapping.get(c.name, c.name) for c in table.data_schema.columns]
+    frame_native = True
 
+    @staticmethod
+    def _apply(config: RenameConfig, frame: Frame) -> Frame:
+        require_schema_columns(frame.data_schema, config.columns)
+        mapping = dict(zip(config.columns, config.names, strict=True))
+        names = [mapping.get(c.name, c.name) for c in frame.data_schema.columns]
         if len(set(names)) != len(names):
             raise BlockError(
                 "duplicate_column",
                 "Renaming would create duplicate columns.",
                 field="names",
             )
-
         schema = DataSchema(
             columns=tuple(
-                Column(
-                    name=mapping.get(c.name, c.name),
-                    dtype=c.dtype,
-                    nullable=c.nullable,
-                )
-                for c in table.data_schema.columns
+                Column(name=new, dtype=c.dtype, nullable=c.nullable)
+                for new, c in zip(names, frame.data_schema.columns, strict=True)
             )
         )
+        return Frame(frame.data.rename(mapping), schema)
 
-        return {"table": (from_frame(to_frame(table).rename(mapping), schema),)}
+    def _execute(
+        self, config: RenameConfig, inputs: PortValues, context: BlockContext
+    ) -> PortValues:
+        return run_on_table(input_table(inputs), lambda f: self._apply(config, f))
+
+    def _execute_frames(
+        self, config: RenameConfig, inputs: FrameValues, context: BlockContext
+    ) -> FrameValues:
+        return {"table": (self._apply(config, input_frame(inputs)),)}
 
 
 class FilterConfig(BlockConfig):
@@ -242,15 +273,25 @@ class Filter(Block[FilterConfig]):
                 field="value_text",
             ) from None
 
+    frame_native = True
+
+    @classmethod
+    def _apply(cls, config: FilterConfig, frame: Frame) -> Frame:
+        schema = frame.data_schema
+        require_schema_columns(schema, [config.column])
+        column = next(c for c in schema.columns if c.name == config.column)
+        predicate = cls._predicate(column, config)
+        return Frame(frame.data.filter(predicate.fill_null(False)), schema)
+
     def _execute(
         self, config: FilterConfig, inputs: PortValues, context: BlockContext
     ) -> PortValues:
-        table = input_table(inputs)
-        require_columns(table, [config.column])
-        column = next(c for c in table.data_schema.columns if c.name == config.column)
-        predicate = self._predicate(column, config)
-        frame = to_frame(table).filter(predicate.fill_null(False))
-        return {"table": (from_frame(frame, table.data_schema),)}
+        return run_on_table(input_table(inputs), lambda f: self._apply(config, f))
+
+    def _execute_frames(
+        self, config: FilterConfig, inputs: FrameValues, context: BlockContext
+    ) -> FrameValues:
+        return {"table": (self._apply(config, input_frame(inputs)),)}
 
 
 class CastConfig(BlockConfig):

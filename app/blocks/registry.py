@@ -16,6 +16,7 @@ from app.blocks.contracts import (
     PreviewLimits,
 )
 from app.blocks.errors import BlockError
+from app.blocks.frames import FrameValues
 
 
 class RegisteredBlock(Protocol):
@@ -34,6 +35,10 @@ class RegisteredBlock(Protocol):
     def run(
         self, config: dict[str, Any], inputs: PortValues, context: BlockContext
     ) -> PortValues: ...
+
+    def run_frames(
+        self, config: dict[str, Any], inputs: FrameValues, context: BlockContext
+    ) -> FrameValues: ...
 
     def preview(
         self,
