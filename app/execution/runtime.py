@@ -12,10 +12,10 @@ from uuid import uuid4
 from pydantic import Field
 
 from app.blocks.context import BlockContext, BlockEvent
-from app.blocks.contracts import Contract, PortValues, Table
+from app.blocks.contracts import Contract
 from app.blocks.errors import BlockError, BlockFailure
 from app.blocks.registry import BlockRegistry
-from app.execution.frames import Frame, FrameValues, to_frames, to_tables
+from app.execution.frames import Frame, FrameValues
 from app.pipelines.models import Edge, Node, PipelineDefinition
 from app.pipelines.validation import Diagnostic, diagnose
 
@@ -115,14 +115,6 @@ def _frame_size(values: FrameValues) -> tuple[int, int]:
     return (
         sum(v.data.height for v in frames),
         sum(v.data.height * v.data.width for v in frames),
-    )
-
-
-def _table_size(values: PortValues) -> tuple[int, int]:
-    tables = [v for port in values.values() for v in port if isinstance(v, Table)]
-    return (
-        sum(len(v.rows) for v in tables),
-        sum(len(v.rows) * len(v.data_schema.columns) for v in tables),
     )
 
 
@@ -232,17 +224,17 @@ class Executor:
                 inputs[edge.target.port] = inputs.get(edge.target.port, ()) + values
             rows, cells = _frame_size(inputs)
             self._check_budget(run.retained_rows + rows, run.retained_cells + cells)
-            # Detach fan-out inputs so branches cannot mutate one another.
-            result.inputs[node_id] = to_frames(to_tables(inputs))
+            # Recorded for row counts only. Blocks never receive these objects:
+            # frame-native blocks get validated clones, others get new Tables.
+            result.inputs[node_id] = inputs
             context = run.context(node_id)
             context.check_cancelled()
             block = self.registry.resolve(node.block_id, node.block_version)
-            raw_outputs = block.run(node.config, to_tables(inputs), context)
-            output_rows, output_cells = _table_size(raw_outputs)
+            outputs = block.run_frames(node.config, inputs, context)
+            output_rows, output_cells = _frame_size(outputs)
             rows += output_rows
             cells += output_cells
             self._check_budget(run.retained_rows + rows, run.retained_cells + cells)
-            outputs = to_frames(raw_outputs)
             run.retained_rows += rows
             run.retained_cells += cells
             result.outputs[node_id] = outputs
