@@ -131,12 +131,13 @@ def test_errors_and_failure_events_match(
     block: Block[Any], config: dict[str, Any], code: str
 ):
     events: dict[str, list[BlockEvent]] = {"table": [], "frame": []}
+    tables: PortValues = {"table": (table(),)}
+    frames = to_frames(tables)
+    table_context, frame_context = context(events["table"]), context(events["frame"])
     with pytest.raises(BlockError) as by_table:
-        block.run(config, {"table": (table(),)}, context(events["table"]))
+        block.run(config, tables, table_context)
     with pytest.raises(BlockError) as by_frame:
-        block.run_frames(
-            config, to_frames({"table": (table(),)}), context(events["frame"])
-        )
+        block.run_frames(config, frames, frame_context)
     assert by_table.value.failure.code == by_frame.value.failure.code == code
     assert by_frame.value.failure.node_id == "node"
     assert [e.error_code for e in events["frame"]] == [
@@ -164,19 +165,20 @@ def valid_data() -> pl.DataFrame:
     ids=["wrong dtype", "null in non-nullable", "nan", "infinity", "column order"],
 )
 def test_invalid_input_frames_are_rejected(data: pl.DataFrame):
+    block, inputs, ctx = SelectColumns(), frame(data), context()
     with pytest.raises(BlockError) as error:
-        SelectColumns().run_frames({"columns": ["id"]}, frame(data), context())
+        block.run_frames({"columns": ["id"]}, inputs, ctx)
     assert error.value.failure.code == "invalid_inputs"
 
 
 def test_wrong_input_cardinality_and_payload():
-    block = SelectColumns()
+    block, ctx = SelectColumns(), context()
     with pytest.raises(BlockError, match="cardinality"):
-        block.run_frames({"columns": ["id"]}, {"table": ()}, context())
+        block.run_frames({"columns": ["id"]}, {"table": ()}, ctx)
+    # A Table where a Frame is required must be rejected at the boundary.
+    wrong: Any = {"table": (table(),)}
     with pytest.raises(BlockError) as error:
-        # A Table where a Frame is required must be rejected at the boundary.
-        wrong: Any = {"table": (table(),)}
-        block.run_frames({"columns": ["id"]}, wrong, context())
+        block.run_frames({"columns": ["id"]}, wrong, ctx)
     assert error.value.failure.code == "invalid_inputs"
 
 
@@ -191,10 +193,9 @@ class BadOutput(SelectColumns):
 
 
 def test_invalid_output_frames_are_rejected():
+    block, inputs, ctx = BadOutput(), to_frames({"table": (table(),)}), context()
     with pytest.raises(BlockError) as error:
-        BadOutput().run_frames(
-            {"columns": ["id"]}, to_frames({"table": (table(),)}), context()
-        )
+        block.run_frames({"columns": ["id"]}, inputs, ctx)
     assert error.value.failure.code == "invalid_outputs"
 
 
