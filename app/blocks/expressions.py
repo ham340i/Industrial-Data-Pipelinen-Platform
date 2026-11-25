@@ -6,7 +6,7 @@ from __future__ import annotations
 import ast
 import math
 from dataclasses import dataclass
-from typing import cast
+from typing import NoReturn
 
 import polars as pl
 
@@ -57,14 +57,18 @@ class _Compiler:
         self.columns = {column.name: column for column in schema.columns}
         self.node_count = 0
 
-    def fail(self, node: ast.AST, reason: str) -> None:
+    def fail(self, node: ast.AST, reason: str) -> NoReturn:
+        line = getattr(node, "lineno", 1)
+        byte_column = getattr(node, "col_offset", 0)
+        if not isinstance(line, int) or not isinstance(byte_column, int):
+            line, byte_column = 1, 0
         self.fail_at(
-            _character_position(self.source, node.lineno, node.col_offset),
+            _character_position(self.source, line, byte_column),
             reason,
         )
 
     @staticmethod
-    def fail_at(position: int, reason: str) -> None:
+    def fail_at(position: int, reason: str) -> NoReturn:
         raise ExpressionError(position, reason)
 
     def compile(self, node: ast.AST, depth: int = 0) -> _TypedExpression:
@@ -76,6 +80,8 @@ class _Compiler:
 
         if isinstance(node, ast.Constant):
             return self._constant(node)
+        if isinstance(node, ast.Name):
+            return self._column(node)
         if isinstance(node, ast.UnaryOp):
             return self._unary(node, depth)
         if isinstance(node, ast.BinOp):
@@ -107,9 +113,34 @@ class _Compiler:
         if type(value) is str:
             return _TypedExpression(pl.lit(value), "string", False)
 
-        self.fail(node, "Only string, numeric, boolean, and null literals are allowed.")
+        self.fail(
+            node,
+            "Only string, numeric, boolean, and null literals are allowed.",
+        )
+
+    def _column(self, node: ast.Name) -> _TypedExpression:
+        column = self.columns.get(node.id)
+        if column is None:
+            self.fail(node, "Unknown column.")
+        return _TypedExpression(
+            pl.col(column.name),
+            column.dtype,
+            column.nullable,
+        )
 
     def _unary(self, node: ast.UnaryOp, depth: int) -> _TypedExpression:
+        if (
+            isinstance(node.op, ast.USub)
+            and isinstance(node.operand, ast.Constant)
+            and type(node.operand.value) is int
+            and node.operand.value == 2**63
+        ):
+            return _TypedExpression(
+                pl.lit(-(2**63), dtype=pl.Int64),
+                "integer",
+                False,
+            )
+
         value = self.compile(node.operand, depth + 1)
 
         if isinstance(node.op, ast.Not):
@@ -141,6 +172,7 @@ class _Compiler:
             )
 
         left, right, dtype = self._numeric_pair(node, left, right)
+
         if isinstance(node.op, ast.Add):
             expression = left.expression + right.expression
         elif isinstance(node.op, ast.Sub):
@@ -175,24 +207,16 @@ class _Compiler:
         dtype: DType = "number" if "number" in (left.dtype, right.dtype) else "integer"
 
         if left.dtype is None:
-            left = self._cast_null(left, dtype)
+            left = self._cast_numeric(left, dtype)
         elif left.dtype != dtype:
             left = self._cast_numeric(left, dtype)
 
         if right.dtype is None:
-            right = self._cast_null(right, dtype)
+            right = self._cast_numeric(right, dtype)
         elif right.dtype != dtype:
             right = self._cast_numeric(right, dtype)
 
         return left, right, dtype
-
-    @staticmethod
-    def _cast_null(value: _TypedExpression, dtype: DType) -> _TypedExpression:
-        return _TypedExpression(
-            value.expression.cast(POLARS_TYPES[dtype]),
-            dtype,
-            value.nullable,
-        )
 
     @staticmethod
     def _cast_numeric(value: _TypedExpression, dtype: DType) -> _TypedExpression:
@@ -229,9 +253,14 @@ class _Compiler:
 
         result: pl.Expr | None = None
         for index, operation in enumerate(node.ops):
+            if not isinstance(
+                operation,
+                (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE),
+            ):
+                self.fail(node, "Comparison operator is not allowed.")
+
             left = values[index]
             right = values[index + 1]
-
             if left.dtype is None or right.dtype is None:
                 self.fail(node, "Compare nulls with is_null() or is_not_null().")
 
@@ -242,7 +271,10 @@ class _Compiler:
             if not (same_type or numeric_pair):
                 self.fail(node, "Comparison operands have incompatible types.")
             if not equality and left.dtype == "boolean":
-                self.fail(node, "Boolean values support equality comparisons only.")
+                self.fail(
+                    node,
+                    "Boolean values support equality comparisons only.",
+                )
 
             if numeric_pair and "number" in (left.dtype, right.dtype):
                 if left.dtype != "number":
@@ -251,7 +283,9 @@ class _Compiler:
                     right = self._cast_numeric(right, "number")
 
             comparison = self._compare_pair(
-                operation, left.expression, right.expression
+                operation,
+                left.expression,
+                right.expression,
             )
             result = comparison if result is None else result & comparison
 
@@ -292,17 +326,28 @@ class _Compiler:
         arguments = list(node.args)
 
         if name == "col":
-            if (
-                len(arguments) != 1
-                or not isinstance(arguments[0], ast.Constant)
-                or type(arguments[0].value) is not str
-            ):
+            if len(arguments) != 1:
                 self.fail(
-                    node, 'col() requires one string literal, e.g. col("amount").'
+                    node,
+                    'col() requires one string literal, e.g. col("amount").',
                 )
-            column = self.columns.get(cast(str, arguments[0].value))
+
+            argument = arguments[0]
+            if not isinstance(argument, ast.Constant):
+                self.fail(
+                    node,
+                    'col() requires one string literal, e.g. col("amount").',
+                )
+            if not isinstance(argument.value, str):
+                self.fail(
+                    node,
+                    'col() requires one string literal, e.g. col("amount").',
+                )
+
+            column = self.columns.get(argument.value)
             if column is None:
-                self.fail(arguments[0], "Unknown column.")
+                self.fail(argument, "Unknown column.")
+
             return _TypedExpression(
                 pl.col(column.name),
                 column.dtype,
@@ -357,30 +402,38 @@ class _Compiler:
         if name == "coalesce":
             if len(arguments) < 2:
                 self.fail(node, "coalesce() requires at least two arguments.")
+
             typed = [value.dtype for value in arguments if value.dtype is not None]
             if not typed:
-                self.fail(node, "coalesce() requires a value with an inferable type.")
-            dtype = cast(DType, typed[0])
+                self.fail(
+                    node,
+                    "coalesce() requires a value with an inferable type.",
+                )
+
+            coalesce_dtype = typed[0]
             if any(
-                other != dtype and not (other in _NUMERIC and dtype in _NUMERIC)
+                other != coalesce_dtype
+                and not (other in _NUMERIC and coalesce_dtype in _NUMERIC)
                 for other in typed[1:]
             ):
                 self.fail(node, "coalesce() arguments have incompatible types.")
             if "number" in typed:
-                dtype = "number"
+                coalesce_dtype = "number"
 
             expressions = []
             for value in arguments:
-                if value.dtype is None:
-                    expressions.append(value.expression.cast(POLARS_TYPES[dtype]))
-                elif value.dtype != dtype and value.dtype in _NUMERIC:
-                    expressions.append(value.expression.cast(POLARS_TYPES[dtype]))
+                if value.dtype is None or (
+                    value.dtype != coalesce_dtype and value.dtype in _NUMERIC
+                ):
+                    expressions.append(
+                        value.expression.cast(POLARS_TYPES[coalesce_dtype])
+                    )
                 else:
                     expressions.append(value.expression)
 
             return _TypedExpression(
                 pl.coalesce(expressions),
-                dtype,
+                coalesce_dtype,
                 all(value.nullable for value in arguments),
             )
 
@@ -391,25 +444,25 @@ class _Compiler:
 
             if name == "lower":
                 expression = value.expression.str.to_lowercase()
-                dtype: DType = "string"
+                result_dtype: DType = "string"
             elif name == "upper":
                 expression = value.expression.str.to_uppercase()
-                dtype = "string"
+                result_dtype = "string"
             elif name == "trim":
                 expression = value.expression.str.strip_chars()
-                dtype = "string"
+                result_dtype = "string"
             elif name == "length":
                 expression = value.expression.str.len_chars()
-                dtype = "integer"
+                result_dtype = "integer"
             else:
                 parsed = value.expression.str.to_date(
                     format="%Y-%m-%d",
                     strict=True,
                 )
                 expression = getattr(parsed.dt, name)()
-                dtype = "integer"
+                result_dtype = "integer"
 
-            return _TypedExpression(expression, dtype, value.nullable)
+            return _TypedExpression(expression, result_dtype, value.nullable)
 
         if name in {"contains", "starts_with", "ends_with"}:
             self._arity(node, name, arguments, 2)
@@ -438,6 +491,7 @@ class _Compiler:
                 self.fail(node, "concat() requires at least one argument.")
             for value in arguments:
                 self._require(node, value, "string")
+
             return _TypedExpression(
                 pl.concat_str(
                     [value.expression for value in arguments],
@@ -451,6 +505,7 @@ class _Compiler:
             self._arity(node, name, arguments, 3)
             for value in arguments:
                 self._require(node, value, "string")
+
             text, old, new = arguments
             return _TypedExpression(
                 text.expression.str.replace_all(
@@ -466,6 +521,7 @@ class _Compiler:
             self._arity(node, name, arguments, 2)
             for value in arguments:
                 self._require(node, value, "string")
+
             left = arguments[0].expression.str.to_date(
                 format="%Y-%m-%d",
                 strict=True,
@@ -493,20 +549,20 @@ class _Compiler:
             )
         if name == "sqrt":
             expression = value.expression.sqrt()
-            dtype = "number"
+            math_dtype: DType = "number"
         elif name == "log":
             expression = value.expression.log()
-            dtype = "number"
+            math_dtype = "number"
         elif name == "floor":
             expression = value.expression.floor().cast(pl.Int64)
-            dtype = "integer"
+            math_dtype = "integer"
         elif name == "ceil":
             expression = value.expression.ceil().cast(pl.Int64)
-            dtype = "integer"
+            math_dtype = "integer"
         else:
             self.fail(node, "Unknown function.")
 
-        return _TypedExpression(expression, dtype, value.nullable)
+        return _TypedExpression(expression, math_dtype, value.nullable)
 
     def _arity(
         self,
@@ -529,7 +585,7 @@ class _Compiler:
 
 
 def compile_expression(source: str, schema: DataSchema) -> CompiledExpression:
-    """Parse, type-check, and compile an expression without evaluating data."""
+    """Parse, type check, and compile an expression without evaluating data."""
     if len(source) > _MAX_LENGTH:
         raise ExpressionError(_MAX_LENGTH + 1, "Expression is too long.")
 
