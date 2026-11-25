@@ -31,6 +31,7 @@ class BlockFailure(Contract):
     reason: NonBlank = Field(min_length=1)
     node_id: NonBlank | None = None
     field: NonBlank | None = None
+    position: int | None = Field(default=None, ge=1)
     diagnostics: tuple[QualityDiagnostic, ...] = ()
 
 
@@ -42,6 +43,7 @@ class BlockError(RuntimeError):
         *,
         node_id: str | None = None,
         field: str | None = None,
+        position: int | None = None,
         diagnostics: tuple[QualityDiagnostic, ...] = (),
     ) -> None:
         self.failure = BlockFailure(
@@ -49,6 +51,7 @@ class BlockError(RuntimeError):
             reason=reason,
             node_id=node_id,
             field=field,
+            position=position,
             diagnostics=diagnostics,
         )
         super().__init__(reason)
@@ -59,5 +62,6 @@ class BlockError(RuntimeError):
             self.failure.reason,
             node_id=node_id,
             field=self.failure.field,
+            position=self.failure.position,
             diagnostics=self.failure.diagnostics,
         )

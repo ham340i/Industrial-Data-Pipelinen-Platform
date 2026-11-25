@@ -26,6 +26,7 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
+from app.blocks.expressions import ExpressionError, compile_expression
 from app.blocks.tabular import (
     POLARS_TYPES,
     TABLE_PORT,
@@ -298,6 +299,96 @@ class Cast(Block[CastConfig]):
 
         return {"table": (from_frame(frame, schema),)}
 
+class DerivedColumnConfig(BlockConfig):
+    name: NonBlank = Field(min_length=1, max_length=128)
+    expression: NonBlank = Field(min_length=1, max_length=2048)
+
+
+class DerivedColumn(Block[DerivedColumnConfig]):
+    config_model = DerivedColumnConfig
+    descriptor = BlockDescriptor(
+        **descriptor_values(
+            "transform.derived_column",
+            "Derived Column",
+            "transform",
+        ),
+        inputs=(TABLE_PORT,),
+        outputs=(TABLE_PORT,),
+    )
+
+    @staticmethod
+    def _compile(
+        config: DerivedColumnConfig,
+        table: Table,
+    ) -> tuple[pl.Expr, Column]:
+        if config.name in {column.name for column in table.data_schema.columns}:
+            raise BlockError(
+                "duplicate_column",
+                "A derived column cannot replace an existing column.",
+                field="name",
+            )
+
+        try:
+            compiled = compile_expression(config.expression, table.data_schema)
+        except ExpressionError as exc:
+            raise BlockError(
+                "invalid_expression",
+                f"Expression is invalid: {exc.reason}",
+                field="expression",
+                position=exc.position,
+            ) from None
+
+        return compiled.expression, Column(
+            name=config.name,
+            dtype=compiled.dtype,
+            nullable=compiled.nullable,
+        )
+
+    def _prepare(
+        self,
+        config: dict[str, Any],
+        inputs: PortValues,
+        descriptor: BlockDescriptor,
+    ) -> tuple[DerivedColumnConfig, PortValues]:
+        parsed, checked = super()._prepare(config, inputs, descriptor)
+        self._compile(parsed, input_table(checked))
+        return parsed, checked
+
+    def _execute(
+        self,
+        config: DerivedColumnConfig,
+        inputs: PortValues,
+        context: BlockContext,
+    ) -> PortValues:
+        table = input_table(inputs)
+        expression, column = self._compile(config, table)
+
+        try:
+            frame = to_frame(table).with_columns(expression.alias(config.name))
+
+            if column.dtype == "number":
+                finite = frame[config.name].is_finite().fill_null(True).all()
+                if not finite:
+                    raise BlockError(
+                        "expression_evaluation_failed",
+                        "Expression produced a non-finite number.",
+                        field="expression",
+                    )
+
+            schema = DataSchema(
+                columns=(*table.data_schema.columns, column),
+            )
+            result = from_frame(frame, schema)
+        except BlockError:
+            raise
+        except Exception:
+            raise BlockError(
+                "expression_evaluation_failed",
+                "Expression could not be evaluated for the input values.",
+                field="expression",
+            ) from None
+
+        return {"table": (result,)}
 
 class SortColumn(BlockConfig):
     column: NonBlank
