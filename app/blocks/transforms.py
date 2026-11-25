@@ -299,6 +299,7 @@ class Cast(Block[CastConfig]):
 
         return {"table": (from_frame(frame, schema),)}
 
+
 class DerivedColumnConfig(BlockConfig):
     name: NonBlank = Field(min_length=1, max_length=128)
     expression: NonBlank = Field(min_length=1, max_length=2048)
@@ -389,6 +390,7 @@ class DerivedColumn(Block[DerivedColumnConfig]):
             ) from None
 
         return {"table": (result,)}
+
 
 class SortColumn(BlockConfig):
     column: NonBlank

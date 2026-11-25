@@ -6,7 +6,7 @@ from __future__ import annotations
 import ast
 import math
 from dataclasses import dataclass
-from typing import TypeAlias, cast
+from typing import cast
 
 import polars as pl
 
@@ -40,12 +40,6 @@ class _TypedExpression:
     expression: pl.Expr
     dtype: DType | None
     nullable: bool
-
-
-_BinaryOperator: TypeAlias = ast.Add | ast.Sub | ast.Mult | ast.Div | ast.Mod
-_ComparisonOperator: TypeAlias = (
-    ast.Eq | ast.NotEq | ast.Lt | ast.LtE | ast.Gt | ast.GtE
-)
 
 
 def _character_position(source: str, line: int, byte_column: int) -> int:
@@ -125,7 +119,9 @@ class _Compiler:
         if isinstance(node.op, (ast.UAdd, ast.USub)):
             if value.dtype not in _NUMERIC:
                 self.fail(node, "Unary arithmetic requires a numeric value.")
-            expression = -value.expression if isinstance(node.op, ast.USub) else value.expression
+            expression = (
+                -value.expression if isinstance(node.op, ast.USub) else value.expression
+            )
             return _TypedExpression(expression, value.dtype, value.nullable)
 
         self.fail(node, "Unary operator is not allowed.")
@@ -152,9 +148,8 @@ class _Compiler:
         elif isinstance(node.op, ast.Mult):
             expression = left.expression * right.expression
         elif isinstance(node.op, ast.Div):
-            expression = (
-                left.expression.cast(pl.Float64)
-                / right.expression.cast(pl.Float64)
+            expression = left.expression.cast(pl.Float64) / right.expression.cast(
+                pl.Float64
             )
             dtype = "number"
         else:
@@ -177,11 +172,7 @@ class _Compiler:
         if left.dtype not in _NUMERIC | {None} or right.dtype not in _NUMERIC | {None}:
             self.fail(node, "Arithmetic requires numeric values.")
 
-        dtype: DType = (
-            "number"
-            if "number" in (left.dtype, right.dtype)
-            else "integer"
-        )
+        dtype: DType = "number" if "number" in (left.dtype, right.dtype) else "integer"
 
         if left.dtype is None:
             left = self._cast_null(left, dtype)
@@ -259,7 +250,9 @@ class _Compiler:
                 if right.dtype != "number":
                     right = self._cast_numeric(right, "number")
 
-            comparison = self._compare_pair(operation, left.expression, right.expression)
+            comparison = self._compare_pair(
+                operation, left.expression, right.expression
+            )
             result = comparison if result is None else result & comparison
 
         assert result is not None
@@ -304,7 +297,9 @@ class _Compiler:
                 or not isinstance(arguments[0], ast.Constant)
                 or type(arguments[0].value) is not str
             ):
-                self.fail(node, 'col() requires one string literal, e.g. col("amount").')
+                self.fail(
+                    node, 'col() requires one string literal, e.g. col("amount").'
+                )
             column = self.columns.get(cast(str, arguments[0].value))
             if column is None:
                 self.fail(arguments[0], "Unknown column.")
@@ -493,7 +488,9 @@ class _Compiler:
         if name == "abs":
             return _TypedExpression(value.expression.abs(), value.dtype, value.nullable)
         if name == "round":
-            return _TypedExpression(value.expression.round(), value.dtype, value.nullable)
+            return _TypedExpression(
+                value.expression.round(), value.dtype, value.nullable
+            )
         if name == "sqrt":
             expression = value.expression.sqrt()
             dtype = "number"

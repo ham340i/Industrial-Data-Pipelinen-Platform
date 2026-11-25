@@ -87,7 +87,7 @@ def test_unsafe_or_mistyped_expressions_are_rejected(source: str):
 
 def test_error_position_points_to_unknown_function():
     with pytest.raises(ExpressionError) as error:
-        compile_expression('1 + unknown(2)', schema())
+        compile_expression("1 + unknown(2)", schema())
 
     assert error.value.position == 5
 
