@@ -46,6 +46,17 @@ const normalized = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, "");
 const object = (value: unknown): value is Schema =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
+function assertPublicObject(value: Schema, depth: number) {
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null)
+    throw new Error("Configuration must contain plain JSON objects.");
+  for (const [key, item] of Object.entries(value)) {
+    if (forbidden.has(normalized(key)))
+      throw new Error("Use resource references instead of credential fields.");
+    assertPublic(item, depth + 1);
+  }
+}
+
 export function assertPublic(
   value: unknown,
   depth = 0,
@@ -63,16 +74,7 @@ export function assertPublic(
     return;
   }
   if (object(value)) {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype !== Object.prototype && prototype !== null)
-      throw new Error("Configuration must contain plain JSON objects.");
-    for (const [key, item] of Object.entries(value)) {
-      if (forbidden.has(normalized(key)))
-        throw new Error(
-          "Use resource references instead of credential fields.",
-        );
-      assertPublic(item, depth + 1);
-    }
+    assertPublicObject(value, depth);
     return;
   }
   throw new Error("Configuration must contain finite JSON values.");
@@ -101,38 +103,35 @@ const allowed = new Set([
   "additionalProperties",
 ]);
 
-function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
-  if (!object(input)) throw new Error("A field schema is invalid.");
-  let schema = input;
-  let nullable = false;
-  if (input.anyOf !== undefined && !Array.isArray(input.anyOf))
-    throw new Error("This union schema is invalid.");
-  if (Array.isArray(input.anyOf)) {
-    const choices = input.anyOf;
-    const nonNull = choices.filter(
-      (choice) => !object(choice) || choice.type !== "null",
-    );
-    if (choices.length !== 2 || nonNull.length !== 1 || !object(nonNull[0]))
-      throw new Error("This union schema is not supported.");
-    const nullChoice = choices.find(
-      (choice) => object(choice) && choice.type === "null",
-    ) as Schema;
-    if (
-      input.type !== undefined ||
-      nonNull[0].anyOf !== undefined ||
-      Object.keys(nullChoice).some(
-        (key) => !["type", "title", "description"].includes(key),
-      ) ||
-      (input.enum !== undefined && nonNull[0].enum !== undefined) ||
-      (input.const !== undefined && nonNull[0].const !== undefined)
-    )
-      throw new Error("This composed union is not supported.");
-    nullable =
-      (!Array.isArray(input.enum) || input.enum.includes(null)) &&
-      (input.const === undefined || input.const === null);
-    schema = { ...input, ...nonNull[0] };
-    delete schema.anyOf;
-  }
+function nullableFieldSchema(input: Schema, choices: unknown[]) {
+  const nonNull = choices.filter(
+    (choice) => !object(choice) || choice.type !== "null",
+  );
+  if (choices.length !== 2 || nonNull.length !== 1 || !object(nonNull[0]))
+    throw new Error("This union schema is not supported.");
+  const nullChoice = choices.find(
+    (choice) => object(choice) && choice.type === "null",
+  ) as Schema;
+  const variant = nonNull[0];
+  if (
+    input.type !== undefined ||
+    variant.anyOf !== undefined ||
+    Object.keys(nullChoice).some(
+      (key) => !["type", "title", "description"].includes(key),
+    ) ||
+    (input.enum !== undefined && variant.enum !== undefined) ||
+    (input.const !== undefined && variant.const !== undefined)
+  )
+    throw new Error("This composed union is not supported.");
+  const nullable =
+    (!Array.isArray(input.enum) || input.enum.includes(null)) &&
+    (input.const === undefined || input.const === null);
+  const schema = { ...input, ...variant };
+  delete schema.anyOf;
+  return { schema, nullable };
+}
+
+function validateFieldType(schema: Schema) {
   if (Object.keys(schema).some((key) => !allowed.has(key)))
     throw new Error("This field uses an unsupported schema rule.");
   if (
@@ -151,6 +150,9 @@ function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
     if (item.schema.type === "array")
       throw new Error("Nested arrays are not supported.");
   }
+}
+
+function validateSchemaChoices(schema: Schema) {
   if (
     schema.enum !== undefined &&
     (!Array.isArray(schema.enum) || schema.enum.length === 0)
@@ -171,6 +173,9 @@ function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
     !["string", "number", "boolean"].includes(typeof schema.const)
   )
     throw new Error("Only scalar fixed values are supported.");
+}
+
+function validateSchemaConstraints(schema: Schema) {
   for (const key of [
     "minimum",
     "maximum",
@@ -198,7 +203,19 @@ function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
     typeof schema.uniqueItems !== "boolean"
   )
     throw new Error("A uniqueness constraint is invalid.");
-  return { schema, nullable };
+}
+
+function fieldSchema(input: unknown): { schema: Schema; nullable: boolean } {
+  if (!object(input)) throw new Error("A field schema is invalid.");
+  if (input.anyOf !== undefined && !Array.isArray(input.anyOf))
+    throw new Error("This union schema is invalid.");
+  const field = Array.isArray(input.anyOf)
+    ? nullableFieldSchema(input, input.anyOf)
+    : { schema: input, nullable: false };
+  validateFieldType(field.schema);
+  validateSchemaChoices(field.schema);
+  validateSchemaConstraints(field.schema);
+  return field;
 }
 
 // Registry references are local definitions only; cycles and expansion are bounded.
@@ -288,24 +305,22 @@ export function fieldsFromSchema(input: unknown): ConfigField[] {
   });
 }
 
-function validValue(
-  value: JsonValue,
-  schema: Schema,
-  nullable: boolean,
-): string | undefined {
-  if (value === null)
-    return nullable ? undefined : "A value is required; null is not allowed.";
-  const matches =
-    schema.type === "integer"
-      ? typeof value === "number" && Number.isInteger(value)
-      : schema.type === "number"
-        ? typeof value === "number" && Number.isFinite(value)
-        : schema.type === "array"
-          ? Array.isArray(value)
-          : schema.type === "object"
-            ? object(value)
-            : typeof value === schema.type;
-  if (!matches) return `Enter a valid ${String(schema.type)}.`;
+function matchesFieldType(value: Exclude<JsonValue, null>, type: unknown) {
+  switch (type) {
+    case "integer":
+      return typeof value === "number" && Number.isInteger(value);
+    case "number":
+      return typeof value === "number" && Number.isFinite(value);
+    case "array":
+      return Array.isArray(value);
+    case "object":
+      return object(value);
+    default:
+      return typeof value === type;
+  }
+}
+
+function choiceError(value: JsonValue, schema: Schema): string | undefined {
   if (
     Array.isArray(schema.enum) &&
     !schema.enum.some(
@@ -318,55 +333,69 @@ function validValue(
     JSON.stringify(schema.const) !== JSON.stringify(value)
   )
     return "This value must match the fixed schema value.";
-  if (typeof value === "number") {
-    if (typeof schema.minimum === "number" && value < schema.minimum)
-      return `Use a value of at least ${schema.minimum}.`;
-    if (typeof schema.maximum === "number" && value > schema.maximum)
-      return `Use a value of at most ${schema.maximum}.`;
-    if (
-      typeof schema.exclusiveMinimum === "number" &&
-      value <= schema.exclusiveMinimum
-    )
-      return `Use a value greater than ${schema.exclusiveMinimum}.`;
-    if (
-      typeof schema.exclusiveMaximum === "number" &&
-      value >= schema.exclusiveMaximum
-    )
-      return `Use a value below ${schema.exclusiveMaximum}.`;
+}
+
+function numberError(value: number, schema: Schema): string | undefined {
+  if (typeof schema.minimum === "number" && value < schema.minimum)
+    return `Use a value of at least ${schema.minimum}.`;
+  if (typeof schema.maximum === "number" && value > schema.maximum)
+    return `Use a value of at most ${schema.maximum}.`;
+  if (
+    typeof schema.exclusiveMinimum === "number" &&
+    value <= schema.exclusiveMinimum
+  )
+    return `Use a value greater than ${schema.exclusiveMinimum}.`;
+  if (
+    typeof schema.exclusiveMaximum === "number" &&
+    value >= schema.exclusiveMaximum
+  )
+    return `Use a value below ${schema.exclusiveMaximum}.`;
+}
+
+function stringError(value: string, schema: Schema): string | undefined {
+  const length = Array.from(value).length;
+  if (typeof schema.minLength === "number" && length < schema.minLength)
+    return `Use at least ${schema.minLength} characters.`;
+  if (typeof schema.maxLength === "number" && length > schema.maxLength)
+    return `Use at most ${schema.maxLength} characters.`;
+}
+
+function listError(value: JsonValue[], schema: Schema): string | undefined {
+  if (typeof schema.minItems === "number" && value.length < schema.minItems)
+    return `Use at least ${schema.minItems} items.`;
+  if (typeof schema.maxItems === "number" && value.length > schema.maxItems)
+    return `Use at most ${schema.maxItems} items.`;
+  if (
+    schema.uniqueItems === true &&
+    new Set(value.map((item) => JSON.stringify(item))).size !== value.length
+  )
+    return "Items must be unique.";
+  const item = fieldSchema(schema.items);
+  for (const entry of value) {
+    const error = validValue(entry, item.schema, item.nullable);
+    if (error) return `List item: ${error}`;
   }
-  if (typeof value === "string") {
-    const length = Array.from(value).length;
-    if (typeof schema.minLength === "number" && length < schema.minLength)
-      return `Use at least ${schema.minLength} characters.`;
-    if (typeof schema.maxLength === "number" && length > schema.maxLength)
-      return `Use at most ${schema.maxLength} characters.`;
-  }
+}
+
+function validValue(
+  value: JsonValue,
+  schema: Schema,
+  nullable: boolean,
+): string | undefined {
+  if (value === null)
+    return nullable ? undefined : "A value is required; null is not allowed.";
+  if (!matchesFieldType(value, schema.type))
+    return `Enter a valid ${String(schema.type)}.`;
+  const error = choiceError(value, schema);
+  if (error) return error;
+  if (typeof value === "number") return numberError(value, schema);
+  if (typeof value === "string") return stringError(value, schema);
   if (object(value) && schema.type === "object") {
-    const issues = validateConfiguration(
-      fieldsFromSchema(schema),
-      value as Configuration,
-    );
-    if (issues.length) {
-      const issue = issues[0];
+    const [issue] = validateConfiguration(fieldsFromSchema(schema), value);
+    if (issue)
       return `${issue.field ? `${issue.field}: ` : ""}${issue.message}`;
-    }
   }
-  if (Array.isArray(value)) {
-    if (typeof schema.minItems === "number" && value.length < schema.minItems)
-      return `Use at least ${schema.minItems} items.`;
-    if (typeof schema.maxItems === "number" && value.length > schema.maxItems)
-      return `Use at most ${schema.maxItems} items.`;
-    if (
-      schema.uniqueItems === true &&
-      new Set(value.map((item) => JSON.stringify(item))).size !== value.length
-    )
-      return "Items must be unique.";
-    const item = fieldSchema(schema.items);
-    for (const entry of value) {
-      const error = validValue(entry, item.schema, item.nullable);
-      if (error) return `List item: ${error}`;
-    }
-  }
+  if (Array.isArray(value)) return listError(value, schema);
 }
 
 export function defaultsFor(fields: ConfigField[]): Configuration {

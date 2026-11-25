@@ -9,7 +9,6 @@ Measured with ESLint's `max-lines-per-function` (50) and `complexity` (15) rules
 | File | Function | Lines | Complexity |
 |---|---|---:|---:|
 | `RunControls.tsx` | `RunControls` | 230 | 42 |
-| `configuration/BlockConfigPanel.tsx` | `ConfigForm` | 249 | 27 (inner field renderer) |
 | `App.tsx` | `App` | 188 | within limit |
 | `Canvas.tsx` | `GraphCanvas`, `BlockCard` | 176, 85 | within limit, 16 |
 | `PipelineControls.tsx` | `PipelineControls` | 169 | 25 |
@@ -26,7 +25,7 @@ Other components exceed 50 lines by smaller margins. No frontend source file exc
 
 ## What is not justified
 
-The complexity figures above are real and are not defended here. `RunControls`, `PipelineControls`, `WorkspaceSettings`, `ConfigForm`, `BlockCard`, `Projects` and `Session` mix request state, derived status text and rendering. The state handling belongs in hooks and the per-field rendering in child components.
+The complexity figures above are real and are not defended here. `RunControls`, `PipelineControls`, `WorkspaceSettings`, `BlockCard`, `Projects` and `Session` mix request state, derived status text and rendering. The state handling belongs in hooks and the per-field rendering in child components.
 
 These were not refactored for Release 1 because the end-to-end browser workflow that would catch regressions in them ([#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31)) is not merged yet. Refactoring user-interface state without that safety net on the release date was judged a larger risk than carrying the debt for one iteration.
 
@@ -34,4 +33,8 @@ The API response parsers (`parsePreview`, `parseRun`, `parseDefinition`, `execut
 
 ## Plan
 
-Refactor the components listed above after [#31](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/31) merges. Add the two ESLint rules as warnings, then as errors once the list above is empty.
+Issue [#130](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/issues/130)
+enforces both limits on production TypeScript with a checked-in ESLint baseline
+for existing findings outside the configuration form. Prune resolved entries with
+`npx eslint . --prune-suppressions` from `frontend/` as this work continues.
+Configuration JSX length exceptions are documented on the affected functions.

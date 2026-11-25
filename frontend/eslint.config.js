@@ -14,4 +14,15 @@ export default tseslint.config(
     plugins: { "react-hooks": hooks },
     rules: hooks.configs.recommended.rules,
   },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}", "src/test/**"],
+    rules: {
+      complexity: ["error", 15],
+      "max-lines-per-function": [
+        "error",
+        { max: 50, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
 );

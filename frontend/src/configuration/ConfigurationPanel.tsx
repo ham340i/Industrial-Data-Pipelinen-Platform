@@ -8,6 +8,7 @@ import { fieldMessages } from "../state/validation";
 import { BlockConfigPanel, type RegistryState } from "./BlockConfigPanel";
 import { assertPublic } from "./schema";
 
+// eslint-disable-next-line max-lines-per-function -- Keep the registry query, unsafe-value recovery, and accessible builder sidebar together.
 export function ConfigurationPanel({
   diagnostics = [],
   staleDiagnostics = false,
