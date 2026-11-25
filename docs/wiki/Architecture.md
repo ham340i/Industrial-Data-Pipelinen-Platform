@@ -54,6 +54,10 @@ flowchart TD
 
 Dependencies point downward: API modules import services and domain; blocks never import the API, the executor or the database.
 
+The builder's configuration form separates schema validation, field diagnostics,
+and field controls. The backend remains responsible for validating the pipeline
+before execution. See the [configuration form design](https://github.com/ham340i/Industrial-Data-Pipelinen-Platform/blob/main/docs/architecture/configuration-form.md).
+
 ## Domain model (metadata)
 
 ```mermaid

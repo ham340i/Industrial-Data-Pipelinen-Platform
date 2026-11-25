@@ -10,6 +10,7 @@
 - [Architecture decision records](decisions/README.md)
 - [Artifact governance and bounded DuckDB queries](artifact-governance.md)
 - [Contextual preview and run error recovery](error-recovery.md)
+- [Configuration form validation and rendering](configuration-form.md)
 
 The team-supplied [Release 1 target](release-1-target.md) specifies frameworks and persistence. Current metadata implementation: [models](../../app/metadata/models.py), [migration](../../migrations/versions/0001_initial_metadata_foundation.py), [ADR-0002](decisions/ADR-0002-sqlite-metadata.md) and [tests](../testing/issue-7-sqlite-metadata.md). Implementation does not imply complete release acceptance.
 

@@ -1,20 +1,27 @@
 // AI contribution: 50% or more AI-generated
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
-  Alert,
-  Button,
-  Paper,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
 import {
   assertPublic,
   defaultsFor,
   fieldsFromSchema,
   validateConfiguration,
 } from "./schema";
-import type { Configuration, ConfigField, JsonValue } from "./schema";
+import type {
+  Configuration,
+  ConfigField,
+  ConfigIssue,
+  JsonValue,
+} from "./schema";
+
+import { ConfigFormField } from "./ConfigFormField";
 
 export interface SelectedBlock {
   nodeId: string;
@@ -68,149 +75,147 @@ function RecoveryNotice({
   );
 }
 
-function StructuredField({
-  field,
-  value,
-  onChange,
-  issue,
-  previousIssue,
-  disabled,
+function focusConfiguration(
+  form: HTMLElement | null,
+  requested: string | null,
+) {
+  if (!form) return;
+  const controls = Array.from(
+    form.querySelectorAll<HTMLElement>(
+      "input[data-config-field]:not([type=hidden]):not([readonly]):not(:disabled), textarea[data-config-field]:not([readonly]):not(:disabled), select[data-config-field]:not(:disabled)",
+    ),
+  ).filter((input) => !input.closest("[hidden], [aria-hidden=true], [inert]"));
+  const field = requested?.split(/[.[]/, 1)[0];
+  const input = field
+    ? (controls.find((input) => input.dataset.configField === requested) ??
+      controls.find((input) => input.dataset.configField === field))
+    : (controls.find(
+        (input) => input.getAttribute("aria-invalid") === "true",
+      ) ?? controls[0]);
+  (input ?? form).focus();
+}
+
+function readFields(schema: unknown) {
+  try {
+    return fieldsFromSchema(schema);
+  } catch {
+    return null;
+  }
+}
+
+function ConfigurationIssues({
+  nodeId,
+  issues,
+  updateError,
 }: {
-  field: ConfigField;
-  value: JsonValue | undefined;
-  onChange: (value: JsonValue | undefined) => void;
-  issue?: string;
-  previousIssue?: string;
-  disabled?: boolean;
+  nodeId: string;
+  issues: ConfigIssue[];
+  updateError: string | null;
 }) {
-  const text =
-    value === undefined
-      ? ""
-      : typeof value === "string"
-        ? value
-        : JSON.stringify(value);
-  const parseError =
-    value !== undefined &&
-    value !== null &&
-    (field.type === "array"
-      ? !Array.isArray(value)
-      : typeof value !== "object" || Array.isArray(value));
-  const kind = field.type === "array" ? "list" : "object";
   return (
-    <TextField
-      label={field.label}
-      disabled={disabled}
-      slotProps={{ htmlInput: { "data-config-field": field.name } }}
-      fullWidth
-      multiline
-      minRows={2}
-      value={text}
-      required={field.required}
-      error={parseError || Boolean(issue)}
-      helperText={
-        parseError
-          ? `Enter a valid JSON ${kind}.`
-          : (issue ??
-            previousIssue ??
-            field.description ??
-            (field.type === "object"
-              ? "Enter a JSON object."
-              : 'Enter a JSON list, such as ["column_a"].'))
-      }
-      onChange={(event) => {
-        const next = event.target.value;
-        if (!next.trim()) {
-          onChange(next);
-          return;
-        }
-        try {
-          const parsed: unknown = JSON.parse(next);
-          if (
-            field.type === "array"
-              ? !Array.isArray(parsed)
-              : parsed === null ||
-                typeof parsed !== "object" ||
-                Array.isArray(parsed)
-          )
-            throw new Error();
-          onChange(parsed as JsonValue);
-        } catch {
-          onChange(next);
-        }
-      }}
-    />
+    <>
+      {issues.length > 0 && (
+        <Alert severity="warning" role="status">
+          {issues.length} configuration{" "}
+          {issues.length === 1 ? "issue needs" : "issues need"} attention for
+          block {nodeId}.
+        </Alert>
+      )}
+      {updateError && <Alert severity="error">{updateError}</Alert>}
+      {issues
+        .filter((issue) => !issue.field)
+        .map((issue) => (
+          <Alert severity="warning" key={issue.message}>
+            {issue.message}
+          </Alert>
+        ))}
+    </>
   );
 }
 
-function ConfigForm({
-  selected,
-  block,
-  value,
-  onChange,
-  disabled = false,
-  serverErrors = {},
-  staleDiagnostics = false,
-  focusRequest,
-}: {
+type ConfigFormProps = Omit<
+  BlockConfigPanelProps,
+  "selected" | "registry" | "onRetry"
+> & {
   selected: SelectedBlock;
   block: RegistryBlock;
-  value: Configuration;
-  onChange: BlockConfigPanelProps["onChange"];
-  disabled?: boolean;
-  serverErrors?: Record<string, string[]>;
-  staleDiagnostics?: boolean;
-  focusRequest?: BlockConfigPanelProps["focusRequest"];
+};
+
+function ConfigurationFields({
+  nodeId,
+  fields,
+  effective,
+  issues,
+  serverErrors,
+  staleDiagnostics,
+  disabled,
+  update,
+}: {
+  nodeId: string;
+  fields: ConfigField[];
+  effective: Configuration;
+  issues: ConfigIssue[];
+  serverErrors: Record<string, string[]>;
+  staleDiagnostics: boolean;
+  disabled: boolean;
+  update: (name: string, value: JsonValue | undefined) => void;
 }) {
-  const headingId = useId();
-  const formRef = useRef<HTMLElement>(null);
+  if (fields.length === 0)
+    return <Typography>This block needs no configuration.</Typography>;
+  return fields.map((field) => (
+    <ConfigFormField
+      key={field.name}
+      field={field}
+      nodeId={nodeId}
+      value={effective[field.name]}
+      issues={issues}
+      serverErrors={serverErrors}
+      staleDiagnostics={staleDiagnostics}
+      disabled={disabled}
+      onChange={(value) => update(field.name, value)}
+    />
+  ));
+}
+
+function useConfigurationUpdate(
+  nodeId: string,
+  onChange: BlockConfigPanelProps["onChange"],
+) {
   const [updateError, setUpdateError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!focusRequest || disabled) return;
-    const controls = Array.from(
-      formRef.current?.querySelectorAll<HTMLElement>(
-        "input[data-config-field]:not([type=hidden]):not([readonly]):not(:disabled), textarea[data-config-field]:not([readonly]):not(:disabled), select[data-config-field]:not(:disabled)",
-      ) ?? [],
-    ).filter(
-      (input) => !input.closest("[hidden], [aria-hidden=true], [inert]"),
-    );
-    const field = focusRequest.field?.split(/[.[]/, 1)[0];
-    const input = field
-      ? (controls.find(
-          (input) => input.dataset.configField === focusRequest.field,
-        ) ?? controls.find((input) => input.dataset.configField === field))
-      : (controls.find(
-          (input) => input.getAttribute("aria-invalid") === "true",
-        ) ?? controls[0]);
-    (input ?? formRef.current)?.focus();
-  }, [focusRequest, disabled]);
-  let fields: ConfigField[];
-  try {
-    fields = fieldsFromSchema(block.config_schema);
-  } catch {
-    return (
-      <RecoveryNotice focusRequest={focusRequest} disabled={disabled}>
-        This block has an unsupported or unsafe configuration schema. Existing
-        values have been preserved. Ask the block owner to provide a supported
-        public schema.
-      </RecoveryNotice>
-    );
-  }
-  const effective = { ...defaultsFor(fields), ...value };
-  const issues = validateConfiguration(fields, effective);
-  const update = (name: string, next: JsonValue | undefined) => {
+  function update(
+    effective: Configuration,
+    name: string,
+    next: JsonValue | undefined,
+  ) {
     const config = { ...effective };
     if (next === undefined) delete config[name];
     else config[name] = next;
     try {
       assertPublic(config);
-      onChange(selected.nodeId, config);
+      onChange(nodeId, config);
       setUpdateError(null);
     } catch {
       setUpdateError(
         "Use logical resource references instead of runtime bindings or credential fields. This edit was not stored.",
       );
     }
-  };
+  }
+  return { updateError, update };
+}
+
+function ConfigFormLayout({
+  headingId,
+  formRef,
+  block,
+  nodeId,
+  children,
+}: {
+  headingId: string;
+  formRef: RefObject<HTMLElement | null>;
+  block: RegistryBlock;
+  nodeId: string;
+  children: ReactNode;
+}) {
   return (
     <Paper
       component="section"
@@ -226,162 +231,10 @@ function ConfigForm({
             Configure {block.name}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Block {selected.nodeId} · {block.version}
+            Block {nodeId} · {block.version}
           </Typography>
         </div>
-        {issues.length > 0 && (
-          <Alert severity="warning" role="status">
-            {issues.length} configuration{" "}
-            {issues.length === 1 ? "issue needs" : "issues need"} attention for
-            block {selected.nodeId}.
-          </Alert>
-        )}
-        {updateError && <Alert severity="error">{updateError}</Alert>}
-        {issues
-          .filter((issue) => !issue.field)
-          .map((issue) => (
-            <Alert severity="warning" key={issue.message}>
-              {issue.message}
-            </Alert>
-          ))}
-        {fields.map((field) => {
-          const current = effective[field.name];
-          const localIssue = issues.find(
-            (item) => item.field === field.name,
-          )?.message;
-          const remote = Object.entries(serverErrors)
-            .filter(
-              ([key]) =>
-                key === field.name ||
-                key.startsWith(`${field.name}.`) ||
-                key.startsWith(`${field.name}[`),
-            )
-            .flatMap(([, messages]) => messages);
-          const issue =
-            [
-              ...new Set(
-                [localIssue, ...(staleDiagnostics ? [] : remote)].filter(
-                  Boolean,
-                ),
-              ),
-            ].join(" ") || undefined;
-          const previousIssue =
-            staleDiagnostics && remote.length > 0
-              ? `Previous check: ${[...new Set(remote)].join(" ")}`
-              : undefined;
-          const helper =
-            issue ??
-            previousIssue ??
-            field.description ??
-            (field.required ? "Required" : "Optional");
-          const options = Array.isArray(field.schema.enum)
-            ? field.schema.enum
-            : field.type === "boolean"
-              ? [true, false]
-              : undefined;
-          return (
-            <Stack key={field.name} spacing={1}>
-              {field.type === "array" || field.type === "object" ? (
-                <StructuredField
-                  key={`${selected.nodeId}:${field.name}:${JSON.stringify(field.schema)}`}
-                  field={field}
-                  value={current}
-                  issue={issue}
-                  previousIssue={previousIssue}
-                  disabled={disabled}
-                  onChange={(next) => update(field.name, next)}
-                />
-              ) : options ? (
-                <TextField
-                  select
-                  disabled={disabled}
-                  slotProps={{
-                    select: { native: true },
-                    htmlInput: { "data-config-field": field.name },
-                  }}
-                  label={field.label}
-                  value={current === undefined ? "" : JSON.stringify(current)}
-                  required={field.required}
-                  error={Boolean(issue)}
-                  helperText={helper}
-                  onChange={(event) =>
-                    update(
-                      field.name,
-                      event.target.value === ""
-                        ? undefined
-                        : (JSON.parse(event.target.value) as JsonValue),
-                    )
-                  }
-                >
-                  <option value="">Not set</option>
-                  {options.map((option) => (
-                    <option
-                      key={JSON.stringify(option)}
-                      value={JSON.stringify(option)}
-                    >
-                      {String(option)}
-                    </option>
-                  ))}
-                  {field.nullable && !options.includes(null) && (
-                    <option value="null">Null</option>
-                  )}
-                </TextField>
-              ) : (
-                <TextField
-                  label={field.label}
-                  disabled={disabled}
-                  value={
-                    current === undefined || current === null
-                      ? ""
-                      : String(current)
-                  }
-                  required={field.required}
-                  error={Boolean(issue)}
-                  helperText={
-                    issue ??
-                    previousIssue ??
-                    (current === null ? "Explicit null value" : helper)
-                  }
-                  type={
-                    field.type === "number" || field.type === "integer"
-                      ? "number"
-                      : "text"
-                  }
-                  slotProps={{
-                    htmlInput: {
-                      "data-config-field": field.name,
-                      step: field.type === "integer" ? 1 : "any",
-                    },
-                  }}
-                  onChange={(event) => {
-                    const raw = event.target.value;
-                    update(
-                      field.name,
-                      field.type === "string"
-                        ? raw
-                        : raw === ""
-                          ? ""
-                          : Number(raw),
-                    );
-                  }}
-                />
-              )}
-              {field.nullable && !options && (
-                <Button
-                  size="small"
-                  disabled={disabled}
-                  onClick={() => update(field.name, null)}
-                  sx={{ alignSelf: "flex-start" }}
-                >
-                  Set {field.label} to null
-                </Button>
-              )}
-            </Stack>
-          );
-        })}
-        {fields.length === 0 && (
-          <Typography>This block needs no configuration.</Typography>
-        )}
+        {children}
         <Typography variant="caption" color="text.secondary">
           Values stay with this block when selection changes. Use resource
           references for protected data. The server validates configuration
@@ -392,8 +245,97 @@ function ConfigForm({
   );
 }
 
-export function BlockConfigPanel(props: BlockConfigPanelProps) {
-  if (!props.selected)
+// eslint-disable-next-line max-lines-per-function -- Keep diagnostic and field rendering together with the focusable form region they describe.
+function ConfigForm({
+  selected,
+  block,
+  value,
+  onChange,
+  disabled = false,
+  serverErrors = {},
+  staleDiagnostics = false,
+  focusRequest,
+}: ConfigFormProps) {
+  const headingId = useId();
+  const formRef = useRef<HTMLElement>(null);
+  const { updateError, update } = useConfigurationUpdate(
+    selected.nodeId,
+    onChange,
+  );
+  useEffect(() => {
+    if (focusRequest && !disabled)
+      focusConfiguration(formRef.current, focusRequest.field);
+  }, [focusRequest, disabled]);
+  const fields = readFields(block.config_schema);
+  if (!fields) {
+    return (
+      <RecoveryNotice focusRequest={focusRequest} disabled={disabled}>
+        This block has an unsupported or unsafe configuration schema. Existing
+        values have been preserved. Ask the block owner to provide a supported
+        public schema.
+      </RecoveryNotice>
+    );
+  }
+  const effective = { ...defaultsFor(fields), ...value };
+  const issues = validateConfiguration(fields, effective);
+  return (
+    <ConfigFormLayout
+      formRef={formRef}
+      headingId={headingId}
+      block={block}
+      nodeId={selected.nodeId}
+    >
+      <ConfigurationIssues
+        nodeId={selected.nodeId}
+        issues={issues}
+        updateError={updateError}
+      />
+      <ConfigurationFields
+        nodeId={selected.nodeId}
+        fields={fields}
+        effective={effective}
+        issues={issues}
+        serverErrors={serverErrors}
+        staleDiagnostics={staleDiagnostics}
+        disabled={disabled}
+        update={(name, next) => update(effective, name, next)}
+      />
+    </ConfigFormLayout>
+  );
+}
+
+function registryNotice({
+  status,
+  focusRequest,
+  disabled,
+  onRetry,
+}: Pick<BlockConfigPanelProps, "focusRequest" | "disabled" | "onRetry"> & {
+  status: "loading" | "error";
+}) {
+  const loading = status === "loading";
+  return (
+    <RecoveryNotice
+      focusRequest={focusRequest}
+      disabled={disabled}
+      loading={loading}
+    >
+      {loading
+        ? "Loading block definitions. Your configuration is preserved."
+        : "Block definitions could not be loaded. Your configuration is preserved."}
+      {!loading && onRetry && (
+        <Button onClick={onRetry}>Retry definitions</Button>
+      )}
+    </RecoveryNotice>
+  );
+}
+
+export function BlockConfigPanel({
+  selected,
+  registry,
+  onRetry,
+  ...props
+}: BlockConfigPanelProps) {
+  if (!selected)
     return (
       <Paper variant="outlined" sx={{ p: 3 }}>
         <Typography component="h2" variant="h6">
@@ -402,32 +344,16 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
         <Typography sx={{ mt: 1 }}>Select a block to configure it.</Typography>
       </Paper>
     );
-  if (props.registry.status === "loading")
-    return (
-      <RecoveryNotice
-        focusRequest={props.focusRequest}
-        disabled={props.disabled}
-        loading
-      >
-        Loading block definitions. Your configuration is preserved.
-      </RecoveryNotice>
-    );
-  if (props.registry.status === "error")
-    return (
-      <RecoveryNotice
-        focusRequest={props.focusRequest}
-        disabled={props.disabled}
-      >
-        Block definitions could not be loaded. Your configuration is preserved.
-        {props.onRetry && (
-          <Button onClick={props.onRetry}>Retry definitions</Button>
-        )}
-      </RecoveryNotice>
-    );
-  const matches = props.registry.blocks.filter(
+  if (registry.status !== "ready")
+    return registryNotice({
+      status: registry.status,
+      focusRequest: props.focusRequest,
+      disabled: props.disabled,
+      onRetry,
+    });
+  const matches = registry.blocks.filter(
     (item) =>
-      item.block_id === props.selected?.blockId &&
-      item.version === props.selected.version,
+      item.block_id === selected.blockId && item.version === selected.version,
   );
   if (matches.length !== 1)
     return (
@@ -441,15 +367,10 @@ export function BlockConfigPanel(props: BlockConfigPanelProps) {
     );
   return (
     <ConfigForm
-      key={`${props.selected.nodeId}:${props.selected.blockId}:${props.selected.version}`}
-      selected={props.selected}
+      key={`${selected.nodeId}:${selected.blockId}:${selected.version}`}
+      {...props}
+      selected={selected}
       block={matches[0]}
-      value={props.value}
-      onChange={props.onChange}
-      disabled={props.disabled}
-      serverErrors={props.serverErrors}
-      staleDiagnostics={props.staleDiagnostics}
-      focusRequest={props.focusRequest}
     />
   );
 }

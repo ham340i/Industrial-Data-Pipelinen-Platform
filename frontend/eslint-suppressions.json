@@ -1,0 +1,93 @@
+{
+  "src/App.tsx": {
+    "max-lines-per-function": {
+      "count": 3
+    }
+  },
+  "src/Builder.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/Canvas.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/OutputInspection.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/PipelineControls.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/PreviewPanel.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 4
+    }
+  },
+  "src/ProjectWorkspace.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/Projects.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/RunControls.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/RunMonitor.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/RunResult.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/ValidationPanel.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/WorkspaceSettings.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/state/editor.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  }
+}
