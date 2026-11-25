@@ -17,6 +17,34 @@ _MAX_LENGTH = 2048
 _MAX_NODES = 256
 _MAX_DEPTH = 32
 _NUMERIC = {"integer", "number"}
+_COLUMN_FUNCTION_ERROR = 'col() requires one string literal, e.g. col("amount").'
+_ALLOWED_FUNCTIONS = {
+    "abs",
+    "ceil",
+    "coalesce",
+    "concat",
+    "contains",
+    "date_diff",
+    "day",
+    "ends_with",
+    "floor",
+    "is_not_null",
+    "is_null",
+    "length",
+    "log",
+    "lower",
+    "month",
+    "replace",
+    "round",
+    "sqrt",
+    "starts_with",
+    "trim",
+    "upper",
+    "year",
+}
+_NULL_FUNCTIONS = {"is_null", "is_not_null"}
+_STRING_UNARY_FUNCTIONS = {"lower", "upper", "trim", "length", "year", "month", "day"}
+_STRING_MATCH_FUNCTIONS = {"contains", "starts_with", "ends_with"}
 
 
 class ExpressionError(ValueError):
@@ -122,11 +150,12 @@ class _Compiler:
         column = self.columns.get(node.id)
         if column is None:
             self.fail(node, "Unknown column.")
-        return _TypedExpression(
-            pl.col(column.name),
-            column.dtype,
-            column.nullable,
-        )
+        else:
+            return _TypedExpression(
+                pl.col(column.name),
+                column.dtype,
+                column.nullable,
+            )
 
     def _unary(self, node: ast.UnaryOp, depth: int) -> _TypedExpression:
         if (
@@ -206,14 +235,9 @@ class _Compiler:
 
         dtype: DType = "number" if "number" in (left.dtype, right.dtype) else "integer"
 
-        if left.dtype is None:
+        if left.dtype != dtype:
             left = self._cast_numeric(left, dtype)
-        elif left.dtype != dtype:
-            left = self._cast_numeric(left, dtype)
-
-        if right.dtype is None:
-            right = self._cast_numeric(right, dtype)
-        elif right.dtype != dtype:
+        if right.dtype != dtype:
             right = self._cast_numeric(right, dtype)
 
         return left, right, dtype
@@ -250,51 +274,63 @@ class _Compiler:
         values = [self.compile(node.left, depth + 1)] + [
             self.compile(value, depth + 1) for value in node.comparators
         ]
+        comparisons = []
 
-        result: pl.Expr | None = None
         for index, operation in enumerate(node.ops):
-            if not isinstance(
+            left, right = self._comparison_operands(
+                node,
                 operation,
-                (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE),
-            ):
-                self.fail(node, "Comparison operator is not allowed.")
-
-            left = values[index]
-            right = values[index + 1]
-            if left.dtype is None or right.dtype is None:
-                self.fail(node, "Compare nulls with is_null() or is_not_null().")
-
-            numeric_pair = left.dtype in _NUMERIC and right.dtype in _NUMERIC
-            same_type = left.dtype == right.dtype
-            equality = isinstance(operation, (ast.Eq, ast.NotEq))
-
-            if not (same_type or numeric_pair):
-                self.fail(node, "Comparison operands have incompatible types.")
-            if not equality and left.dtype == "boolean":
-                self.fail(
-                    node,
-                    "Boolean values support equality comparisons only.",
-                )
-
-            if numeric_pair and "number" in (left.dtype, right.dtype):
-                if left.dtype != "number":
-                    left = self._cast_numeric(left, "number")
-                if right.dtype != "number":
-                    right = self._cast_numeric(right, "number")
-
-            comparison = self._compare_pair(
-                operation,
-                left.expression,
-                right.expression,
+                values[index],
+                values[index + 1],
             )
-            result = comparison if result is None else result & comparison
+            comparisons.append(
+                self._compare_pair(operation, left.expression, right.expression)
+            )
 
-        assert result is not None
+        if not comparisons:
+            self.fail(node, "Comparison requires at least one operator.")
+
+        expression = comparisons[0]
+        for comparison in comparisons[1:]:
+            expression = expression & comparison
+
         return _TypedExpression(
-            result,
+            expression,
             "boolean",
             any(value.nullable for value in values),
         )
+
+    def _comparison_operands(
+        self,
+        node: ast.Compare,
+        operation: ast.cmpop,
+        left: _TypedExpression,
+        right: _TypedExpression,
+    ) -> tuple[_TypedExpression, _TypedExpression]:
+        if not isinstance(
+            operation,
+            (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE),
+        ):
+            self.fail(node, "Comparison operator is not allowed.")
+        if left.dtype is None or right.dtype is None:
+            self.fail(node, "Compare nulls with is_null() or is_not_null().")
+
+        numeric_pair = left.dtype in _NUMERIC and right.dtype in _NUMERIC
+        same_type = left.dtype == right.dtype
+        equality = isinstance(operation, (ast.Eq, ast.NotEq))
+
+        if not (same_type or numeric_pair):
+            self.fail(node, "Comparison operands have incompatible types.")
+        if not equality and left.dtype == "boolean":
+            self.fail(node, "Boolean values support equality comparisons only.")
+
+        if numeric_pair and "number" in (left.dtype, right.dtype):
+            if left.dtype != "number":
+                left = self._cast_numeric(left, "number")
+            if right.dtype != "number":
+                right = self._cast_numeric(right, "number")
+
+        return left, right
 
     @staticmethod
     def _compare_pair(
@@ -326,63 +362,37 @@ class _Compiler:
         arguments = list(node.args)
 
         if name == "col":
-            if len(arguments) != 1:
-                self.fail(
-                    node,
-                    'col() requires one string literal, e.g. col("amount").',
-                )
+            return self._column_call(node, arguments)
 
-            argument = arguments[0]
-            if not isinstance(argument, ast.Constant):
-                self.fail(
-                    node,
-                    'col() requires one string literal, e.g. col("amount").',
-                )
-            if not isinstance(argument.value, str):
-                self.fail(
-                    node,
-                    'col() requires one string literal, e.g. col("amount").',
-                )
+        if name not in _ALLOWED_FUNCTIONS:
+            self.fail(node.func, "Unknown function.")
 
-            column = self.columns.get(argument.value)
-            if column is None:
-                self.fail(argument, "Unknown column.")
+        compiled = [self.compile(argument, depth + 1) for argument in arguments]
+        return self._call_function(node, name, compiled)
 
+    def _column_call(
+        self,
+        node: ast.Call,
+        arguments: list[ast.expr],
+    ) -> _TypedExpression:
+        if len(arguments) != 1:
+            self.fail(node, _COLUMN_FUNCTION_ERROR)
+
+        argument = arguments[0]
+        if not isinstance(argument, ast.Constant):
+            self.fail(node, _COLUMN_FUNCTION_ERROR)
+        if not isinstance(argument.value, str):
+            self.fail(node, _COLUMN_FUNCTION_ERROR)
+
+        column = self.columns.get(argument.value)
+        if column is None:
+            self.fail(argument, "Unknown column.")
+        else:
             return _TypedExpression(
                 pl.col(column.name),
                 column.dtype,
                 column.nullable,
             )
-
-        allowed = {
-            "abs",
-            "ceil",
-            "coalesce",
-            "concat",
-            "contains",
-            "date_diff",
-            "day",
-            "ends_with",
-            "floor",
-            "is_not_null",
-            "is_null",
-            "length",
-            "log",
-            "lower",
-            "month",
-            "replace",
-            "round",
-            "sqrt",
-            "starts_with",
-            "trim",
-            "upper",
-            "year",
-        }
-        if name not in allowed:
-            self.fail(node.func, "Unknown function.")
-
-        compiled = [self.compile(argument, depth + 1) for argument in arguments]
-        return self._call_function(node, name, compiled)
 
     def _call_function(
         self,
@@ -390,152 +400,201 @@ class _Compiler:
         name: str,
         arguments: list[_TypedExpression],
     ) -> _TypedExpression:
-        if name in {"is_null", "is_not_null"}:
-            self._arity(node, name, arguments, 1)
-            expression = (
-                arguments[0].expression.is_null()
-                if name == "is_null"
-                else arguments[0].expression.is_not_null()
-            )
-            return _TypedExpression(expression, "boolean", False)
-
+        if name in _NULL_FUNCTIONS:
+            return self._null_function(node, name, arguments)
         if name == "coalesce":
-            if len(arguments) < 2:
-                self.fail(node, "coalesce() requires at least two arguments.")
+            return self._coalesce(node, arguments)
+        if name in _STRING_UNARY_FUNCTIONS:
+            return self._string_unary(node, name, arguments)
+        if name in _STRING_MATCH_FUNCTIONS:
+            return self._string_match(node, name, arguments)
+        if name == "concat":
+            return self._concat(node, arguments)
+        if name == "replace":
+            return self._replace(node, arguments)
+        if name == "date_diff":
+            return self._date_diff(node, arguments)
+        return self._math_function(node, name, arguments)
 
-            typed = [value.dtype for value in arguments if value.dtype is not None]
-            if not typed:
-                self.fail(
-                    node,
-                    "coalesce() requires a value with an inferable type.",
-                )
+    def _null_function(
+        self,
+        node: ast.Call,
+        name: str,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
+        self._arity(node, name, arguments, 1)
+        value = arguments[0]
+        if name == "is_null":
+            expression = value.expression.is_null()
+        else:
+            expression = value.expression.is_not_null()
+        return _TypedExpression(expression, "boolean", False)
 
-            coalesce_dtype = typed[0]
-            if any(
-                other != coalesce_dtype
-                and not (other in _NUMERIC and coalesce_dtype in _NUMERIC)
-                for other in typed[1:]
-            ):
+    def _coalesce(
+        self,
+        node: ast.Call,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
+        if len(arguments) < 2:
+            self.fail(node, "coalesce() requires at least two arguments.")
+
+        typed = [value.dtype for value in arguments if value.dtype is not None]
+        if not typed:
+            self.fail(
+                node,
+                "coalesce() requires a value with an inferable type.",
+            )
+
+        coalesce_dtype = typed[0]
+        for other in typed[1:]:
+            numeric_pair = other in _NUMERIC and coalesce_dtype in _NUMERIC
+            if other != coalesce_dtype and not numeric_pair:
                 self.fail(node, "coalesce() arguments have incompatible types.")
-            if "number" in typed:
+            if other == "number":
                 coalesce_dtype = "number"
 
-            expressions = []
-            for value in arguments:
-                if value.dtype is None or (
-                    value.dtype != coalesce_dtype and value.dtype in _NUMERIC
-                ):
-                    expressions.append(
-                        value.expression.cast(POLARS_TYPES[coalesce_dtype])
-                    )
-                else:
-                    expressions.append(value.expression)
+        expressions = []
+        for value in arguments:
+            if value.dtype is None or (
+                value.dtype != coalesce_dtype and value.dtype in _NUMERIC
+            ):
+                expressions.append(value.expression.cast(POLARS_TYPES[coalesce_dtype]))
+            else:
+                expressions.append(value.expression)
 
-            return _TypedExpression(
-                pl.coalesce(expressions),
-                coalesce_dtype,
-                all(value.nullable for value in arguments),
+        return _TypedExpression(
+            pl.coalesce(expressions),
+            coalesce_dtype,
+            all(value.nullable for value in arguments),
+        )
+
+    def _string_unary(
+        self,
+        node: ast.Call,
+        name: str,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
+        self._arity(node, name, arguments, 1)
+        value = arguments[0]
+        self._require(node, value, "string")
+
+        if name == "lower":
+            expression = value.expression.str.to_lowercase()
+            result_dtype: DType = "string"
+        elif name == "upper":
+            expression = value.expression.str.to_uppercase()
+            result_dtype = "string"
+        elif name == "trim":
+            expression = value.expression.str.strip_chars()
+            result_dtype = "string"
+        elif name == "length":
+            expression = value.expression.str.len_chars()
+            result_dtype = "integer"
+        else:
+            parsed = value.expression.str.to_date(
+                format="%Y-%m-%d",
+                strict=True,
             )
+            expression = getattr(parsed.dt, name)()
+            result_dtype = "integer"
 
-        if name in {"lower", "upper", "trim", "length", "year", "month", "day"}:
-            self._arity(node, name, arguments, 1)
-            value = arguments[0]
+        return _TypedExpression(expression, result_dtype, value.nullable)
+
+    def _string_match(
+        self,
+        node: ast.Call,
+        name: str,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
+        self._arity(node, name, arguments, 2)
+        for value in arguments:
             self._require(node, value, "string")
 
-            if name == "lower":
-                expression = value.expression.str.to_lowercase()
-                result_dtype: DType = "string"
-            elif name == "upper":
-                expression = value.expression.str.to_uppercase()
-                result_dtype = "string"
-            elif name == "trim":
-                expression = value.expression.str.strip_chars()
-                result_dtype = "string"
-            elif name == "length":
-                expression = value.expression.str.len_chars()
-                result_dtype = "integer"
-            else:
-                parsed = value.expression.str.to_date(
-                    format="%Y-%m-%d",
-                    strict=True,
-                )
-                expression = getattr(parsed.dt, name)()
-                result_dtype = "integer"
-
-            return _TypedExpression(expression, result_dtype, value.nullable)
-
-        if name in {"contains", "starts_with", "ends_with"}:
-            self._arity(node, name, arguments, 2)
-            for value in arguments:
-                self._require(node, value, "string")
-
-            text, fragment = arguments
-            if name == "contains":
-                expression = text.expression.str.contains(
-                    fragment.expression,
-                    literal=True,
-                )
-            elif name == "starts_with":
-                expression = text.expression.str.starts_with(fragment.expression)
-            else:
-                expression = text.expression.str.ends_with(fragment.expression)
-
-            return _TypedExpression(
-                expression,
-                "boolean",
-                text.nullable or fragment.nullable,
+        text, fragment = arguments
+        if name == "contains":
+            expression = text.expression.str.contains(
+                fragment.expression,
+                literal=True,
             )
+        elif name == "starts_with":
+            expression = text.expression.str.starts_with(fragment.expression)
+        else:
+            expression = text.expression.str.ends_with(fragment.expression)
 
-        if name == "concat":
-            if not arguments:
-                self.fail(node, "concat() requires at least one argument.")
-            for value in arguments:
-                self._require(node, value, "string")
+        return _TypedExpression(
+            expression,
+            "boolean",
+            text.nullable or fragment.nullable,
+        )
 
-            return _TypedExpression(
-                pl.concat_str(
-                    [value.expression for value in arguments],
-                    separator="",
-                ),
-                "string",
-                any(value.nullable for value in arguments),
-            )
+    def _concat(
+        self,
+        node: ast.Call,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
+        if not arguments:
+            self.fail(node, "concat() requires at least one argument.")
+        for value in arguments:
+            self._require(node, value, "string")
 
-        if name == "replace":
-            self._arity(node, name, arguments, 3)
-            for value in arguments:
-                self._require(node, value, "string")
+        return _TypedExpression(
+            pl.concat_str(
+                [value.expression for value in arguments],
+                separator="",
+            ),
+            "string",
+            any(value.nullable for value in arguments),
+        )
 
-            text, old, new = arguments
-            return _TypedExpression(
-                text.expression.str.replace_all(
-                    old.expression,
-                    new.expression,
-                    literal=True,
-                ),
-                "string",
-                any(value.nullable for value in arguments),
-            )
+    def _replace(
+        self,
+        node: ast.Call,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
+        self._arity(node, "replace", arguments, 3)
+        for value in arguments:
+            self._require(node, value, "string")
 
-        if name == "date_diff":
-            self._arity(node, name, arguments, 2)
-            for value in arguments:
-                self._require(node, value, "string")
+        text, old, new = arguments
+        return _TypedExpression(
+            text.expression.str.replace_all(
+                old.expression,
+                new.expression,
+                literal=True,
+            ),
+            "string",
+            any(value.nullable for value in arguments),
+        )
 
-            left = arguments[0].expression.str.to_date(
-                format="%Y-%m-%d",
-                strict=True,
-            )
-            right = arguments[1].expression.str.to_date(
-                format="%Y-%m-%d",
-                strict=True,
-            )
-            return _TypedExpression(
-                (left - right).dt.total_days(),
-                "integer",
-                arguments[0].nullable or arguments[1].nullable,
-            )
+    def _date_diff(
+        self,
+        node: ast.Call,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
+        self._arity(node, "date_diff", arguments, 2)
+        for value in arguments:
+            self._require(node, value, "string")
 
+        left = arguments[0].expression.str.to_date(
+            format="%Y-%m-%d",
+            strict=True,
+        )
+        right = arguments[1].expression.str.to_date(
+            format="%Y-%m-%d",
+            strict=True,
+        )
+        return _TypedExpression(
+            (left - right).dt.total_days(),
+            "integer",
+            arguments[0].nullable or arguments[1].nullable,
+        )
+
+    def _math_function(
+        self,
+        node: ast.Call,
+        name: str,
+        arguments: list[_TypedExpression],
+    ) -> _TypedExpression:
         self._arity(node, name, arguments, 1)
         value = arguments[0]
         if value.dtype not in _NUMERIC:
@@ -545,24 +604,26 @@ class _Compiler:
             return _TypedExpression(value.expression.abs(), value.dtype, value.nullable)
         if name == "round":
             return _TypedExpression(
-                value.expression.round(), value.dtype, value.nullable
+                value.expression.round(),
+                value.dtype,
+                value.nullable,
             )
         if name == "sqrt":
             expression = value.expression.sqrt()
-            math_dtype: DType = "number"
+            result_dtype: DType = "number"
         elif name == "log":
             expression = value.expression.log()
-            math_dtype = "number"
+            result_dtype = "number"
         elif name == "floor":
             expression = value.expression.floor().cast(pl.Int64)
-            math_dtype = "integer"
+            result_dtype = "integer"
         elif name == "ceil":
             expression = value.expression.ceil().cast(pl.Int64)
-            math_dtype = "integer"
+            result_dtype = "integer"
         else:
             self.fail(node, "Unknown function.")
 
-        return _TypedExpression(expression, math_dtype, value.nullable)
+        return _TypedExpression(expression, result_dtype, value.nullable)
 
     def _arity(
         self,

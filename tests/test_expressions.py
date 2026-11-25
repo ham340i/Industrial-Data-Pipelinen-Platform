@@ -24,7 +24,8 @@ def schema() -> DataSchema:
 
 
 def test_arithmetic_compiles_and_infers_type():
-    compiled = compile_expression('col("n") * 2 + 1', schema())
+    input_schema = schema()
+    compiled = compile_expression('col("n") * 2 + 1', input_schema)
 
     assert compiled.dtype == "integer"
     assert compiled.nullable
@@ -35,9 +36,10 @@ def test_arithmetic_compiles_and_infers_type():
 
 
 def test_comparison_and_boolean_logic_compile():
+    input_schema = schema()
     compiled = compile_expression(
         'col("n") >= 2 and col("n") < 5',
-        schema(),
+        input_schema,
     )
 
     assert compiled.dtype == "boolean"
@@ -49,7 +51,11 @@ def test_comparison_and_boolean_logic_compile():
 
 
 def test_string_and_date_functions_compile():
-    string_expression = compile_expression('upper(trim(col("label")))', schema())
+    input_schema = schema()
+    string_expression = compile_expression(
+        'upper(trim(col("label")))',
+        input_schema,
+    )
     assert string_expression.dtype == "string"
 
     string_frame = pl.DataFrame({"label": ["  kiln  "]})
@@ -58,7 +64,7 @@ def test_string_and_date_functions_compile():
         == "KILN"
     )
 
-    date_expression = compile_expression('year(col("label"))', schema())
+    date_expression = compile_expression('year(col("label"))', input_schema)
     assert date_expression.dtype == "integer"
 
     date_frame = pl.DataFrame({"label": ["2026-03-14"]})
@@ -79,15 +85,17 @@ def test_string_and_date_functions_compile():
     ],
 )
 def test_unsafe_or_mistyped_expressions_are_rejected(source: str):
+    input_schema = schema()
     with pytest.raises(ExpressionError) as error:
-        compile_expression(source, schema())
+        compile_expression(source, input_schema)
 
     assert error.value.position >= 1
 
 
 def test_error_position_points_to_unknown_function():
+    input_schema = schema()
     with pytest.raises(ExpressionError) as error:
-        compile_expression("1 + unknown(2)", schema())
+        compile_expression("1 + unknown(2)", input_schema)
 
     assert error.value.position == 5
 
