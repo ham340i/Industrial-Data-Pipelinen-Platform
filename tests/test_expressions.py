@@ -35,6 +35,17 @@ def test_arithmetic_compiles_and_infers_type():
     assert result["result"].to_list() == [5, None]
 
 
+def test_integer_division_uses_true_division():
+    input_schema = schema()
+    compiled = compile_expression('col("n") / 2', input_schema)
+
+    assert compiled.dtype == "number"
+
+    frame = pl.DataFrame({"n": [3, None]}, schema={"n": pl.Int64})
+    result = frame.select(compiled.expression.alias("result"))
+    assert result["result"].to_list() == [1.5, None]
+
+
 def test_comparison_and_boolean_logic_compile():
     input_schema = schema()
     compiled = compile_expression(

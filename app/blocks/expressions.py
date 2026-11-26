@@ -248,6 +248,17 @@ class _Compiler:
         left, right, dtype = self._numeric_pair(node, left, right)
         nullable = left.nullable or right.nullable
 
+        if isinstance(node.op, ast.Div):
+            expression = left.expression.cast(pl.Float64) / right.expression.cast(
+                pl.Float64
+            )
+            return _TypedExpression(
+                expression,
+                "number",
+                nullable,
+                _combined_invalid((left, right)),
+            )
+
         if dtype == "integer":
             left_wide = left.expression.cast(pl.Int128)
             right_wide = right.expression.cast(pl.Int128)
@@ -267,15 +278,12 @@ class _Compiler:
             expression = left.expression - right.expression
         elif isinstance(node.op, ast.Mult):
             expression = left.expression * right.expression
-        elif isinstance(node.op, ast.Div):
-            expression = left.expression / right.expression
         else:
             expression = left.expression % right.expression
 
-        result_dtype: DType = "number" if isinstance(node.op, ast.Div) else dtype
         return _TypedExpression(
             expression,
-            result_dtype,
+            dtype,
             nullable,
             _combined_invalid((left, right)),
         )
