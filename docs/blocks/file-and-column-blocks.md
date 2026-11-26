@@ -71,6 +71,7 @@ row order; inputs are detached by the SDK and are not mutated.
 | `transform.join` | `left_on`, `right_on`, `how`, `cardinality` | Joins two tables using explicit key pairs. Supported join types are `inner`, `left` and `outer`. Supported cardinalities are `many_to_many`, `one_to_one`, `one_to_many` and `many_to_one`. |
 | `transform.aggregate` | `group_by`, `operations` | Groups rows and applies bounded `count`, `sum`, `min`, `max` or `mean` operations. Output names are explicitly configured and must be unique. |
 | `transform.sort` | `columns` with `column`, `descending` and `nulls_last` | Performs stable multi-column sorting while preserving the complete input schema and row values. Null placement is explicitly configured per sort column. |
+| `transform.derived_column` | `name`, `expression` | Type-checks and evaluates a safe expression, then appends the result as a new column. Existing column names cannot be reused. |
 
 Filter `value_text` is the literal value for a string column, and JSON scalar
 text for numbers/integers/booleans. Examples: `"12.5"`, `"0"`, `"true"` as config
@@ -104,6 +105,35 @@ parsing follows finite IEEE Float64 semantics. Integers must fit signed Int64;
 unsupported input ranges fail before any transformation. Empty inputs retain
 their declared output schema. Filtering does not strengthen nullability merely
 because this particular result happens to contain no nulls.
+
+Derived Column expressions use `col("column name")` to reference columns.
+Supported syntax includes string, finite numeric, boolean and null literals;
+unary `+`, `-` and `not`; arithmetic `+`, `-`, `*`, `/` and `%`; comparisons
+`==`, `!=`, `<`, `<=`, `>` and `>=`; and boolean `and` and `or`. Parentheses
+can group expressions.
+
+The function whitelist is `abs`, `ceil`, `coalesce`, `concat`, `contains`,
+`date_diff`, `day`, `ends_with`, `floor`, `is_not_null`, `is_null`, `length`,
+`log`, `lower`, `month`, `replace`, `round`, `sqrt`, `starts_with`, `trim`,
+`upper` and `year`. Functions take positional arguments only. `contains` and
+`replace` treat search text literally.
+
+The type checker runs against the input schema before execution. Arithmetic
+requires numeric operands, except `+` also concatenates strings. Mixed integer
+and number arithmetic produces a number; division produces a number.
+Comparisons require compatible types, and boolean values support equality
+comparisons only. Use `is_null()` or `is_not_null()` to test nulls.
+`coalesce()` requires at least two compatible arguments. The output type and
+nullability are inferred and added to the output schema.
+
+Date functions accept ISO `YYYY-MM-DD` strings; they do not add date types to
+the table schema. `year`, `month` and `day` return integer parts.
+`date_diff(a, b)` returns the days from `b` to `a`.
+
+Unknown columns or functions, type mismatches, attribute access, indexing,
+keyword arguments and unsupported syntax are rejected with a 1-based character
+position. Expressions are bounded in length, size and nesting depth, and are
+compiled to Polars expressions without evaluating Python code.
 
 ## Sinks
 
