@@ -12,7 +12,6 @@ from app.blocks.files import CsvSource, JsonSource, ParquetSource
 from app.blocks.relational import Aggregate, Join
 from app.blocks.transforms import (
     Cast,
-    DerivedColumn,
     Filter,
     RenameColumns,
     SelectColumns,
@@ -36,7 +35,6 @@ for block in (
     JsonSource(),
     ParquetSource(),
     SelectColumns(),
-    DerivedColumn(),
     RenameColumns(),
     Filter(),
     Cast(),

@@ -16,6 +16,8 @@ from app.blocks.tabular import DType, POLARS_TYPES
 _MAX_LENGTH = 2048
 _MAX_NODES = 256
 _MAX_DEPTH = 32
+_MIN_INT = -(2**63)
+_MAX_INT = 2**63 - 1
 _NUMERIC = {"integer", "number"}
 _COLUMN_FUNCTION_ERROR = 'col() requires one string literal, e.g. col("amount").'
 _ALLOWED_FUNCTIONS = {
@@ -61,6 +63,7 @@ class CompiledExpression:
     expression: pl.Expr
     dtype: DType
     nullable: bool
+    invalid: pl.Expr | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,7 @@ class _TypedExpression:
     expression: pl.Expr
     dtype: DType | None
     nullable: bool
+    invalid: pl.Expr | None = None
 
 
 def _character_position(source: str, line: int, byte_column: int) -> int:
@@ -77,6 +81,31 @@ def _character_position(source: str, line: int, byte_column: int) -> int:
     current = lines[line - 1] if line <= len(lines) else ""
     prefix = current.encode("utf-8")[:byte_column].decode("utf-8", errors="ignore")
     return preceding + len(prefix) + 1
+
+
+def _syntax_position(source: str, line: int, character_column: int) -> int:
+    """Convert SyntaxError's 1-based character column to a source offset."""
+    lines = source.splitlines(keepends=True)
+    preceding = sum(len(part) for part in lines[: line - 1])
+    return preceding + max(character_column, 1)
+
+
+def _combined_invalid(
+    values: tuple[_TypedExpression, ...],
+    additional: pl.Expr | None = None,
+) -> pl.Expr | None:
+    checks = [
+        value.invalid.fill_null(False) for value in values if value.invalid is not None
+    ]
+    if additional is not None:
+        checks.append(additional.fill_null(False))
+    if not checks:
+        return None
+
+    combined = checks[0]
+    for check in checks[1:]:
+        combined = combined | check
+    return combined
 
 
 class _Compiler:
@@ -131,7 +160,7 @@ class _Compiler:
         if type(value) is bool:
             return _TypedExpression(pl.lit(value), "boolean", False)
         if type(value) is int:
-            if not -(2**63) <= value < 2**63:
+            if not _MIN_INT <= value <= _MAX_INT:
                 self.fail(node, "Integer literal is outside the supported range.")
             return _TypedExpression(pl.lit(value, dtype=pl.Int64), "integer", False)
         if type(value) is float:
@@ -152,7 +181,7 @@ class _Compiler:
             self.fail(node, "Unknown column.")
         else:
             return _TypedExpression(
-                pl.col(column.name),
+                pl.selectors.by_name(column.name).as_expr(),
                 column.dtype,
                 column.nullable,
             )
@@ -165,7 +194,7 @@ class _Compiler:
             and node.operand.value == 2**63
         ):
             return _TypedExpression(
-                pl.lit(-(2**63), dtype=pl.Int64),
+                pl.lit(_MIN_INT, dtype=pl.Int64),
                 "integer",
                 False,
             )
@@ -174,15 +203,30 @@ class _Compiler:
 
         if isinstance(node.op, ast.Not):
             self._require(node, value, "boolean")
-            return _TypedExpression(~value.expression, "boolean", value.nullable)
+            return _TypedExpression(
+                ~value.expression,
+                "boolean",
+                value.nullable,
+                value.invalid,
+            )
 
-        if isinstance(node.op, (ast.UAdd, ast.USub)):
+        if isinstance(node.op, ast.UAdd):
             if value.dtype not in _NUMERIC:
                 self.fail(node, "Unary arithmetic requires a numeric value.")
-            expression = (
-                -value.expression if isinstance(node.op, ast.USub) else value.expression
+            return value
+
+        if isinstance(node.op, ast.USub):
+            if value.dtype not in _NUMERIC:
+                self.fail(node, "Unary arithmetic requires a numeric value.")
+            if value.dtype == "integer":
+                wide = -value.expression.cast(pl.Int128)
+                return self._checked_integer(wide, (value,), value.nullable)
+            return _TypedExpression(
+                -value.expression,
+                value.dtype,
+                value.nullable,
+                value.invalid,
             )
-            return _TypedExpression(expression, value.dtype, value.nullable)
 
         self.fail(node, "Unary operator is not allowed.")
 
@@ -198,9 +242,24 @@ class _Compiler:
                 left.expression + right.expression,
                 "string",
                 left.nullable or right.nullable,
+                _combined_invalid((left, right)),
             )
 
         left, right, dtype = self._numeric_pair(node, left, right)
+        nullable = left.nullable or right.nullable
+
+        if dtype == "integer":
+            left_wide = left.expression.cast(pl.Int128)
+            right_wide = right.expression.cast(pl.Int128)
+            if isinstance(node.op, ast.Add):
+                wide = left_wide + right_wide
+            elif isinstance(node.op, ast.Sub):
+                wide = left_wide - right_wide
+            elif isinstance(node.op, ast.Mult):
+                wide = left_wide * right_wide
+            else:
+                wide = left_wide % right_wide
+            return self._checked_integer(wide, (left, right), nullable)
 
         if isinstance(node.op, ast.Add):
             expression = left.expression + right.expression
@@ -209,17 +268,16 @@ class _Compiler:
         elif isinstance(node.op, ast.Mult):
             expression = left.expression * right.expression
         elif isinstance(node.op, ast.Div):
-            expression = left.expression.cast(pl.Float64) / right.expression.cast(
-                pl.Float64
-            )
-            dtype = "number"
+            expression = left.expression / right.expression
         else:
             expression = left.expression % right.expression
 
+        result_dtype: DType = "number" if isinstance(node.op, ast.Div) else dtype
         return _TypedExpression(
             expression,
-            dtype,
-            left.nullable or right.nullable,
+            result_dtype,
+            nullable,
+            _combined_invalid((left, right)),
         )
 
     def _numeric_pair(
@@ -248,6 +306,24 @@ class _Compiler:
             value.expression.cast(POLARS_TYPES[dtype]),
             dtype,
             value.nullable,
+            value.invalid,
+        )
+
+    def _checked_integer(
+        self,
+        wide: pl.Expr,
+        operands: tuple[_TypedExpression, ...],
+        nullable: bool,
+    ) -> _TypedExpression:
+        overflow = (
+            (wide < pl.lit(_MIN_INT, dtype=pl.Int128))
+            | (wide > pl.lit(_MAX_INT, dtype=pl.Int128))
+        ).fill_null(False)
+        return _TypedExpression(
+            wide.cast(pl.Int64),
+            "integer",
+            nullable,
+            _combined_invalid(operands, overflow),
         )
 
     def _boolean(self, node: ast.BoolOp, depth: int) -> _TypedExpression:
@@ -268,6 +344,7 @@ class _Compiler:
             expression,
             "boolean",
             any(value.nullable for value in values),
+            _combined_invalid(tuple(values)),
         )
 
     def _compare(self, node: ast.Compare, depth: int) -> _TypedExpression:
@@ -298,6 +375,7 @@ class _Compiler:
             expression,
             "boolean",
             any(value.nullable for value in values),
+            _combined_invalid(tuple(values)),
         )
 
     def _comparison_operands(
@@ -315,20 +393,16 @@ class _Compiler:
         if left.dtype is None or right.dtype is None:
             self.fail(node, "Compare nulls with is_null() or is_not_null().")
 
-        numeric_pair = left.dtype in _NUMERIC and right.dtype in _NUMERIC
-        same_type = left.dtype == right.dtype
-        equality = isinstance(operation, (ast.Eq, ast.NotEq))
-
-        if not (same_type or numeric_pair):
+        if left.dtype != right.dtype:
+            if left.dtype in _NUMERIC and right.dtype in _NUMERIC:
+                self.fail(
+                    node,
+                    "Mixed integer and number comparisons are unsupported.",
+                )
             self.fail(node, "Comparison operands have incompatible types.")
-        if not equality and left.dtype == "boolean":
-            self.fail(node, "Boolean values support equality comparisons only.")
 
-        if numeric_pair and "number" in (left.dtype, right.dtype):
-            if left.dtype != "number":
-                left = self._cast_numeric(left, "number")
-            if right.dtype != "number":
-                right = self._cast_numeric(right, "number")
+        if not isinstance(operation, (ast.Eq, ast.NotEq)) and left.dtype == "boolean":
+            self.fail(node, "Boolean values support equality comparisons only.")
 
         return left, right
 
@@ -363,9 +437,11 @@ class _Compiler:
 
         if name == "col":
             return self._column_call(node, arguments)
-
         if name not in _ALLOWED_FUNCTIONS:
             self.fail(node.func, "Unknown function.")
+
+        if name == "replace":
+            return self._replace_call(node, arguments, depth)
 
         compiled = [self.compile(argument, depth + 1) for argument in arguments]
         return self._call_function(node, name, compiled)
@@ -389,10 +465,31 @@ class _Compiler:
             self.fail(argument, "Unknown column.")
         else:
             return _TypedExpression(
-                pl.col(column.name),
+                pl.selectors.by_name(column.name).as_expr(),
                 column.dtype,
                 column.nullable,
             )
+
+    def _replace_call(
+        self,
+        node: ast.Call,
+        arguments: list[ast.expr],
+        depth: int,
+    ) -> _TypedExpression:
+        if len(arguments) != 3:
+            self.fail(node, "replace() expects 3 argument(s).")
+
+        pattern_node = arguments[1]
+        if not isinstance(pattern_node, ast.Constant) or not isinstance(
+            pattern_node.value, str
+        ):
+            self.fail(
+                pattern_node,
+                "replace() pattern must be a string literal.",
+            )
+
+        compiled = [self.compile(argument, depth + 1) for argument in arguments]
+        return self._replace(node, compiled, pattern_node.value)
 
     def _call_function(
         self,
@@ -411,7 +508,7 @@ class _Compiler:
         if name == "concat":
             return self._concat(node, arguments)
         if name == "replace":
-            return self._replace(node, arguments)
+            self.fail(node, "replace() requires a literal pattern.")
         if name == "date_diff":
             return self._date_diff(node, arguments)
         return self._math_function(node, name, arguments)
@@ -424,11 +521,12 @@ class _Compiler:
     ) -> _TypedExpression:
         self._arity(node, name, arguments, 1)
         value = arguments[0]
-        if name == "is_null":
-            expression = value.expression.is_null()
-        else:
-            expression = value.expression.is_not_null()
-        return _TypedExpression(expression, "boolean", False)
+        expression = (
+            value.expression.is_null()
+            if name == "is_null"
+            else value.expression.is_not_null()
+        )
+        return _TypedExpression(expression, "boolean", False, value.invalid)
 
     def _coalesce(
         self,
@@ -440,15 +538,13 @@ class _Compiler:
 
         typed = [value.dtype for value in arguments if value.dtype is not None]
         if not typed:
-            self.fail(
-                node,
-                "coalesce() requires a value with an inferable type.",
-            )
+            self.fail(node, "coalesce() requires a value with an inferable type.")
 
         coalesce_dtype = typed[0]
         for other in typed[1:]:
-            numeric_pair = other in _NUMERIC and coalesce_dtype in _NUMERIC
-            if other != coalesce_dtype and not numeric_pair:
+            if other != coalesce_dtype and not (
+                other in _NUMERIC and coalesce_dtype in _NUMERIC
+            ):
                 self.fail(node, "coalesce() arguments have incompatible types.")
             if other == "number":
                 coalesce_dtype = "number"
@@ -466,6 +562,7 @@ class _Compiler:
             pl.coalesce(expressions),
             coalesce_dtype,
             all(value.nullable for value in arguments),
+            _combined_invalid(tuple(arguments)),
         )
 
     def _string_unary(
@@ -498,7 +595,12 @@ class _Compiler:
             expression = getattr(parsed.dt, name)()
             result_dtype = "integer"
 
-        return _TypedExpression(expression, result_dtype, value.nullable)
+        return _TypedExpression(
+            expression,
+            result_dtype,
+            value.nullable,
+            value.invalid,
+        )
 
     def _string_match(
         self,
@@ -525,6 +627,7 @@ class _Compiler:
             expression,
             "boolean",
             text.nullable or fragment.nullable,
+            _combined_invalid((text, fragment)),
         )
 
     def _concat(
@@ -544,26 +647,28 @@ class _Compiler:
             ),
             "string",
             any(value.nullable for value in arguments),
+            _combined_invalid(tuple(arguments)),
         )
 
     def _replace(
         self,
         node: ast.Call,
         arguments: list[_TypedExpression],
+        pattern: str,
     ) -> _TypedExpression:
-        self._arity(node, "replace", arguments, 3)
         for value in arguments:
             self._require(node, value, "string")
 
-        text, old, new = arguments
+        text, _, replacement = arguments
         return _TypedExpression(
             text.expression.str.replace_all(
-                old.expression,
-                new.expression,
+                pattern,
+                replacement.expression,
                 literal=True,
             ),
             "string",
             any(value.nullable for value in arguments),
+            _combined_invalid(tuple(arguments)),
         )
 
     def _date_diff(
@@ -587,6 +692,7 @@ class _Compiler:
             (left - right).dt.total_days(),
             "integer",
             arguments[0].nullable or arguments[1].nullable,
+            _combined_invalid(tuple(arguments)),
         )
 
     def _math_function(
@@ -600,13 +706,25 @@ class _Compiler:
         if value.dtype not in _NUMERIC:
             self.fail(node, f"{name}() requires a numeric argument.")
 
+        if name == "abs" and value.dtype == "integer":
+            return self._checked_integer(
+                value.expression.cast(pl.Int128).abs(),
+                (value,),
+                value.nullable,
+            )
         if name == "abs":
-            return _TypedExpression(value.expression.abs(), value.dtype, value.nullable)
+            return _TypedExpression(
+                value.expression.abs(),
+                value.dtype,
+                value.nullable,
+                value.invalid,
+            )
         if name == "round":
             return _TypedExpression(
                 value.expression.round(),
                 value.dtype,
                 value.nullable,
+                value.invalid,
             )
         if name == "sqrt":
             expression = value.expression.sqrt()
@@ -623,7 +741,12 @@ class _Compiler:
         else:
             self.fail(node, "Unknown function.")
 
-        return _TypedExpression(expression, result_dtype, value.nullable)
+        return _TypedExpression(
+            expression,
+            result_dtype,
+            value.nullable,
+            value.invalid,
+        )
 
     def _arity(
         self,
@@ -654,9 +777,9 @@ def compile_expression(source: str, schema: DataSchema) -> CompiledExpression:
         tree = ast.parse(source, mode="eval")
     except SyntaxError as exc:
         line = exc.lineno or 1
-        byte_column = max((exc.offset or 1) - 1, 0)
+        character_column = exc.offset or 1
         raise ExpressionError(
-            _character_position(source, line, byte_column),
+            _syntax_position(source, line, character_column),
             "Invalid expression syntax.",
         ) from None
     except (ValueError, RecursionError):
@@ -671,4 +794,5 @@ def compile_expression(source: str, schema: DataSchema) -> CompiledExpression:
         expression=result.expression,
         dtype=result.dtype,
         nullable=result.nullable,
+        invalid=result.invalid,
     )

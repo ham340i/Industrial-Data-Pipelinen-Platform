@@ -26,7 +26,11 @@ from app.blocks.contracts import (
     Table,
 )
 from app.blocks.errors import BlockError
-from app.blocks.expressions import ExpressionError, compile_expression
+from app.blocks.expressions import (
+    CompiledExpression,
+    ExpressionError,
+    compile_expression,
+)
 from app.blocks.tabular import (
     POLARS_TYPES,
     TABLE_PORT,
@@ -321,7 +325,7 @@ class DerivedColumn(Block[DerivedColumnConfig]):
     def _compile(
         config: DerivedColumnConfig,
         table: Table,
-    ) -> tuple[pl.Expr, Column]:
+    ) -> tuple[CompiledExpression, Column]:
         if config.name in {column.name for column in table.data_schema.columns}:
             raise BlockError(
                 "duplicate_column",
@@ -339,7 +343,7 @@ class DerivedColumn(Block[DerivedColumnConfig]):
                 position=exc.position,
             ) from None
 
-        return compiled.expression, Column(
+        return compiled, Column(
             name=config.name,
             dtype=compiled.dtype,
             nullable=compiled.nullable,
@@ -362,10 +366,20 @@ class DerivedColumn(Block[DerivedColumnConfig]):
         context: BlockContext,
     ) -> PortValues:
         table = input_table(inputs)
-        expression, column = self._compile(config, table)
+        compiled, column = self._compile(config, table)
 
         try:
-            frame = to_frame(table).with_columns(expression.alias(config.name))
+            frame = to_frame(table)
+            if compiled.invalid is not None:
+                overflow = frame.select(compiled.invalid.fill_null(False).any()).item()
+                if overflow:
+                    raise BlockError(
+                        "expression_overflow",
+                        "Integer expression result exceeds the Int64 range.",
+                        field="expression",
+                    )
+
+            frame = frame.with_columns(compiled.expression.alias(config.name))
 
             if column.dtype == "number":
                 finite = frame[config.name].is_finite().fill_null(True).all()

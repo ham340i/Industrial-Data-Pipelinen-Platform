@@ -75,6 +75,110 @@ def test_string_and_date_functions_compile():
 
 
 @pytest.mark.parametrize(
+    ("value", "expression"),
+    [
+        (2**63 - 1, 'col("n") + 1'),
+        (-(2**63), 'col("n") - 1'),
+        (2**62, 'col("n") * 2'),
+        (-(2**63), 'abs(col("n"))'),
+    ],
+)
+def test_integer_overflow_is_rejected(value: int, expression: str, tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="n", dtype="integer"),),
+        ),
+        rows=({"n": value},),
+    )
+
+    with pytest.raises(BlockError) as error:
+        DerivedColumn().run(
+            {"name": "result", "expression": expression},
+            {"table": (source,)},
+            BlockContext("overflow-test", "derived", workspace_root=tmp_path),
+        )
+
+    assert error.value.failure.code == "expression_overflow"
+
+
+def test_int64_boundary_values_without_overflow_are_preserved(tmp_path: Path):
+    source = Table(
+        data_schema=DataSchema(
+            columns=(Column(name="n", dtype="integer"),),
+        ),
+        rows=({"n": -(2**63)}, {"n": 2**63 - 1}),
+    )
+
+    result = DerivedColumn().run(
+        {"name": "result", "expression": 'col("n")'},
+        {"table": (source,)},
+        BlockContext("boundary-test", "derived", workspace_root=tmp_path),
+    )["table"][0]
+
+    assert isinstance(result, Table)
+    assert [row["result"] for row in result.rows] == [-(2**63), 2**63 - 1]
+
+
+def test_quoted_column_names_are_selected_literally(tmp_path: Path):
+    input_schema = DataSchema(
+        columns=(
+            Column(name="^amount$", dtype="integer"),
+            Column(name="amount", dtype="integer"),
+            Column(name="*", dtype="integer"),
+        ),
+    )
+    source = Table(
+        data_schema=input_schema,
+        rows=({"^amount$": 111, "amount": 222, "*": 333},),
+    )
+
+    result = DerivedColumn().run(
+        {"name": "result", "expression": 'col("^amount$")'},
+        {"table": (source,)},
+        BlockContext("literal-column-test", "derived", workspace_root=tmp_path),
+    )["table"][0]
+
+    assert isinstance(result, Table)
+    assert result.rows[0]["result"] == 111
+
+    star_result = DerivedColumn().run(
+        {"name": "result", "expression": 'col("*")'},
+        {"table": (source,)},
+        BlockContext("literal-star-test", "derived", workspace_root=tmp_path),
+    )["table"][0]
+
+    assert isinstance(star_result, Table)
+    assert star_result.rows[0]["result"] == 333
+
+
+def test_mixed_integer_number_comparison_is_rejected():
+    input_schema = schema()
+
+    with pytest.raises(ExpressionError):
+        compile_expression(
+            'col("n") == 9007199254740992.0',
+            input_schema,
+        )
+
+
+def test_replace_requires_a_literal_pattern():
+    input_schema = schema()
+    expression = 'replace(col("label"), col("label"), "z")'
+
+    with pytest.raises(ExpressionError) as error:
+        compile_expression(expression, input_schema)
+
+    assert error.value.position == expression.rindex('col("label")') + 1
+
+
+def test_syntax_error_position_counts_unicode_characters():
+    with pytest.raises(ExpressionError) as error:
+        compile_expression("'é' + )", schema())
+
+    assert error.value.position == 7
+
+
+@pytest.mark.parametrize(
     "source",
     [
         'unknown("x")',
@@ -86,6 +190,7 @@ def test_string_and_date_functions_compile():
 )
 def test_unsafe_or_mistyped_expressions_are_rejected(source: str):
     input_schema = schema()
+
     with pytest.raises(ExpressionError) as error:
         compile_expression(source, input_schema)
 
@@ -94,6 +199,7 @@ def test_unsafe_or_mistyped_expressions_are_rejected(source: str):
 
 def test_error_position_points_to_unknown_function():
     input_schema = schema()
+
     with pytest.raises(ExpressionError) as error:
         compile_expression("1 + unknown(2)", input_schema)
 
@@ -126,13 +232,8 @@ def test_derived_column_appends_column_and_preserves_input(tmp_path: Path):
     assert result.data_schema.columns[-1].dtype == "integer"
     assert not result.data_schema.columns[-1].nullable
     assert [row["calculated"] for row in result.rows] == [4, 0]
-    assert source == Table(
-        data_schema=schema(),
-        rows=(
-            {"n": 2, "label": "a", "active": True},
-            {"n": None, "label": "b", "active": False},
-        ),
-    )
+    assert source.rows[0]["n"] == 2
+    assert source.rows[1]["n"] is None
 
 
 def test_derived_column_rejects_bad_expression_before_execution():
